@@ -9,7 +9,7 @@ export const KEYWORD_LABEL: Record<Keyword, string> = {
   pierce: '貫通',
   firstStrike: '先制',
   shield: '盾',
-  mobile: '機動',
+  mobile: '遊撃',
   delay: '遅延',
   quick: '即効',
 };

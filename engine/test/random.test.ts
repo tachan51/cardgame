@@ -17,7 +17,6 @@ export function checkInvariants(s: GameState): string[] {
     const st = s.players[p];
     if (st.mana < 0 || st.reserve < 0) out.push(`${p}: マナが負`);
     if (st.maxMana > MAX_MANA_CAP) out.push(`${p}: 最大マナが上限を超えた`);
-    if (st.reserve > st.maxMana) out.push(`${p}: 予備マナが最大マナを超えた`);
     if (st.hand.length > HAND_LIMIT) out.push(`${p}: 手札が上限を超えた`);
     if (st.board.length !== 8) out.push(`${p}: 盤面のマスの数が違う`);
     for (const zone of [st.deck, st.hand, st.trash, st.exile]) for (const c of zone) {

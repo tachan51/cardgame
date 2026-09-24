@@ -179,12 +179,12 @@ export function roundStart(s: GameState): void {
     const pl = s.players[p];
     pl.maxMana = Math.min(MAX_MANA_CAP, pl.maxMana + 1);
     const before = pl.reserve;
-    pl.reserve = Math.min(pl.maxMana, pl.reserve + pl.unusedMana);
+    pl.reserve += pl.unusedMana; // 予備マナに上限はない（ルール仕様書 v1.11）
     pl.unusedMana = 0;
     pl.mana = pl.maxMana;
     for (const l of pl.leaders) l.usedThisRound = false;
     for (const u of pl.board) {
-      if (u) u.markers = u.markers.filter((m) => m !== '起動済み' && m !== '機動済み');
+      if (u) u.markers = u.markers.filter((m) => m !== '起動済み' && m !== '遊撃済み');
     }
     log(s, p, `最大マナ ${pl.maxMana}、予備マナ ${before}→${pl.reserve}、通常マナ全回復`);
     drawCards(s, p, 1);
@@ -498,17 +498,6 @@ export function clearUnitTemporary(s: GameState, p: PlayerId, index: number): vo
   if (!u) return;
   clearTemporary(u);
   log(s, p, `${card(u.cardId).name}（${cellLabel(index)}）のこのラウンド中の効果を外す`);
-}
-
-export function advanceUnit(s: GameState, p: PlayerId, index: number): boolean {
-  if (index % 2 !== 1) return false; // 後列のみ
-  const front = index - 1;
-  if (s.players[p].board[front]) return false;
-  const u = s.players[p].board[index]!;
-  s.players[p].board[front] = u;
-  s.players[p].board[index] = null;
-  log(s, p, `${card(u.cardId).name} が前進（${cellLabel(index)} → ${cellLabel(front)}）`);
-  return true;
 }
 
 export function setCellNote(s: GameState, p: PlayerId, index: number, note: string): void {

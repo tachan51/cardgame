@@ -3,7 +3,6 @@ import {
   cellName,
   getCard,
   getLeader,
-  laneOf,
   previewCombat,
   Runner,
   type Action,
@@ -325,9 +324,24 @@ function unitHtml(r: Runner, u: Unit, pv: PreviewInfo | null): string {
   const dead = pv?.destroyed.has(u.uid);
   return `<div class="unit fac-${def.faction} ${u.owner === HUMAN ? 'mine' : 'theirs'}" data-card-id="${u.cardId}" data-uid="${u.uid}">
     <div class="uname">${esc(def.name)}${u.isToken ? ' <span class="tag">トークン</span>' : ''}</div>
-    <div class="stats"><span class="atk ${atk > base ? 'up' : atk < base ? 'down' : ''}">⚔${atk}</span> <span class="hp ${hp < max ? 'hurt' : max > (def.health ?? 0) ? 'up' : ''}">♥${hp}${hp < max ? `/${max}` : ''}</span>${u.shield ? ' <span class="shield" title="盾">🛡</span>' : ''}</div>
-    <div class="kws">${kws.map((k) => `<span class="kw">${KEYWORD_LABEL[k]}</span>`).join('')}</div>
-    ${dead ? '<div class="pv dead" title="このまま戦闘になると破壊される">☠</div>' : dmg ? `<div class="pv" title="このまま戦闘になったときのダメージ">-${dmg}</div>` : ''}
+    <div class="stats"><span class="atk ${atk > base ? 'up' : atk < base ? 'down' : ''}">⚔${atk}</span> <span class="hp ${hp < max ? 'hurt' : max > (def.health ?? 0) ? 'up' : ''}" title="残り体力${hp}（最大${max}）">♥${hp}</span>${u.shield ? ' <span class="shield" title="盾">🛡</span>' : ''}${
+      hp < max ? ` <span class="dmg" title="受けているダメージ（最大体力${max}、残り${hp}）">ダメージ${max - hp}</span>` : ''
+    }</div>
+    ${hp < max ? `<div class="hpbar" title="残り体力${hp} / 最大${max}"><div style="width:${Math.max(0, (hp / max) * 100)}%"></div></div>` : ''}
+    <div class="kws">${kws
+      .map((k) =>
+        k === 'mobile'
+          ? `<span class="kw ${u.mobileUsed ? 'used' : 'ready'}" title="${u.mobileUsed ? 'このラウンドは遊撃を使用済み' : 'このラウンドはまだ遊撃を使える'}">遊撃${u.mobileUsed ? '済' : ''}</span>`
+          : `<span class="kw">${KEYWORD_LABEL[k]}</span>`,
+      )
+      .join('')}${(def.abilities ?? [])
+      .map((a, idx) => {
+        if (a.kind !== 'activated') return '';
+        const used = u.activatedUsed.includes(idx);
+        return `<span class="kw act ${used ? 'used' : 'ready'}" title="${used ? 'このラウンドは起動能力を使用済み' : 'このラウンドはまだ起動能力を使える'}">起動${a.cost}${used ? '済' : ''}</span>`;
+      })
+      .join('')}</div>
+    ${dead ? '<div class="pv dead" title="このまま戦闘になると破壊される予測">予測☠</div>' : dmg ? `<div class="pv" title="このまま戦闘になったときに受けるダメージの予測">予測-${dmg}</div>` : ''}
   </div>`;
 }
 
@@ -360,7 +374,7 @@ function promptHtml(s: GameState, step: Step | null, game: Game): string {
   if (!ui.sel || !step) {
     const hint = ui.hint ? `<div class="hint">${esc(ui.hint)}</div>` : '';
     const base = s.phase === 'action' && game.humanToAct() && !s.pending
-      ? '手札のカードを選ぶと使えます。盤面の自分のユニットを選ぶと、前進・機動・起動ができます。'
+      ? '手札のカードを選ぶと使えます。盤面の自分のユニットを選ぶと、遊撃・起動ができます。'
       : '';
     return `<div class="prompt">${err}${hint}<span class="muted">${base}</span></div>`;
   }
@@ -427,7 +441,7 @@ function sourceLabel(s: GameState, src: Source): string {
   }
   const u = s.players[HUMAN].board.find((x) => x?.uid === src.uid);
   const name = u ? cardName(u.cardId) : '';
-  return src.mode === 'advance' ? `${name}の前進` : src.mode === 'mobileMove' ? `${name}の機動` : `${name}の起動能力`;
+  return src.mode === 'mobileMove' ? `${name}の遊撃` : `${name}の起動能力`;
 }
 
 // ---------------------------------------------------------------- メニュー・選択・マリガン・結果
@@ -437,8 +451,7 @@ function unitMenuHtml(r: Runner, uid: number, all: Action[]): string {
   if (!loc || loc.p !== HUMAN) return '';
   const def = getCard(cat, loc.unit.cardId);
   const items: string[] = [];
-  if (all.some((a) => a.type === 'advance' && a.cell === loc.i)) items.push(`<button data-unit-act="advance">前進（${cellName(loc.i)} → ${laneOf(loc.i)}前）</button>`);
-  if (all.some((a) => a.type === 'mobileMove' && a.unit === uid)) items.push('<button data-unit-act="mobileMove">機動で移動</button>');
+  if (all.some((a) => a.type === 'mobileMove' && a.unit === uid)) items.push('<button data-unit-act="mobileMove">遊撃で移動</button>');
   (def.abilities ?? []).forEach((ab, idx) => {
     if (ab.kind !== 'activated') return;
     const ok = all.some((a) => a.type === 'activate' && a.unit === uid && a.ability === idx);
@@ -501,11 +514,11 @@ function recentHtml(s: GameState, mark: number): string {
   return `<div class="box recent"><h3>直前の出来事</h3>${lines.slice(-12).map((l) => `<div>${esc(l)}</div>`).join('')}</div>`;
 }
 
-/** ログの1行の文章。前進・機動の直後の「移動」は同じことなので出さない */
+/** ログの1行の文章。遊撃の直後の「移動」は同じことなので出さない */
 function lineFor(s: GameState, i: number): string | null {
   const e = s.log[i];
   const prev = s.log[i - 1];
-  if (e.type === 'move' && prev && (prev.type === 'advance' || prev.type === 'mobile')) return null;
+  if (e.type === 'move' && prev && prev.type === 'mobile') return null;
   return logText(e);
 }
 
@@ -535,9 +548,10 @@ function onHover(e: MouseEvent, root: HTMLElement, s: GameState, r: Runner): voi
   let extra = '';
   if (loc) {
     const u = loc.unit;
-    extra = `<div class="small">${who(loc.p)}の${cellName(loc.i)}　⚔${r.attack(u)} ♥${r.health(u)}/${r.maxHealth(u)}${u.shield ? '　🛡盾' : ''}</div>
+    extra = `<div class="small">${who(loc.p)}の${cellName(loc.i)}　攻撃力${r.attack(u)}　体力 残り${r.health(u)}（最大${r.maxHealth(u)}${r.health(u) < r.maxHealth(u) ? `、ダメージ${r.maxHealth(u) - r.health(u)}` : ''}）${u.shield ? '　🛡盾' : ''}</div>
       <div class="small">${[...r.keywords(u)].filter((k) => k !== 'shield').map((k) => KEYWORD_LABEL[k]).join('・')}</div>
-      ${u.mobileUsed ? '<div class="small muted">このラウンドは機動を使用済み</div>' : ''}`;
+      ${u.mobileUsed ? '<div class="small muted">このラウンドは遊撃を使用済み</div>' : ''}
+      ${u.activatedUsed.length ? '<div class="small muted">このラウンドは起動能力を使用済み</div>' : ''}`;
   }
   box.innerHTML = `<h3>${esc(def.name)} <span class="muted small">${def.id}</span></h3>
     <div class="small">${cardTypeLabel(def.id)}　コスト${def.cost}${def.type === 'unit' ? `　${def.attack}/${def.health}` : ''}　${esc(cat.factions.get(def.faction) ?? '')}</div>
@@ -609,7 +623,7 @@ function onClick(e: MouseEvent, root: HTMLElement, game: Game, all: Action[], on
   const unitAct = t.closest<HTMLElement>('[data-unit-act]')?.dataset.unitAct;
   if (unitAct && ui.menuUnit !== null) {
     const [mode, ab] = unitAct.split(':');
-    ui.sel = { source: { kind: 'unit', uid: ui.menuUnit, mode: mode as 'advance' | 'mobileMove' | 'activate', ability: ab ? Number(ab) : undefined }, picks: {}, confirmed: true };
+    ui.sel = { source: { kind: 'unit', uid: ui.menuUnit, mode: mode as 'mobileMove' | 'activate', ability: ab ? Number(ab) : undefined }, picks: {}, confirmed: true };
     ui.menuUnit = null;
     return advanceSelection(game, all, rerender);
   }

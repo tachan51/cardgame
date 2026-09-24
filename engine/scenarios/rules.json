@@ -15,8 +15,8 @@
           "board": {
             "3前": {
               "card": "KN-19",
-              "attack": 1,
-              "health": 1,
+              "attack": 0,
+              "health": 2,
               "keywords": [
                 "pierce"
               ]
@@ -325,7 +325,7 @@
           "maxMana": 4,
           "hand": [
             "KN-03",
-            "AC-05"
+            "AC-18"
           ]
         },
         "B": {
@@ -363,15 +363,13 @@
         {
           "type": "castSpell",
           "player": "A",
-          "card": "AC-05"
+          "card": "AC-18"
         },
         {
           "expect": {
             "passStreak": 0,
             "A": {
-              "hand": [
-                "KN-03"
-              ],
+              "hand": [],
               "spellsCast": 1
             }
           }
@@ -409,10 +407,10 @@
             "1前": null
           },
           "trash": [
-            "AC-05",
+            "AC-18",
             "KN-03"
           ],
-          "handCount": 2
+          "handCount": 1
         },
         "B": {
           "maxMana": 4,
@@ -429,7 +427,7 @@
       }
     },
     {
-      "name": "16.3 マナの例（予備マナの加算と上限）",
+      "name": "16.3 マナの例（予備マナの加算。上限はない）",
       "refs": [
         "6.1",
         "16.1",
@@ -549,7 +547,7 @@
               "reserve": 2
             },
             "B": {
-              "reserve": 4
+              "reserve": 6
             }
           }
         },
@@ -567,10 +565,10 @@
         "A": {
           "maxMana": 5,
           "mana": 5,
-          "reserve": 5
+          "reserve": 6
         },
         "B": {
-          "reserve": 5
+          "reserve": 10
         }
       }
     },
@@ -883,7 +881,7 @@
           "board": {
             "1前": {
               "card": "KN-19",
-              "attack": 1
+              "attack": 0
             }
           }
         }
@@ -1081,9 +1079,8 @@
       }
     },
     {
-      "name": "前進と機動の制限",
+      "name": "遊撃の制限（1ラウンド1回・空きマスへ・遊撃を持つユニットだけ）",
       "refs": [
-        "7.3",
         "7.6",
         "14"
       ],
@@ -1091,7 +1088,6 @@
         "A": {
           "board": {
             "1前": "KN-03",
-            "1後": "KN-04",
             "2後": "CY-01"
           }
         },
@@ -1099,26 +1095,12 @@
       },
       "steps": [
         {
-          "type": "advance",
-          "player": "A",
-          "cell": "1後",
-          "illegal": true,
-          "note": "前列が空いていない"
-        },
-        {
-          "type": "advance",
-          "player": "A",
-          "cell": "1前",
-          "illegal": true,
-          "note": "前列のユニットは前進しない"
-        },
-        {
           "type": "mobileMove",
           "player": "A",
           "unit": "1前",
           "to": "3前",
           "illegal": true,
-          "note": "機動を持たない"
+          "note": "遊撃を持たない"
         },
         {
           "type": "mobileMove",
@@ -1129,9 +1111,10 @@
           "note": "空きマスではない"
         },
         {
-          "type": "advance",
+          "type": "mobileMove",
           "player": "A",
-          "cell": "2後"
+          "unit": "2後",
+          "to": "2前"
         },
         {
           "type": "pass",
@@ -1141,7 +1124,18 @@
           "type": "mobileMove",
           "player": "A",
           "unit": "2前",
-          "to": "4後"
+          "to": "4後",
+          "illegal": true,
+          "note": "遊撃は1ラウンド1回"
+        },
+        {
+          "type": "pass",
+          "player": "A"
+        },
+        {
+          "expect": {
+            "round": 2
+          }
         },
         {
           "type": "pass",
@@ -1150,10 +1144,9 @@
         {
           "type": "mobileMove",
           "player": "A",
-          "unit": "4後",
-          "to": "3後",
-          "illegal": true,
-          "note": "機動は1ラウンド1回"
+          "unit": "2前",
+          "to": "4後",
+          "note": "次のラウンドはまた使える"
         }
       ],
       "expect": {

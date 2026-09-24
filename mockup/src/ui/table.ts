@@ -463,7 +463,7 @@ function unitMenu(store: Store, p: PlayerId, i: number, x: number, y: number): v
     },
     { label: 'キーワード・盾…', action: () => keywordModal(store, p, i) },
     { separator: true, label: '' },
-    ...['起動済み', '機動済み', 'ラウンド終了時に処理'].map((m) => ({
+    ...['起動済み', '遊撃済み', 'ラウンド終了時に処理'].map((m) => ({
       label: `${u.markers.includes(m) ? '✓ ' : ''}目印: ${m}`,
       action: () => d('目印', (st) => G.toggleMarker(st, p, i, m)),
     })),
@@ -487,11 +487,6 @@ function unitMenu(store: Store, p: PlayerId, i: number, x: number, y: number): v
       action: () => d('一時的な効果を外す', (st) => G.clearUnitTemporary(st, p, i)),
     },
     { separator: true, label: '' },
-    {
-      label: '前進',
-      disabled: i % 2 !== 1 || !!s.players[p].board[i - 1],
-      action: () => d('前進', (st) => G.advanceUnit(st, p, i)),
-    },
     { label: '破壊（トラッシュへ）', action: () => d('破壊', (st) => G.moveCard(st, from, { p, zone: 'trash' })) },
     { label: '手札に戻す', action: () => d('手札に戻す', (st) => G.moveCard(st, from, { p, zone: 'hand' })) },
     { label: '除外', action: () => d('除外', (st) => G.moveCard(st, from, { p, zone: 'exile' })) },

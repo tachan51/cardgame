@@ -186,3 +186,9 @@ button.wide { width: 100%; margin-top: 6px; }
 .delay-item { margin-bottom: 6px; cursor: help; }
 .delay-item .ctext { color: #c3c8d4; margin-top: 2px; line-height: 1.4; }
 .dmark-cell, .dmark { cursor: help; }
+.kw.ready { background: #1f3b2c; color: #9be3b8; font-weight: bold; }
+.kw.act { border: 1px solid #3b6b4f; }
+.kw.used { background: #5a2a2f; color: #ffc4c8; font-weight: bold; border: 1px solid #8a3a42; }
+.dmg { font-size: 10px; font-weight: bold; color: #fff; background: #b8323c; border-radius: 4px; padding: 0 5px; vertical-align: middle; }
+.hpbar { height: 4px; background: #3a2226; border-radius: 2px; margin: 2px 0 3px; overflow: hidden; }
+.hpbar div { height: 100%; background: #e0595e; }

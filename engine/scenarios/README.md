@@ -55,7 +55,6 @@ TypeScript 版のエンジンは `npm test` ですべて実行する（`test/sce
 |---|---|
 | `playUnit` | `card`（手札のカードID）, `cell`（`"2前"`）, `enhance?`, `targets?` |
 | `castSpell` | `card`, `enhance?`, `targets?` |
-| `advance` | `cell`（後列のマス） |
 | `mobileMove` | `unit`（自分のマス）, `to` |
 | `activate` | `unit`（自分のマス）, `ability?`（abilities の番号。省略時は最初の起動能力）, `targets?` |
 | `leaderAbility` | `leader`（0 か 1）, `targets?` |
