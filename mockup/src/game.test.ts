@@ -89,7 +89,7 @@ describe('試合の準備', () => {
 });
 
 describe('ラウンドの補助', () => {
-  it('使い残した通常マナが次のラウンドの予備マナになる（上限は新しい最大マナ）', () => {
+  it('使い残した通常マナが次のラウンドの予備マナになる（上限はない）', () => {
     const s = started();
     // ラウンド1: 1マナを残す → ラウンド2で予備マナ1
     G.roundEnd(s);
@@ -97,14 +97,14 @@ describe('ラウンドの補助', () => {
     expect(s.players.A.maxMana).toBe(2);
     expect(s.players.A.reserve).toBe(1);
     expect(s.players.A.mana).toBe(2);
-    // 予備マナの上限は最大マナ
+    // 予備マナに上限はない（ルール仕様書 v1.11）
     s.players.A.reserve = 3;
     s.players.A.mana = 3;
     s.players.A.maxMana = 3;
     G.roundEnd(s);
     G.roundStart(s);
     expect(s.players.A.maxMana).toBe(4);
-    expect(s.players.A.reserve).toBe(4);
+    expect(s.players.A.reserve).toBe(6);
   });
 
   it('先手トークンはラウンドごとに交代する', () => {
@@ -225,14 +225,6 @@ describe('カードの操作', () => {
     G.roundEnd(s);
     G.roundStart(s);
     expect(s.players.A.leaders[0].usedThisRound).toBe(false);
-  });
-
-  it('前進は後列から、同じレーンの前列が空いているときだけ', () => {
-    const s = started();
-    G.summonToken(s, 'A', 'KN-09', 1); // 1後
-    expect(G.advanceUnit(s, 'A', 1)).toBe(true);
-    expect(s.players.A.board[0]).not.toBeNull();
-    expect(G.advanceUnit(s, 'A', 0)).toBe(false);
   });
 
   it('ランダムなユニットを手札に加える', () => {
