@@ -35,7 +35,7 @@ function render(): void {
       () => {
         const d = game.match!.decks;
         resetBattleUi();
-        game.start(d.human, d.ai, 'random');
+        game.start(d.human, d.ai, 'random', game.match!.level ?? 'normal');
       },
     );
   }

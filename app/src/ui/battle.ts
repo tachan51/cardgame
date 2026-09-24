@@ -14,7 +14,7 @@ import {
 } from '../../../engine/src';
 import { canonical } from '../../../engine/src/runner';
 import { cat } from '../data';
-import type { Game } from '../game';
+import { LEVEL_LABEL, type Game } from '../game';
 import { allLegal, nextStep, type Selection, type Source, type Step } from '../select';
 import { AI, cardName, cardTypeLabel, esc, HUMAN, KEYWORD_LABEL, leaderLabel, logText, richText, targetText, who } from '../text';
 
@@ -52,7 +52,7 @@ export function renderBattle(root: HTMLElement, game: Game, onQuit: () => void, 
   root.innerHTML = `
   <div class="battle">
     <header class="topbar">
-      <div class="title">第${s.round}ラウンド <span class="muted">先手: ${who(s.firstPlayer)}</span></div>
+      <div class="title">第${s.round}ラウンド <span class="muted">先手: ${who(s.firstPlayer)}　AI: ${LEVEL_LABEL[m.level ?? 'normal']}</span></div>
       <div class="status ${humanTurn ? 'mine' : ''}">${statusText(game, s)}</div>
       <div class="actions">
         <button data-btn="pass" class="primary" ${humanTurn && s.phase === 'action' && !s.pending ? '' : 'disabled'}>パス${s.passStreak === 1 && s.activePlayer === HUMAN ? '（戦闘へ）' : ''}</button>

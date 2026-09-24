@@ -64,7 +64,22 @@ describe('ルールベースの AI', () => {
     const other = structuredClone(base);
     other.players.A.hand[0].cardId = 'AC-02';
     other.players.A.deck.reverse();
-    expect(chooseAction(cat, base, 'B').action).toEqual(chooseAction(cat, other, 'B').action);
+    for (const level of ['easy', 'normal', 'hard'] as const) {
+      expect(chooseAction(cat, base, 'B', { level, seed: 1 }).action).toEqual(chooseAction(cat, other, 'B', { level, seed: 1 }).action);
+    }
+  });
+
+  it('つよい（段階3）は思考時間の上限を守り、合法手を返す', () => {
+    let s = newGame(cat, { A: decks[0], B: decks[1] }, { seed: 21 });
+    s = applyAction(cat, s, { type: 'mulligan', player: 'A', cards: [] });
+    s = applyAction(cat, s, { type: 'mulligan', player: 'B', cards: [] });
+    for (let k = 0; k < 12 && !s.result; k++) {
+      const p = s.activePlayer;
+      const t = performance.now();
+      const d = chooseAction(cat, s, p, { level: 'hard', timeLimitMs: 300 });
+      expect(performance.now() - t).toBeLessThan(1500);
+      s = applyAction(cat, s, d.action);
+    }
   });
 
   it('とどめを刺せるなら刺す', () => {

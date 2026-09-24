@@ -9,6 +9,6 @@ export { legalActions, playerToAct } from './legal';
 export { publicView, previewCombat } from './view';
 export type { CombatPreview } from './view';
 export { IllegalAction, Runner } from './runner';
-export { chooseAction, evaluate, DEFAULT_WEIGHTS } from './ai';
-export type { AiDecision, AiWeights } from './ai';
+export { chooseAction, evaluate, determinize, AI_LEVELS, DEFAULT_WEIGHTS, STAGE1_WEIGHTS, STAGE2_WEIGHTS } from './ai';
+export type { AiDecision, AiLevel, AiOptions, AiWeights } from './ai';
 export { cellIndex, cellName, parseCellName, laneOf, rowOf, opponent } from './board';

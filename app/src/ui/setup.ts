@@ -1,11 +1,11 @@
 // 対戦の準備: 自分のデッキと AI のデッキを選ぶ（2-6・3-3）。見本デッキと自分で作ったデッキから選べる
-import { getLeader, validateDeck, type DeckDef } from '../../../engine/src';
+import { getLeader, validateDeck, type AiLevel, type DeckDef } from '../../../engine/src';
 import { cat } from '../data';
 import { allDecks, findDeck } from '../decks';
-import type { Game } from '../game';
+import { LEVEL_LABEL, type Game } from '../game';
 import { esc } from '../text';
 
-const choice = { human: '', ai: '', first: 'random' as 'A' | 'B' | 'random' };
+const choice = { human: '', ai: '', first: 'random' as 'A' | 'B' | 'random', level: 'normal' as AiLevel };
 
 /** 準備画面で最初に選んでおくデッキ（デッキ構築から戻ったときなど） */
 export function selectHumanDeck(id: string): void {
@@ -56,6 +56,10 @@ export function renderSetup(root: HTMLElement, game: Game, hasSave: boolean, ope
           <option value="A" ${choice.first === 'A' ? 'selected' : ''}>あなた</option>
           <option value="B" ${choice.first === 'B' ? 'selected' : ''}>AI</option>
         </select></label>
+      <label>AI の強さ
+        <select data-sel="level">
+          ${(['easy', 'normal', 'hard'] as AiLevel[]).map((l) => `<option value="${l}" ${choice.level === l ? 'selected' : ''}>${LEVEL_LABEL[l]}</option>`).join('')}
+        </select></label>
       <button class="primary" data-go>対戦を始める</button>
       ${hasSave ? '<button data-resume>前回の続きから</button>' : ''}
     </div>
@@ -66,14 +70,16 @@ export function renderSetup(root: HTMLElement, game: Game, hasSave: boolean, ope
         <li>通常マナ（◆）は毎ラウンド全回復します。使い残した分は次のラウンドに予備マナ（◇）として貯まり、リーダー能力・強化・起動に使えます。</li>
         <li>遅延（⏳）の効果は、使った人の次の手番の始めに発動します。発動までの間に、移動などで避けられます。</li>
         <li>右側の「このまま戦闘になったら」に、今の盤面で戦闘になったときの結果が表示されます。</li>
+        <li>AI の強さ: やさしい＝その場で良さそうな手を選ぶ（少し手加減する）、ふつう＝その場で一番良い手を選ぶ、つよい＝相手の手札を推測し、ラウンドの終わりまで先を読む。</li>
         <li>詳しいルールは <a href="https://github.com/tachan51/cardgame/blob/main/docs/rules.md" target="_blank" rel="noopener">ルール仕様書</a> を見てください。</li>
       </ul>
     </details>
   </div>`;
   root.querySelectorAll<HTMLSelectElement>('[data-sel]').forEach((sel) =>
     sel.addEventListener('change', () => {
-      const k = sel.dataset.sel as 'human' | 'ai' | 'first';
+      const k = sel.dataset.sel as 'human' | 'ai' | 'first' | 'level';
       if (k === 'first') choice.first = sel.value as 'A' | 'B' | 'random';
+      else if (k === 'level') choice.level = sel.value as AiLevel;
       else choice[k] = sel.value;
       renderSetup(root, game, hasSave, openBuilder);
     }),
@@ -81,7 +87,7 @@ export function renderSetup(root: HTMLElement, game: Game, hasSave: boolean, ope
   root.querySelector('[data-go]')!.addEventListener('click', () => {
     const h = findDeck(choice.human);
     const a = findDeck(choice.ai);
-    if (h && a) game.start(h, a, choice.first);
+    if (h && a) game.start(h, a, choice.first, choice.level);
   });
   root.querySelector('[data-resume]')?.addEventListener('click', () => game.resume());
   root.querySelector('[data-builder="new"]')?.addEventListener('click', () => openBuilder());
