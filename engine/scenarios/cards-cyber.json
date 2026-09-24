@@ -602,12 +602,12 @@
       "expect": {"A": {"leaders": [{}, {"grown": true, "used": false, "cost": 4}]}}
     },
     {
-      "name": "レイ 成長: 遊撃による移動（敵・味方とも）は数えず、自分のスペルで動かした味方・敵を数える",
+      "name": "レイ 成長: 自分の遊撃と自分のスペルによる移動（味方・敵とも）を数え、相手の遊撃は数えない",
       "refs": ["leader-rei", "13.4", "CY-13", "7.6"],
-      "setup": {"activePlayer": "B", "A": {"mana": 4, "hand": ["CY-13", "CY-13"], "leaders": ["leader-alto", {"id": "leader-rei", "progress": 2}], "board": {"2前": "KN-04", "4前": "CY-01"}}, "B": {"board": {"1前": "KN-19", "3前": "KN-03"}}},
+      "setup": {"activePlayer": "B", "A": {"mana": 4, "hand": ["CY-13", "CY-13"], "leaders": ["leader-alto", {"id": "leader-rei", "progress": 1}], "board": {"2前": "KN-04", "4前": "CY-01"}}, "B": {"board": {"1前": "KN-19", "3前": "KN-03"}}},
       "steps": [
         {"type": "mobileMove", "player": "B", "unit": "1前", "to": "1後"},
-        {"expect": {"A": {"leaders": [{}, {"progress": 2, "grown": false}]}, "B": {"leaders": [{"progress": 0}]}}},
+        {"expect": {"A": {"leaders": [{}, {"progress": 1, "grown": false}]}, "B": {"leaders": [{"progress": 1}]}}},
         {"type": "mobileMove", "player": "A", "unit": "4前", "to": "4後"},
         {"expect": {"A": {"leaders": [{}, {"progress": 2, "grown": false}]}}},
         {"type": "pass", "player": "B"},

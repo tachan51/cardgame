@@ -146,7 +146,7 @@ type LeaderAbility = { name: string; cost: number; targets?: TargetSpec[]; effec
 
 type GrowthCounter =
   | "allyEnduredCombatDamage"  // 味方が戦闘ダメージを耐えた回数（アルト）
-  | "unitMoved"                // 自分の効果でユニット（敵味方問わず）を移動させた回数（レイ）。遊撃による移動は数えない
+  | "unitMoved"                // 自分がユニット（敵味方問わず）を移動させた回数（レイ）。効果による移動と、自分の遊撃による移動
   | "leaderAbilityUsed";       // このリーダーの能力を使った回数（ノエル）
 ```
 

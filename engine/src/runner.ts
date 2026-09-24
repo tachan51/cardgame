@@ -678,7 +678,7 @@ export class Runner {
   }
 
   /** ユニットを移動させる（12章）。by は移動させたプレイヤー */
-  moveUnits(moves: { from: Located; to: number }[], by: PlayerId, byEffect = true): void {
+  moveUnits(moves: { from: Located; to: number }[], by: PlayerId): void {
     if (!moves.length) return;
     for (const m of moves) this.pl(m.from.p).board[m.from.i] = null;
     const events: GameEvent[] = [];
@@ -686,8 +686,8 @@ export class Runner {
       this.pl(m.from.p).board[m.to] = m.from.unit;
       this.log('move', { uid: m.from.unit.uid, card: m.from.unit.cardId, player: m.from.p, from: cellName(m.from.i), to: cellName(m.to), by });
       this.s.unitMoves = (this.s.unitMoves ?? 0) + 1;
-      // レイの成長条件: 自分のカード・能力の効果でユニットを移動させた回数（遊撃による移動は数えない）
-      if (byEffect) this.addProgress(by, 'unitMoved', 1);
+      // レイの成長条件: 自分がユニットを移動させた回数（カード・能力の効果と、自分の遊撃。敵味方問わず）
+      this.addProgress(by, 'unitMoved', 1);
       events.push({ type: 'move', uid: m.from.unit.uid, owner: m.from.unit.owner });
     }
     this.touch();

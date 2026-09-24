@@ -324,7 +324,10 @@ function unitHtml(r: Runner, u: Unit, pv: PreviewInfo | null): string {
   const dead = pv?.destroyed.has(u.uid);
   return `<div class="unit fac-${def.faction} ${u.owner === HUMAN ? 'mine' : 'theirs'}" data-card-id="${u.cardId}" data-uid="${u.uid}">
     <div class="uname">${esc(def.name)}${u.isToken ? ' <span class="tag">トークン</span>' : ''}</div>
-    <div class="stats"><span class="atk ${atk > base ? 'up' : atk < base ? 'down' : ''}">⚔${atk}</span> <span class="hp ${hp < max ? 'hurt' : max > (def.health ?? 0) ? 'up' : ''}">♥${hp}${hp < max ? `/${max}` : ''}</span>${u.shield ? ' <span class="shield" title="盾">🛡</span>' : ''}</div>
+    <div class="stats"><span class="atk ${atk > base ? 'up' : atk < base ? 'down' : ''}">⚔${atk}</span> <span class="hp ${hp < max ? 'hurt' : max > (def.health ?? 0) ? 'up' : ''}" title="残り体力${hp}（最大${max}）">♥${hp}</span>${u.shield ? ' <span class="shield" title="盾">🛡</span>' : ''}${
+      hp < max ? ` <span class="dmg" title="受けているダメージ（最大体力${max}、残り${hp}）">ダメージ${max - hp}</span>` : ''
+    }</div>
+    ${hp < max ? `<div class="hpbar" title="残り体力${hp} / 最大${max}"><div style="width:${Math.max(0, (hp / max) * 100)}%"></div></div>` : ''}
     <div class="kws">${kws
       .map((k) =>
         k === 'mobile'
@@ -338,7 +341,7 @@ function unitHtml(r: Runner, u: Unit, pv: PreviewInfo | null): string {
         return `<span class="kw act ${used ? 'used' : 'ready'}" title="${used ? 'このラウンドは起動能力を使用済み' : 'このラウンドはまだ起動能力を使える'}">起動${a.cost}${used ? '済' : ''}</span>`;
       })
       .join('')}</div>
-    ${dead ? '<div class="pv dead" title="このまま戦闘になると破壊される">☠</div>' : dmg ? `<div class="pv" title="このまま戦闘になったときのダメージ">-${dmg}</div>` : ''}
+    ${dead ? '<div class="pv dead" title="このまま戦闘になると破壊される予測">予測☠</div>' : dmg ? `<div class="pv" title="このまま戦闘になったときに受けるダメージの予測">予測-${dmg}</div>` : ''}
   </div>`;
 }
 
@@ -545,7 +548,7 @@ function onHover(e: MouseEvent, root: HTMLElement, s: GameState, r: Runner): voi
   let extra = '';
   if (loc) {
     const u = loc.unit;
-    extra = `<div class="small">${who(loc.p)}の${cellName(loc.i)}　⚔${r.attack(u)} ♥${r.health(u)}/${r.maxHealth(u)}${u.shield ? '　🛡盾' : ''}</div>
+    extra = `<div class="small">${who(loc.p)}の${cellName(loc.i)}　攻撃力${r.attack(u)}　体力 残り${r.health(u)}（最大${r.maxHealth(u)}${r.health(u) < r.maxHealth(u) ? `、ダメージ${r.maxHealth(u) - r.health(u)}` : ''}）${u.shield ? '　🛡盾' : ''}</div>
       <div class="small">${[...r.keywords(u)].filter((k) => k !== 'shield').map((k) => KEYWORD_LABEL[k]).join('・')}</div>
       ${u.mobileUsed ? '<div class="small muted">このラウンドは遊撃を使用済み</div>' : ''}
       ${u.activatedUsed.length ? '<div class="small muted">このラウンドは起動能力を使用済み</div>' : ''}`;

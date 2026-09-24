@@ -303,7 +303,7 @@ function mobileMove(r: Runner, p: PlayerId, uid: number, to: number): void {
   if (!Number.isInteger(to) || to < 0 || to >= CELLS || r.unitAt(p, to)) throw new IllegalAction('移動先が空きマスではありません');
   loc.unit.mobileUsed = true;
   r.log('mobile', { player: p, card: loc.unit.cardId });
-  r.moveUnits([{ from: loc, to }], p, false);
+  r.moveUnits([{ from: loc, to }], p);
 }
 
 function activate(r: Runner, a: Extract<Action, { type: 'activate' }>): void {
