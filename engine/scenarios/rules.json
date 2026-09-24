@@ -1,0 +1,1357 @@
+{
+  "description": "ルール仕様書の例と基本ルールのシナリオ",
+  "scenarios": [
+    {
+      "name": "17章 総合例（1レーン分の戦闘）",
+      "refs": [
+        "8.1",
+        "8.3",
+        "8.4",
+        "14",
+        "17"
+      ],
+      "setup": {
+        "A": {
+          "board": {
+            "3前": {
+              "card": "KN-19",
+              "attack": 1,
+              "health": 1,
+              "keywords": [
+                "pierce"
+              ]
+            },
+            "3後": {
+              "card": "KN-03",
+              "keywords": [
+                "firstStrike"
+              ]
+            }
+          }
+        },
+        "B": {
+          "board": {
+            "3前": {
+              "card": "KN-12",
+              "shield": true
+            },
+            "3後": "KN-03"
+          }
+        }
+      },
+      "steps": [
+        {
+          "do": "combat"
+        }
+      ],
+      "expect": {
+        "A": {
+          "life": 20,
+          "board": {
+            "3前": null,
+            "3後": {
+              "card": "KN-03",
+              "damage": 0
+            }
+          },
+          "trash": [
+            "KN-19"
+          ]
+        },
+        "B": {
+          "life": 20,
+          "board": {
+            "3前": {
+              "card": "KN-12",
+              "health": 1,
+              "damage": 4,
+              "shield": false
+            },
+            "3後": {
+              "damage": 0
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "貫通: 前列 → 後列 → 本体へ超えた分が流れる",
+      "refs": [
+        "8.4",
+        "14"
+      ],
+      "setup": {
+        "A": {
+          "board": {
+            "1前": "KN-23"
+          }
+        },
+        "B": {
+          "board": {
+            "1前": "KN-04",
+            "1後": "KN-05"
+          }
+        }
+      },
+      "steps": [
+        {
+          "do": "combat"
+        }
+      ],
+      "expect": {
+        "A": {
+          "board": {
+            "1前": {
+              "card": "KN-23",
+              "damage": 0
+            }
+          }
+        },
+        "B": {
+          "life": 15,
+          "board": {
+            "1前": null,
+            "1後": null
+          },
+          "trash": [
+            "KN-04",
+            "KN-05"
+          ]
+        }
+      }
+    },
+    {
+      "name": "盾で防いだら貫通しない。先制で攻撃したユニットは通常ステップで攻撃しない",
+      "refs": [
+        "8.1",
+        "14"
+      ],
+      "setup": {
+        "A": {
+          "board": {
+            "1前": "KN-23"
+          }
+        },
+        "B": {
+          "board": {
+            "1前": "KN-09",
+            "1後": "KN-05"
+          }
+        }
+      },
+      "steps": [
+        {
+          "do": "combat"
+        }
+      ],
+      "expect": {
+        "A": {
+          "board": {
+            "1前": null
+          },
+          "trash": [
+            "KN-23"
+          ]
+        },
+        "B": {
+          "life": 20,
+          "board": {
+            "1前": {
+              "card": "KN-09",
+              "shield": false,
+              "damage": 0
+            },
+            "1後": {
+              "damage": 0
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "同じ対象への攻撃は前列 → 後列の順に残り体力を割り当てる",
+      "refs": [
+        "8.4"
+      ],
+      "setup": {
+        "A": {
+          "board": {
+            "2前": "KN-04",
+            "2後": {
+              "card": "KN-03",
+              "attack": 2,
+              "keywords": [
+                "pierce"
+              ]
+            }
+          }
+        },
+        "B": {
+          "board": {
+            "2前": "KN-01"
+          }
+        }
+      },
+      "steps": [
+        {
+          "do": "combat"
+        }
+      ],
+      "expect": {
+        "A": {
+          "board": {
+            "2前": {
+              "damage": 2,
+              "health": 1
+            }
+          }
+        },
+        "B": {
+          "life": 16,
+          "board": {
+            "2前": null
+          }
+        }
+      }
+    },
+    {
+      "name": "後列の射撃なしは攻撃しない。攻撃力0は攻撃しない。空きレーンは本体へ",
+      "refs": [
+        "8.2",
+        "8.3"
+      ],
+      "setup": {
+        "A": {
+          "board": {
+            "1後": "KN-04",
+            "2前": "AC-13",
+            "3前": "KN-01",
+            "4後": "KN-03"
+          }
+        },
+        "B": {
+          "board": {}
+        }
+      },
+      "steps": [
+        {
+          "do": "combat"
+        }
+      ],
+      "expect": {
+        "B": {
+          "life": 16
+        }
+      }
+    },
+    {
+      "name": "双方のライフが同時に0以下: マイナスが大きい側の負け",
+      "refs": [
+        "9.3"
+      ],
+      "setup": {
+        "A": {
+          "life": 2,
+          "board": {
+            "1前": "KN-04"
+          }
+        },
+        "B": {
+          "life": 1,
+          "board": {
+            "2前": "KN-04"
+          }
+        }
+      },
+      "steps": [
+        {
+          "do": "combat"
+        }
+      ],
+      "expect": {
+        "A": {
+          "life": 0
+        },
+        "B": {
+          "life": -1
+        },
+        "result": {
+          "winner": "A",
+          "reason": "life"
+        }
+      }
+    },
+    {
+      "name": "双方のライフが同じ値で0以下なら引き分け",
+      "refs": [
+        "9.3"
+      ],
+      "setup": {
+        "A": {
+          "life": 1,
+          "board": {
+            "1前": "KN-04"
+          }
+        },
+        "B": {
+          "life": 1,
+          "board": {
+            "2前": "KN-04"
+          }
+        }
+      },
+      "steps": [
+        {
+          "do": "combat"
+        }
+      ],
+      "expect": {
+        "result": {
+          "winner": null,
+          "reason": "draw"
+        }
+      }
+    },
+    {
+      "name": "6.2 行動フェイズの流れ（双方が続けてパスしたら戦闘、次のラウンドは先手が入れ替わる）",
+      "refs": [
+        "6.1",
+        "6.2",
+        "6.4"
+      ],
+      "setup": {
+        "round": 3,
+        "A": {
+          "maxMana": 4,
+          "hand": [
+            "KN-03",
+            "AC-05"
+          ]
+        },
+        "B": {
+          "maxMana": 3,
+          "hand": [
+            "KN-04"
+          ]
+        }
+      },
+      "steps": [
+        {
+          "type": "playUnit",
+          "player": "A",
+          "card": "KN-03",
+          "cell": "1前"
+        },
+        {
+          "expect": {
+            "activePlayer": "B",
+            "A": {
+              "mana": 2
+            }
+          }
+        },
+        {
+          "type": "pass",
+          "player": "B"
+        },
+        {
+          "expect": {
+            "activePlayer": "A",
+            "passStreak": 1
+          }
+        },
+        {
+          "type": "castSpell",
+          "player": "A",
+          "card": "AC-05"
+        },
+        {
+          "expect": {
+            "passStreak": 0,
+            "A": {
+              "hand": [
+                "KN-03"
+              ],
+              "spellsCast": 1
+            }
+          }
+        },
+        {
+          "type": "playUnit",
+          "player": "B",
+          "card": "KN-04",
+          "cell": "1前"
+        },
+        {
+          "type": "pass",
+          "player": "A"
+        },
+        {
+          "expect": {
+            "round": 3
+          }
+        },
+        {
+          "type": "pass",
+          "player": "B"
+        }
+      ],
+      "expect": {
+        "round": 4,
+        "firstPlayer": "B",
+        "activePlayer": "B",
+        "passStreak": 0,
+        "A": {
+          "maxMana": 5,
+          "mana": 5,
+          "reserve": 0,
+          "board": {
+            "1前": null
+          },
+          "trash": [
+            "AC-05",
+            "KN-03"
+          ],
+          "handCount": 2
+        },
+        "B": {
+          "maxMana": 4,
+          "mana": 4,
+          "reserve": 1,
+          "board": {
+            "1前": {
+              "card": "KN-04",
+              "health": 1
+            }
+          },
+          "handCount": 1
+        }
+      }
+    },
+    {
+      "name": "16.3 マナの例（予備マナの加算と上限）",
+      "refs": [
+        "6.1",
+        "16.1",
+        "16.2",
+        "16.3"
+      ],
+      "setup": {
+        "round": 1,
+        "A": {
+          "hand": [
+            "KN-04"
+          ],
+          "leaders": [
+            {
+              "id": "leader-alto",
+              "costMod": -2
+            },
+            "leader-rei"
+          ]
+        },
+        "B": {}
+      },
+      "steps": [
+        {
+          "type": "pass",
+          "player": "A"
+        },
+        {
+          "type": "pass",
+          "player": "B"
+        },
+        {
+          "expect": {
+            "round": 2,
+            "firstPlayer": "B",
+            "A": {
+              "maxMana": 2,
+              "mana": 2,
+              "reserve": 1
+            },
+            "B": {
+              "reserve": 1
+            }
+          }
+        },
+        {
+          "type": "pass",
+          "player": "B"
+        },
+        {
+          "type": "playUnit",
+          "player": "A",
+          "card": "KN-04",
+          "cell": "1後"
+        },
+        {
+          "type": "pass",
+          "player": "B"
+        },
+        {
+          "type": "pass",
+          "player": "A"
+        },
+        {
+          "expect": {
+            "round": 3,
+            "A": {
+              "maxMana": 3,
+              "reserve": 1
+            },
+            "B": {
+              "reserve": 3
+            }
+          }
+        },
+        {
+          "type": "leaderAbility",
+          "player": "A",
+          "leader": 0,
+          "reserve": 1,
+          "targets": {
+            "ally": {
+              "unit": "A:1後"
+            }
+          }
+        },
+        {
+          "expect": {
+            "A": {
+              "mana": 2,
+              "reserve": 0,
+              "leaders": [
+                {
+                  "used": true
+                }
+              ],
+              "board": {
+                "1後": {
+                  "shield": true
+                }
+              }
+            }
+          }
+        },
+        {
+          "type": "pass",
+          "player": "B"
+        },
+        {
+          "type": "pass",
+          "player": "A"
+        },
+        {
+          "expect": {
+            "round": 4,
+            "A": {
+              "maxMana": 4,
+              "reserve": 2
+            },
+            "B": {
+              "reserve": 4
+            }
+          }
+        },
+        {
+          "type": "pass",
+          "player": "B"
+        },
+        {
+          "type": "pass",
+          "player": "A"
+        }
+      ],
+      "expect": {
+        "round": 5,
+        "A": {
+          "maxMana": 5,
+          "mana": 5,
+          "reserve": 5
+        },
+        "B": {
+          "reserve": 5
+        }
+      }
+    },
+    {
+      "name": "14.1 遅延: マスを指定した効果は移動で避けられる",
+      "refs": [
+        "14.1"
+      ],
+      "setup": {
+        "A": {
+          "maxMana": 5,
+          "hand": [
+            "CY-17"
+          ]
+        },
+        "B": {
+          "board": {
+            "2前": "CY-01"
+          }
+        }
+      },
+      "steps": [
+        {
+          "type": "castSpell",
+          "player": "A",
+          "card": "CY-17",
+          "targets": {
+            "cell": {
+              "cell": "B:2前"
+            }
+          }
+        },
+        {
+          "expect": {
+            "activePlayer": "B",
+            "A": {
+              "delayed": [
+                "CY-17"
+              ],
+              "trash": [],
+              "spellsCast": 1
+            }
+          }
+        },
+        {
+          "type": "mobileMove",
+          "player": "B",
+          "unit": "2前",
+          "to": "4後"
+        },
+        {
+          "expect": {
+            "activePlayer": "B",
+            "passStreak": 0
+          },
+          "note": "A の手番の始めに遅延が発動し、それが A の手番のアクションになるので、行動権は B に戻っている"
+        }
+      ],
+      "expect": {
+        "A": {
+          "delayed": [],
+          "trash": [
+            "CY-17"
+          ]
+        },
+        "B": {
+          "board": {
+            "2前": null,
+            "4後": {
+              "card": "CY-01",
+              "damage": 0
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "14.1 遅延: ユニットを対象にした効果は移動しても追いかける",
+      "refs": [
+        "14.1"
+      ],
+      "setup": {
+        "A": {
+          "hand": [
+            "AC-02"
+          ],
+          "maxMana": 2
+        },
+        "B": {
+          "board": {
+            "2前": "CY-08"
+          }
+        }
+      },
+      "steps": [
+        {
+          "type": "castSpell",
+          "player": "A",
+          "card": "AC-02",
+          "targets": {
+            "target": {
+              "unit": "B:2前"
+            }
+          }
+        },
+        {
+          "type": "mobileMove",
+          "player": "B",
+          "unit": "2前",
+          "to": "4後"
+        }
+      ],
+      "expect": {
+        "activePlayer": "B",
+        "B": {
+          "board": {
+            "4後": null
+          },
+          "trash": [
+            "CY-08"
+          ]
+        },
+        "A": {
+          "trash": [
+            "AC-02"
+          ]
+        }
+      }
+    },
+    {
+      "name": "14.1 遅延: 対象が本体の場合",
+      "refs": [
+        "14.1"
+      ],
+      "setup": {
+        "A": {
+          "hand": [
+            "AC-02"
+          ],
+          "maxMana": 2
+        },
+        "B": {}
+      },
+      "steps": [
+        {
+          "type": "castSpell",
+          "player": "A",
+          "card": "AC-02",
+          "targets": {
+            "target": {
+              "player": "B"
+            }
+          }
+        },
+        {
+          "type": "pass",
+          "player": "B"
+        },
+        {
+          "expect": {
+            "B": {
+              "life": 18
+            },
+            "activePlayer": "B",
+            "passStreak": 0
+          }
+        },
+        {
+          "type": "pass",
+          "player": "B"
+        },
+        {
+          "expect": {
+            "round": 1,
+            "activePlayer": "A",
+            "passStreak": 1
+          }
+        }
+      ]
+    },
+    {
+      "name": "14.2 即効: 追加の手番を得る",
+      "refs": [
+        "14.2"
+      ],
+      "setup": {
+        "A": {
+          "maxMana": 3,
+          "hand": [
+            "AC-07",
+            "KN-03"
+          ]
+        },
+        "B": {}
+      },
+      "steps": [
+        {
+          "type": "castSpell",
+          "player": "A",
+          "card": "AC-07"
+        },
+        {
+          "expect": {
+            "activePlayer": "A",
+            "A": {
+              "reserve": 2,
+              "mana": 2
+            }
+          }
+        },
+        {
+          "type": "playUnit",
+          "player": "A",
+          "card": "KN-03",
+          "cell": "1後"
+        }
+      ],
+      "expect": {
+        "activePlayer": "B"
+      }
+    },
+    {
+      "name": "相手が即効を使えば、遅延の発動までに複数の手番を行える",
+      "refs": [
+        "14.1",
+        "14.2"
+      ],
+      "setup": {
+        "A": {
+          "maxMana": 5,
+          "hand": [
+            "CY-17"
+          ]
+        },
+        "B": {
+          "hand": [
+            "AC-07"
+          ],
+          "board": {
+            "1前": "CY-01"
+          }
+        }
+      },
+      "steps": [
+        {
+          "type": "castSpell",
+          "player": "A",
+          "card": "CY-17",
+          "targets": {
+            "cell": {
+              "cell": "B:1前"
+            }
+          }
+        },
+        {
+          "type": "castSpell",
+          "player": "B",
+          "card": "AC-07"
+        },
+        {
+          "expect": {
+            "activePlayer": "B",
+            "A": {
+              "delayed": [
+                "CY-17"
+              ]
+            }
+          }
+        },
+        {
+          "type": "mobileMove",
+          "player": "B",
+          "unit": "1前",
+          "to": "3後"
+        }
+      ],
+      "expect": {
+        "activePlayer": "B",
+        "A": {
+          "delayed": [],
+          "trash": [
+            "CY-17"
+          ]
+        },
+        "B": {
+          "board": {
+            "3後": {
+              "card": "CY-01",
+              "damage": 0
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "10.4 一時的な体力が受け止めたダメージは、ラウンドの終わりに一緒に消える",
+      "refs": [
+        "10.4"
+      ],
+      "setup": {
+        "A": {
+          "board": {
+            "1前": {
+              "card": "KN-04",
+              "tempHealth": 3
+            }
+          }
+        },
+        "B": {
+          "board": {
+            "1前": {
+              "card": "KN-19",
+              "attack": 1
+            }
+          }
+        }
+      },
+      "steps": [
+        {
+          "do": "combat"
+        },
+        {
+          "expect": {
+            "A": {
+              "board": {
+                "1前": {
+                  "health": 2,
+                  "maxHealth": 6
+                }
+              }
+            }
+          }
+        },
+        {
+          "do": "roundEnd"
+        }
+      ],
+      "expect": {
+        "A": {
+          "board": {
+            "1前": {
+              "health": 2,
+              "maxHealth": 3,
+              "damage": 1
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "11.5 常時効果の体力がなくなって残り体力が0以下になったユニットは破壊される",
+      "refs": [
+        "11.5",
+        "11.7"
+      ],
+      "setup": {
+        "A": {
+          "hand": [
+            "CY-02"
+          ],
+          "board": {
+            "1前": {
+              "card": "KN-01",
+              "damage": 2
+            },
+            "2前": "KN-08"
+          }
+        },
+        "B": {}
+      },
+      "steps": [
+        {
+          "expect": {
+            "A": {
+              "board": {
+                "1前": {
+                  "attack": 3,
+                  "health": 1
+                }
+              }
+            }
+          }
+        },
+        {
+          "type": "castSpell",
+          "player": "A",
+          "card": "CY-02",
+          "targets": {
+            "ally": {
+              "unit": "A:2前"
+            }
+          }
+        }
+      ],
+      "expect": {
+        "activePlayer": "A",
+        "A": {
+          "board": {
+            "1前": null,
+            "2前": null
+          },
+          "hand": [
+            "KN-08"
+          ],
+          "trash": [
+            "CY-02",
+            "KN-01"
+          ]
+        }
+      }
+    },
+    {
+      "name": "開始フェイズ: 手札が上限のときに引いたカードはトラッシュへ",
+      "refs": [
+        "6.1"
+      ],
+      "setup": {
+        "A": {
+          "hand": [
+            "KN-01",
+            "KN-01",
+            "KN-01",
+            "KN-03",
+            "KN-03",
+            "KN-03",
+            "KN-04",
+            "KN-04",
+            "KN-04",
+            "KN-05"
+          ],
+          "deck": [
+            "KN-09",
+            "KN-10"
+          ]
+        },
+        "B": {}
+      },
+      "steps": [
+        {
+          "do": "endRound"
+        }
+      ],
+      "expect": {
+        "round": 2,
+        "A": {
+          "handCount": 10,
+          "trash": [
+            "KN-09"
+          ],
+          "deckTop": [
+            "KN-10"
+          ]
+        }
+      }
+    },
+    {
+      "name": "開始フェイズ: 山札が0枚で引けないプレイヤーの負け",
+      "refs": [
+        "6.1",
+        "9.1"
+      ],
+      "setup": {
+        "A": {
+          "deck": []
+        },
+        "B": {}
+      },
+      "steps": [
+        {
+          "type": "pass",
+          "player": "A"
+        },
+        {
+          "type": "pass",
+          "player": "B"
+        }
+      ],
+      "expect": {
+        "result": {
+          "winner": "B",
+          "reason": "deckOut"
+        }
+      }
+    },
+    {
+      "name": "双方の山札が同時に尽きたら引き分け",
+      "refs": [
+        "9.3"
+      ],
+      "setup": {
+        "A": {
+          "deck": []
+        },
+        "B": {
+          "deck": []
+        }
+      },
+      "steps": [
+        {
+          "do": "endRound"
+        }
+      ],
+      "expect": {
+        "result": {
+          "winner": null,
+          "reason": "deckOut"
+        }
+      }
+    },
+    {
+      "name": "前進と機動の制限",
+      "refs": [
+        "7.3",
+        "7.6",
+        "14"
+      ],
+      "setup": {
+        "A": {
+          "board": {
+            "1前": "KN-03",
+            "1後": "KN-04",
+            "2後": "CY-01"
+          }
+        },
+        "B": {}
+      },
+      "steps": [
+        {
+          "type": "advance",
+          "player": "A",
+          "cell": "1後",
+          "illegal": true,
+          "note": "前列が空いていない"
+        },
+        {
+          "type": "advance",
+          "player": "A",
+          "cell": "1前",
+          "illegal": true,
+          "note": "前列のユニットは前進しない"
+        },
+        {
+          "type": "mobileMove",
+          "player": "A",
+          "unit": "1前",
+          "to": "3前",
+          "illegal": true,
+          "note": "機動を持たない"
+        },
+        {
+          "type": "mobileMove",
+          "player": "A",
+          "unit": "2後",
+          "to": "1前",
+          "illegal": true,
+          "note": "空きマスではない"
+        },
+        {
+          "type": "advance",
+          "player": "A",
+          "cell": "2後"
+        },
+        {
+          "type": "pass",
+          "player": "B"
+        },
+        {
+          "type": "mobileMove",
+          "player": "A",
+          "unit": "2前",
+          "to": "4後"
+        },
+        {
+          "type": "pass",
+          "player": "B"
+        },
+        {
+          "type": "mobileMove",
+          "player": "A",
+          "unit": "4後",
+          "to": "3後",
+          "illegal": true,
+          "note": "機動は1ラウンド1回"
+        }
+      ],
+      "expect": {
+        "A": {
+          "board": {
+            "2後": null,
+            "2前": null,
+            "4後": {
+              "card": "CY-01"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "行えないアクション（マナ不足・対象なし・行動権なし・起動は1ラウンド1回）",
+      "refs": [
+        "7",
+        "7.2",
+        "15.2"
+      ],
+      "setup": {
+        "A": {
+          "maxMana": 2,
+          "reserve": 0,
+          "hand": [
+            "KN-09",
+            "CY-02",
+            "KN-06"
+          ],
+          "board": {
+            "1後": "KN-10"
+          }
+        },
+        "B": {
+          "board": {
+            "1後": "KN-04"
+          }
+        }
+      },
+      "steps": [
+        {
+          "type": "playUnit",
+          "player": "A",
+          "card": "KN-09",
+          "cell": "1前",
+          "illegal": true,
+          "note": "マナが足りない"
+        },
+        {
+          "type": "castSpell",
+          "player": "A",
+          "card": "CY-02",
+          "illegal": true,
+          "note": "対象を選んでいない"
+        },
+        {
+          "type": "castSpell",
+          "player": "A",
+          "card": "KN-06",
+          "enhance": true,
+          "targets": {
+            "ally": {
+              "unit": "A:1後"
+            }
+          },
+          "illegal": true,
+          "note": "強化のコストが足りない"
+        },
+        {
+          "type": "pass",
+          "player": "B",
+          "illegal": true,
+          "note": "行動権がない"
+        },
+        {
+          "type": "castSpell",
+          "player": "A",
+          "card": "CY-02",
+          "targets": {
+            "ally": {
+              "unit": "B:1後"
+            }
+          },
+          "illegal": true,
+          "note": "敵は選べない"
+        },
+        {
+          "type": "activate",
+          "player": "A",
+          "unit": "1後"
+        },
+        {
+          "type": "pass",
+          "player": "B"
+        },
+        {
+          "type": "activate",
+          "player": "A",
+          "unit": "1後",
+          "illegal": true,
+          "note": "1ラウンド1回"
+        }
+      ],
+      "expect": {
+        "A": {
+          "mana": 0,
+          "board": {
+            "1後": {
+              "attack": 5
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "スペルのコストは通常マナだけ、強化のコストは予備マナからも払える",
+      "refs": [
+        "15.1",
+        "16.2"
+      ],
+      "setup": {
+        "A": {
+          "maxMana": 2,
+          "reserve": 2,
+          "hand": [
+            "KN-06"
+          ],
+          "board": {
+            "1前": "KN-04"
+          }
+        },
+        "B": {}
+      },
+      "steps": [
+        {
+          "type": "castSpell",
+          "player": "A",
+          "card": "KN-06",
+          "enhance": true,
+          "targets": {
+            "ally": {
+              "unit": "A:1前"
+            }
+          }
+        }
+      ],
+      "expect": {
+        "A": {
+          "mana": 0,
+          "reserve": 0,
+          "board": {
+            "1前": {
+              "health": 6
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "予備マナの内訳を指定して払う",
+      "refs": [
+        "16.2"
+      ],
+      "setup": {
+        "A": {
+          "maxMana": 4,
+          "reserve": 2,
+          "hand": [
+            "KN-06"
+          ],
+          "board": {
+            "1前": "KN-04"
+          }
+        },
+        "B": {}
+      },
+      "steps": [
+        {
+          "type": "castSpell",
+          "player": "A",
+          "card": "KN-06",
+          "enhance": true,
+          "reserve": 1,
+          "targets": {
+            "ally": {
+              "unit": "A:1前"
+            }
+          }
+        }
+      ],
+      "expect": {
+        "A": {
+          "mana": 1,
+          "reserve": 1
+        }
+      }
+    }
+  ]
+}
