@@ -304,7 +304,7 @@ export type Phase = 'mulligan' | 'action' | 'gameOver';
 
 export interface GameResult {
   winner: PlayerId | null;
-  reason: 'life' | 'deckOut' | 'draw' | 'turnLimit';
+  reason: 'life' | 'deckOut' | 'draw';
 }
 
 /** 効果の処理中に選択が必要になったとき（山札の上から見て1枚選ぶなど） */

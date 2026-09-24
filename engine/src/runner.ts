@@ -1172,7 +1172,7 @@ export class Runner {
     return true;
   }
 
-  endGame(winner: PlayerId | null, reason: 'life' | 'deckOut' | 'draw' | 'turnLimit'): void {
+  endGame(winner: PlayerId | null, reason: 'life' | 'deckOut' | 'draw'): void {
     this.s.result = { winner, reason };
     this.s.phase = 'gameOver';
     this.queue = [];
