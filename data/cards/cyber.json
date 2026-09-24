@@ -1,0 +1,957 @@
+{
+  "formatVersion": 1,
+  "faction": {
+    "id": "cyber",
+    "name": "電脳都市"
+  },
+  "leader": {
+    "id": "leader-rei",
+    "name": "レイ",
+    "title": "天才ハッカー",
+    "faction": "cyber",
+    "ability": {
+      "name": "強制転送",
+      "cost": 5,
+      "targets": [
+        {
+          "id": "unit",
+          "kind": "unit"
+        },
+        {
+          "id": "cell",
+          "kind": "cell",
+          "cellOwner": {
+            "ownerOf": "unit"
+          },
+          "where": {
+            "empty": true
+          }
+        }
+      ],
+      "effects": [
+        {
+          "op": "move",
+          "target": {
+            "ref": "unit"
+          },
+          "to": {
+            "ref": "cell"
+          }
+        }
+      ]
+    },
+    "growth": {
+      "counter": "enemyMoved",
+      "threshold": 4
+    },
+    "grown": {
+      "ability": {
+        "name": "強制転送",
+        "cost": 4,
+        "targets": [
+          {
+            "id": "a",
+            "kind": "cell",
+            "cellOwner": "any"
+          },
+          {
+            "id": "b",
+            "kind": "cell",
+            "cellOwner": {
+              "sameOwnerAs": "a"
+            }
+          }
+        ],
+        "effects": [
+          {
+            "op": "swapCells",
+            "a": {
+              "ref": "a"
+            },
+            "b": {
+              "ref": "b"
+            }
+          }
+        ]
+      }
+    },
+    "text": "**強制転送**（5）: ユニット1体を、その持ち主の盤面の空きマスへ移動させる。成長条件: 敵ユニットを合計4回移動させる。成長後: **強制転送**（4）: 同じプレイヤーの盤面のマスを2つ選び、その中身を入れ替える（空きマスも選べる。片方が空きマスなら、もう片方のユニットをそこへ移動させることになる）"
+  },
+  "cards": [
+    {
+      "id": "CY-01",
+      "name": "偵察ドローン",
+      "faction": "cyber",
+      "type": "unit",
+      "cost": 1,
+      "attack": 1,
+      "health": 1,
+      "keywords": [
+        "mobile"
+      ],
+      "text": ""
+    },
+    {
+      "id": "CY-02",
+      "name": "緊急ログアウト",
+      "faction": "cyber",
+      "type": "spell",
+      "cost": 1,
+      "keywords": [
+        "quick"
+      ],
+      "targets": [
+        {
+          "id": "ally",
+          "kind": "unit",
+          "side": "ally"
+        }
+      ],
+      "effects": [
+        {
+          "op": "returnToHand",
+          "target": {
+            "ref": "ally"
+          }
+        }
+      ],
+      "text": "味方ユニット1体を、手札に戻す"
+    },
+    {
+      "id": "CY-03",
+      "name": "警備ドローンMk-II",
+      "faction": "cyber",
+      "type": "unit",
+      "cost": 2,
+      "attack": 2,
+      "health": 1,
+      "keywords": [
+        "mobile"
+      ],
+      "abilities": [
+        {
+          "kind": "activated",
+          "cost": 1,
+          "effects": [
+            {
+              "op": "grantKeyword",
+              "target": "self",
+              "keywords": [
+                "firstStrike"
+              ],
+              "duration": "thisRound"
+            }
+          ]
+        }
+      ],
+      "text": "起動（1）: このラウンド中、このユニットは先制を得る"
+    },
+    {
+      "id": "CY-04",
+      "name": "ストリートサムライ",
+      "faction": "cyber",
+      "type": "unit",
+      "cost": 2,
+      "attack": 3,
+      "health": 2,
+      "keywords": [
+        "firstStrike"
+      ],
+      "text": ""
+    },
+    {
+      "id": "CY-05",
+      "name": "ジャミング技師",
+      "faction": "cyber",
+      "type": "unit",
+      "cost": 2,
+      "attack": 1,
+      "health": 3,
+      "abilities": [
+        {
+          "kind": "trigger",
+          "when": "onPlay",
+          "targets": [
+            {
+              "id": "enemy",
+              "kind": "unit",
+              "side": "enemy"
+            }
+          ],
+          "effects": [
+            {
+              "op": "buff",
+              "target": {
+                "ref": "enemy"
+              },
+              "attack": -2,
+              "duration": "thisRound"
+            }
+          ]
+        },
+        {
+          "kind": "activated",
+          "cost": 2,
+          "targets": [
+            {
+              "id": "enemy",
+              "kind": "unit",
+              "side": "enemy"
+            }
+          ],
+          "effects": [
+            {
+              "op": "buff",
+              "target": {
+                "ref": "enemy"
+              },
+              "attack": -2,
+              "duration": "thisRound"
+            }
+          ]
+        }
+      ],
+      "text": "配置時: 敵ユニット1体を、このラウンド中攻撃力−2。起動（2）: 同じ効果"
+    },
+    {
+      "id": "CY-06",
+      "name": "データ検索",
+      "faction": "cyber",
+      "type": "spell",
+      "cost": 2,
+      "keywords": [
+        "quick"
+      ],
+      "effects": [
+        {
+          "op": "lookAtTopPickOne",
+          "look": 2
+        }
+      ],
+      "enhance": {
+        "cost": 1,
+        "mode": "replace",
+        "appliesTo": "effects",
+        "effects": [
+          {
+            "op": "lookAtTopPickOne",
+            "look": 3
+          }
+        ]
+      },
+      "text": "山札の上から2枚を見て、1枚を手札に加え、残りは元の順番で山札の上に戻す。強化（1）: 代わりに上から3枚を見る"
+    },
+    {
+      "id": "CY-07",
+      "name": "オーバークロック",
+      "faction": "cyber",
+      "type": "spell",
+      "cost": 2,
+      "targets": [
+        {
+          "id": "unit",
+          "kind": "unit"
+        }
+      ],
+      "effects": [
+        {
+          "op": "buff",
+          "target": {
+            "ref": "unit"
+          },
+          "attack": 4,
+          "duration": "thisRound"
+        },
+        {
+          "op": "atRoundEnd",
+          "effects": [
+            {
+              "op": "damage",
+              "target": {
+                "ref": "unit"
+              },
+              "amount": 2
+            }
+          ]
+        }
+      ],
+      "text": "ユニット1体を、このラウンド中+4/+0。このラウンド終了時、そのユニットに2ダメージ"
+    },
+    {
+      "id": "CY-08",
+      "name": "ゴーストハッカー",
+      "faction": "cyber",
+      "type": "unit",
+      "cost": 3,
+      "attack": 3,
+      "health": 1,
+      "keywords": [
+        "ranged",
+        "mobile"
+      ],
+      "text": ""
+    },
+    {
+      "id": "CY-09",
+      "name": "小型転送",
+      "faction": "cyber",
+      "type": "spell",
+      "cost": 2,
+      "keywords": [
+        "delay"
+      ],
+      "targets": [
+        {
+          "id": "unit",
+          "kind": "unit"
+        },
+        {
+          "id": "cell",
+          "kind": "cell",
+          "cellOwner": {
+            "ownerOf": "unit"
+          },
+          "where": {
+            "empty": true
+          }
+        }
+      ],
+      "effects": [
+        {
+          "op": "delay",
+          "effects": [
+            {
+              "op": "if",
+              "subject": {
+                "ref": "unit"
+              },
+              "condition": {
+                "attackAtMost": 3
+              },
+              "then": [
+                {
+                  "op": "move",
+                  "target": {
+                    "ref": "unit"
+                  },
+                  "to": {
+                    "ref": "cell"
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "text": "ユニット1体と、その持ち主の盤面の空きマス1つを指定する。遅延: そのユニットの攻撃力が3以下なら、指定したマスへ移動させる（空きマスでなくなっていれば何もしない）"
+    },
+    {
+      "id": "CY-10",
+      "name": "路地裏の運び屋",
+      "faction": "cyber",
+      "type": "unit",
+      "cost": 3,
+      "attack": 1,
+      "health": 2,
+      "keywords": [
+        "mobile"
+      ],
+      "abilities": [
+        {
+          "kind": "trigger",
+          "when": "onPlay",
+          "effects": [
+            {
+              "op": "draw",
+              "count": 1
+            }
+          ]
+        }
+      ],
+      "text": "配置時: カードを1枚引く"
+    },
+    {
+      "id": "CY-11",
+      "name": "EMPグレネード",
+      "faction": "cyber",
+      "type": "spell",
+      "cost": 4,
+      "keywords": [
+        "delay"
+      ],
+      "targets": [
+        {
+          "id": "lane",
+          "kind": "lane"
+        }
+      ],
+      "effects": [
+        {
+          "op": "delay",
+          "effects": [
+            {
+              "op": "damage",
+              "target": {
+                "units": {
+                  "side": "enemy",
+                  "lane": {
+                    "ref": "lane"
+                  }
+                }
+              },
+              "amount": 2
+            }
+          ]
+        }
+      ],
+      "enhance": {
+        "cost": 2,
+        "mode": "replace",
+        "appliesTo": "effects",
+        "effects": [
+          {
+            "op": "delay",
+            "effects": [
+              {
+                "op": "damage",
+                "target": {
+                  "units": {
+                    "side": "enemy",
+                    "lane": {
+                      "ref": "lane"
+                    }
+                  }
+                },
+                "amount": 3
+              }
+            ]
+          }
+        ]
+      },
+      "text": "レーンを1つ指定する。遅延: そのレーンの敵ユニットすべてに2ダメージ。強化（2）: 代わりに3ダメージ"
+    },
+    {
+      "id": "CY-12",
+      "name": "狙撃手ヴァイパー",
+      "faction": "cyber",
+      "type": "unit",
+      "cost": 4,
+      "attack": 3,
+      "health": 3,
+      "keywords": [
+        "ranged",
+        "firstStrike"
+      ],
+      "text": ""
+    },
+    {
+      "id": "CY-13",
+      "name": "座標ズレ",
+      "faction": "cyber",
+      "type": "spell",
+      "cost": 2,
+      "targets": [
+        {
+          "id": "unit",
+          "kind": "unit"
+        }
+      ],
+      "effects": [
+        {
+          "op": "moveToOtherRow",
+          "target": {
+            "ref": "unit"
+          }
+        }
+      ],
+      "text": "ユニット1体を、同じレーンのもう一方の列へ移動させる（そのマスが空きマスの場合のみ）"
+    },
+    {
+      "id": "CY-14",
+      "name": "攻性防壁",
+      "faction": "cyber",
+      "type": "unit",
+      "cost": 4,
+      "attack": 0,
+      "health": 8,
+      "abilities": [
+        {
+          "kind": "trigger",
+          "when": "onEnemyMove",
+          "effects": [
+            {
+              "op": "damage",
+              "target": "eventUnit",
+              "amount": 1
+            }
+          ]
+        }
+      ],
+      "text": "敵ユニットが移動するたび、そのユニットに1ダメージ"
+    },
+    {
+      "id": "CY-15",
+      "name": "ハッキング網",
+      "faction": "cyber",
+      "type": "spell",
+      "cost": 2,
+      "targets": [
+        {
+          "id": "unit",
+          "kind": "unit",
+          "side": "ally"
+        },
+        {
+          "id": "cell",
+          "kind": "cell",
+          "cellOwner": "ally",
+          "where": {
+            "empty": true
+          }
+        }
+      ],
+      "effects": [
+        {
+          "op": "move",
+          "target": {
+            "ref": "unit"
+          },
+          "to": {
+            "ref": "cell"
+          }
+        }
+      ],
+      "enhance": {
+        "cost": 2,
+        "mode": "replace",
+        "appliesTo": "effects",
+        "targets": [
+          {
+            "id": "unit",
+            "kind": "unit",
+            "side": "any"
+          },
+          {
+            "id": "cell",
+            "kind": "cell",
+            "cellOwner": {
+              "ownerOf": "unit"
+            },
+            "where": {
+              "empty": true
+            }
+          }
+        ],
+        "effects": [
+          {
+            "op": "move",
+            "target": {
+              "ref": "unit"
+            },
+            "to": {
+              "ref": "cell"
+            }
+          }
+        ]
+      },
+      "text": "味方ユニット1体を、自分の盤面の空きマスへ移動させる。強化（2）: 代わりに、敵ユニット1体を相手の盤面の空きマスへ移動させてもよい"
+    },
+    {
+      "id": "CY-16",
+      "name": "ドローン管制官",
+      "faction": "cyber",
+      "type": "unit",
+      "cost": 5,
+      "attack": 3,
+      "health": 5,
+      "abilities": [
+        {
+          "kind": "trigger",
+          "when": "onPlay",
+          "effects": [
+            {
+              "op": "summon",
+              "cardId": "CY-01",
+              "at": {
+                "cellsRelative": "leftRight"
+              }
+            }
+          ]
+        },
+        {
+          "kind": "activated",
+          "cost": 2,
+          "targets": [
+            {
+              "id": "cell",
+              "kind": "cell",
+              "cellOwner": "ally",
+              "where": {
+                "empty": true
+              }
+            }
+          ],
+          "effects": [
+            {
+              "op": "summon",
+              "cardId": "CY-01",
+              "at": {
+                "ref": "cell"
+              }
+            }
+          ]
+        }
+      ],
+      "text": "配置時: 左右隣のマスに「偵察ドローン」（CY-01）を1体ずつ出す（空きマスでなければ出さない）。起動（2）: 自分の空きマス1つに偵察ドローンを出す"
+    },
+    {
+      "id": "CY-17",
+      "name": "軌道レーザー照準",
+      "faction": "cyber",
+      "type": "spell",
+      "cost": 3,
+      "keywords": [
+        "delay"
+      ],
+      "targets": [
+        {
+          "id": "cell",
+          "kind": "cell",
+          "cellOwner": "enemy"
+        }
+      ],
+      "effects": [
+        {
+          "op": "delay",
+          "effects": [
+            {
+              "op": "damage",
+              "target": {
+                "ref": "cell"
+              },
+              "amount": 3,
+              "times": 1
+            }
+          ]
+        }
+      ],
+      "enhance": {
+        "cost": 2,
+        "mode": "replace",
+        "appliesTo": "effects",
+        "effects": [
+          {
+            "op": "delay",
+            "effects": [
+              {
+                "op": "damage",
+                "target": {
+                  "ref": "cell"
+                },
+                "amount": 3,
+                "times": 2
+              }
+            ]
+          }
+        ]
+      },
+      "text": "相手の盤面のマスを1つ指定する。遅延: そのマスにいるユニットに3ダメージを1回与える。強化（2）: 代わりに3ダメージを2回与える"
+    },
+    {
+      "id": "CY-18",
+      "name": "サイバー忍者",
+      "faction": "cyber",
+      "type": "unit",
+      "cost": 5,
+      "attack": 4,
+      "health": 3,
+      "keywords": [
+        "firstStrike",
+        "mobile"
+      ],
+      "abilities": [
+        {
+          "kind": "activated",
+          "cost": 2,
+          "effects": [
+            {
+              "op": "delay",
+              "effects": [
+                {
+                  "op": "damage",
+                  "target": {
+                    "cell": {
+                      "owner": "enemy",
+                      "lane": {
+                        "laneOf": "self"
+                      },
+                      "row": "back"
+                    }
+                  },
+                  "amount": 1
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "text": "起動（2）: 遅延: このユニットがいるレーンの、相手の後列のユニットに1ダメージ"
+    },
+    {
+      "id": "CY-19",
+      "name": "電脳戦車「ベヒモス」",
+      "faction": "cyber",
+      "type": "unit",
+      "cost": 6,
+      "attack": 8,
+      "health": 5,
+      "abilities": [
+        {
+          "kind": "activated",
+          "cost": 3,
+          "effects": [
+            {
+              "op": "grantKeyword",
+              "target": "self",
+              "keywords": [
+                "ranged",
+                "mobile",
+                "firstStrike",
+                "pierce"
+              ],
+              "duration": "thisRound"
+            }
+          ]
+        }
+      ],
+      "text": "起動（3）: このラウンド中、このユニットは射撃・機動・先制・貫通を得る"
+    },
+    {
+      "id": "CY-20",
+      "name": "ドローンエンジニア",
+      "faction": "cyber",
+      "type": "unit",
+      "cost": 6,
+      "attack": 5,
+      "health": 6,
+      "abilities": [
+        {
+          "kind": "static",
+          "modifiers": [
+            {
+              "target": {
+                "units": {
+                  "side": "ally",
+                  "cardId": "CY-01"
+                }
+              },
+              "keywords": [
+                "ranged"
+              ]
+            }
+          ]
+        },
+        {
+          "kind": "trigger",
+          "when": "onPlay",
+          "effects": [
+            {
+              "op": "generate",
+              "cardId": "CY-01"
+            }
+          ]
+        },
+        {
+          "kind": "trigger",
+          "when": "roundStart",
+          "effects": [
+            {
+              "op": "generate",
+              "cardId": "CY-01"
+            }
+          ]
+        }
+      ],
+      "text": "味方の偵察ドローンすべては射撃を持つ。配置時とラウンド開始時: 偵察ドローン（CY-01）1枚を手札に生成する"
+    },
+    {
+      "id": "CY-21",
+      "name": "重装ガンシップ",
+      "faction": "cyber",
+      "type": "unit",
+      "cost": 10,
+      "attack": 5,
+      "health": 6,
+      "keywords": [
+        "ranged",
+        "pierce"
+      ],
+      "abilities": [
+        {
+          "kind": "inHand",
+          "when": "onAnyUnitMove",
+          "effects": [
+            {
+              "op": "modifyCost",
+              "target": "self",
+              "amount": -1
+            }
+          ]
+        }
+      ],
+      "text": "手札にある間、ユニット（敵味方問わず、前進を含む）が移動するたび、このカードのコストを−1"
+    },
+    {
+      "id": "CY-22",
+      "name": "全域ジャミング",
+      "faction": "cyber",
+      "type": "spell",
+      "cost": 6,
+      "effects": [
+        {
+          "op": "buff",
+          "target": {
+            "units": {
+              "side": "enemy"
+            }
+          },
+          "attack": -2,
+          "duration": "thisRound"
+        }
+      ],
+      "text": "敵ユニットすべてを、このラウンド中攻撃力−2"
+    },
+    {
+      "id": "CY-23",
+      "name": "マザーAI「オラクル」",
+      "faction": "cyber",
+      "type": "unit",
+      "cost": 8,
+      "attack": 6,
+      "health": 9,
+      "abilities": [
+        {
+          "kind": "trigger",
+          "when": "onEnemyMove",
+          "effects": [
+            {
+              "op": "buff",
+              "target": "eventUnit",
+              "attack": -2,
+              "duration": "thisRound"
+            }
+          ]
+        },
+        {
+          "kind": "activated",
+          "cost": 1,
+          "targets": [
+            {
+              "id": "unit",
+              "kind": "unit",
+              "where": {
+                "row": "front"
+              }
+            }
+          ],
+          "effects": [
+            {
+              "op": "moveToOtherRow",
+              "target": {
+                "ref": "unit"
+              }
+            }
+          ]
+        }
+      ],
+      "text": "敵ユニットが移動するたび、そのユニットをこのラウンド中−2/−0。起動（1）: 前列のユニット1体を、同じレーンの後列へ移動させる（後列が空きマスの場合のみ）"
+    },
+    {
+      "id": "CY-24",
+      "name": "機動要塞「バベル」",
+      "faction": "cyber",
+      "type": "unit",
+      "cost": 9,
+      "attack": 5,
+      "health": 10,
+      "keywords": [
+        "ranged",
+        "mobile"
+      ],
+      "abilities": [
+        {
+          "kind": "activated",
+          "cost": 3,
+          "targets": [
+            {
+              "id": "cell",
+              "kind": "cell",
+              "cellOwner": "enemy"
+            }
+          ],
+          "effects": [
+            {
+              "op": "delay",
+              "effects": [
+                {
+                  "op": "damage",
+                  "target": {
+                    "ref": "cell"
+                  },
+                  "amount": 4
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "text": "起動（3）: 相手の盤面のマスを1つ指定する。遅延: そのマスにいるユニットに4ダメージ"
+    },
+    {
+      "id": "CY-25",
+      "name": "衛星兵器「ラグナロク」",
+      "faction": "cyber",
+      "type": "spell",
+      "cost": 10,
+      "keywords": [
+        "delay"
+      ],
+      "effects": [
+        {
+          "op": "delay",
+          "effects": [
+            {
+              "op": "damage",
+              "target": {
+                "units": {
+                  "side": "any"
+                }
+              },
+              "amount": 8
+            }
+          ]
+        }
+      ],
+      "enhance": {
+        "cost": 10,
+        "mode": "add",
+        "appliesTo": "effects",
+        "effects": [
+          {
+            "op": "grantKeyword",
+            "target": {
+              "units": {
+                "side": "ally"
+              }
+            },
+            "keywords": [
+              "shield"
+            ],
+            "duration": "permanent"
+          }
+        ]
+      },
+      "text": "強化（10）: 味方ユニットすべてに盾を与える。遅延: 敵味方すべてのユニットに8ダメージ"
+    }
+  ]
+}
