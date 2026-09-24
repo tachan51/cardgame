@@ -1,13 +1,26 @@
-// 対戦の準備: 自分のデッキと AI のデッキ（固定の見本デッキ）を選ぶ（2-6）
-import { getLeader, validateDeck } from '../../../engine/src';
-import { cat, deckById, decks } from '../data';
+// 対戦の準備: 自分のデッキと AI のデッキを選ぶ（2-6・3-3）。見本デッキと自分で作ったデッキから選べる
+import { getLeader, validateDeck, type DeckDef } from '../../../engine/src';
+import { cat } from '../data';
+import { allDecks, findDeck } from '../decks';
 import type { Game } from '../game';
 import { esc } from '../text';
 
-const choice = { human: decks[0]?.id ?? '', ai: decks[1]?.id ?? decks[0]?.id ?? '', first: 'random' as 'A' | 'B' | 'random' };
+const choice = { human: '', ai: '', first: 'random' as 'A' | 'B' | 'random' };
+
+/** 準備画面で最初に選んでおくデッキ（デッキ構築から戻ったときなど） */
+export function selectHumanDeck(id: string): void {
+  choice.human = id;
+}
+
+function ensureChoice(): void {
+  const { samples, user } = allDecks();
+  const ids = [...samples, ...user].map((d) => d.id);
+  if (!ids.includes(choice.human)) choice.human = user[0]?.id ?? samples[0]?.id ?? '';
+  if (!ids.includes(choice.ai) || choice.ai === '') choice.ai = samples.find((d) => d.id !== choice.human)?.id ?? samples[0]?.id ?? '';
+}
 
 function deckInfo(id: string): string {
-  const d = deckById(id);
+  const d = findDeck(id);
   if (!d) return '';
   const leaders = d.leaders.map((l) => {
     const def = getLeader(cat, l);
@@ -19,13 +32,21 @@ function deckInfo(id: string): string {
   }</div>`;
 }
 
-export function renderSetup(root: HTMLElement, game: Game, hasSave: boolean): void {
-  const opts = (sel: string) => decks.map((d) => `<option value="${esc(d.id)}" ${d.id === sel ? 'selected' : ''}>${esc(d.name)}</option>`).join('');
+function options(sel: string): string {
+  const { samples, user } = allDecks();
+  const opt = (d: DeckDef) => `<option value="${esc(d.id)}" ${d.id === sel ? 'selected' : ''}>${esc(d.name)}</option>`;
+  return `<optgroup label="見本デッキ">${samples.map(opt).join('')}</optgroup>${user.length ? `<optgroup label="自分のデッキ">${user.map(opt).join('')}</optgroup>` : ''}`;
+}
+
+export function renderSetup(root: HTMLElement, game: Game, hasSave: boolean, openBuilder: (deckId?: string) => void): void {
+  ensureChoice();
+  const opts = options;
   root.innerHTML = `<div class="setup">
     <h1>カードゲーム 試遊版</h1>
-    <p class="muted">見本デッキを選んで AI と対戦します。ルールはすべて自動で処理されます。</p>
+    <p class="muted">デッキを選んで AI と対戦します。ルールはすべて自動で処理されます。自分でデッキを作ることもできます。</p>
     <div class="setup-cols">
-      <section><h2>あなたのデッキ</h2><select data-sel="human">${opts(choice.human)}</select>${deckInfo(choice.human)}</section>
+      <section><h2>あなたのデッキ</h2><select data-sel="human">${opts(choice.human)}</select>${deckInfo(choice.human)}
+        <div class="row"><button data-builder="new">デッキを作る</button>${choice.human.startsWith('user-') ? '<button data-builder="edit">このデッキを編集する</button>' : ''}</div></section>
       <section><h2>AI のデッキ</h2><select data-sel="ai">${opts(choice.ai)}</select>${deckInfo(choice.ai)}</section>
     </div>
     <div class="row">
@@ -54,13 +75,15 @@ export function renderSetup(root: HTMLElement, game: Game, hasSave: boolean): vo
       const k = sel.dataset.sel as 'human' | 'ai' | 'first';
       if (k === 'first') choice.first = sel.value as 'A' | 'B' | 'random';
       else choice[k] = sel.value;
-      renderSetup(root, game, hasSave);
+      renderSetup(root, game, hasSave, openBuilder);
     }),
   );
   root.querySelector('[data-go]')!.addEventListener('click', () => {
-    const h = deckById(choice.human);
-    const a = deckById(choice.ai);
+    const h = findDeck(choice.human);
+    const a = findDeck(choice.ai);
     if (h && a) game.start(h, a, choice.first);
   });
   root.querySelector('[data-resume]')?.addEventListener('click', () => game.resume());
+  root.querySelector('[data-builder="new"]')?.addEventListener('click', () => openBuilder());
+  root.querySelector('[data-builder="edit"]')?.addEventListener('click', () => openBuilder(choice.human));
 }
