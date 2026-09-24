@@ -1,0 +1,120 @@
+{
+  "formatVersion": 1,
+  "id": "sample-cyber-academy",
+  "name": "見本: 動かして当てる（電脳＋学院）",
+  "description": "遅延の魔法で狙ったマスへ、電脳の移動で敵ユニットを動かして当てる。偵察ドローンと学院の小型ユニットで数を並べ、スペルと移動で重装ガンシップ・魔導ゴーレムのコストを下げて早めに出す。",
+  "leaders": [
+    "leader-rei",
+    "leader-noel"
+  ],
+  "cards": [
+    {
+      "id": "AC-01",
+      "count": 1
+    },
+    {
+      "id": "AC-07",
+      "count": 2
+    },
+    {
+      "id": "CY-01",
+      "count": 2
+    },
+    {
+      "id": "AC-02",
+      "count": 2
+    },
+    {
+      "id": "AC-06",
+      "count": 1
+    },
+    {
+      "id": "CY-05",
+      "count": 2
+    },
+    {
+      "id": "CY-09",
+      "count": 2
+    },
+    {
+      "id": "CY-13",
+      "count": 1
+    },
+    {
+      "id": "CY-15",
+      "count": 2
+    },
+    {
+      "id": "AC-08",
+      "count": 1
+    },
+    {
+      "id": "AC-09",
+      "count": 2
+    },
+    {
+      "id": "CY-08",
+      "count": 2
+    },
+    {
+      "id": "CY-10",
+      "count": 2
+    },
+    {
+      "id": "CY-17",
+      "count": 1
+    },
+    {
+      "id": "AC-14",
+      "count": 2
+    },
+    {
+      "id": "AC-21",
+      "count": 2
+    },
+    {
+      "id": "CY-12",
+      "count": 2
+    },
+    {
+      "id": "CY-14",
+      "count": 1
+    },
+    {
+      "id": "AC-17",
+      "count": 1
+    },
+    {
+      "id": "CY-16",
+      "count": 2
+    },
+    {
+      "id": "AC-10",
+      "count": 1
+    },
+    {
+      "id": "AC-19",
+      "count": 1
+    },
+    {
+      "id": "AC-20",
+      "count": 1
+    },
+    {
+      "id": "CY-20",
+      "count": 1
+    },
+    {
+      "id": "AC-22",
+      "count": 1
+    },
+    {
+      "id": "AC-25",
+      "count": 1
+    },
+    {
+      "id": "CY-21",
+      "count": 1
+    }
+  ]
+}

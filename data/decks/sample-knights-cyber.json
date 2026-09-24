@@ -1,0 +1,116 @@
+{
+  "formatVersion": 1,
+  "id": "sample-knights-cyber",
+  "name": "見本: 守って崩す（騎士団＋電脳）",
+  "description": "騎士団の盾と体力の高いユニットで前列を固め、電脳の移動と攻撃力ダウンで相手の壁を崩す。アルトは盾で防いだ回数も数えるので、盾を持つユニットを多めに入れて早めの成長を狙う。",
+  "leaders": [
+    "leader-alto",
+    "leader-rei"
+  ],
+  "cards": [
+    {
+      "id": "KN-01",
+      "count": 2
+    },
+    {
+      "id": "CY-04",
+      "count": 2
+    },
+    {
+      "id": "CY-05",
+      "count": 2
+    },
+    {
+      "id": "CY-13",
+      "count": 1
+    },
+    {
+      "id": "CY-15",
+      "count": 1
+    },
+    {
+      "id": "KN-03",
+      "count": 2
+    },
+    {
+      "id": "KN-04",
+      "count": 2
+    },
+    {
+      "id": "KN-06",
+      "count": 1
+    },
+    {
+      "id": "CY-08",
+      "count": 2
+    },
+    {
+      "id": "CY-17",
+      "count": 2
+    },
+    {
+      "id": "KN-08",
+      "count": 2
+    },
+    {
+      "id": "KN-09",
+      "count": 3
+    },
+    {
+      "id": "CY-11",
+      "count": 1
+    },
+    {
+      "id": "CY-12",
+      "count": 2
+    },
+    {
+      "id": "KN-13",
+      "count": 2
+    },
+    {
+      "id": "KN-14",
+      "count": 2
+    },
+    {
+      "id": "CY-18",
+      "count": 1
+    },
+    {
+      "id": "KN-12",
+      "count": 1
+    },
+    {
+      "id": "KN-16",
+      "count": 2
+    },
+    {
+      "id": "KN-17",
+      "count": 1
+    },
+    {
+      "id": "CY-19",
+      "count": 1
+    },
+    {
+      "id": "KN-20",
+      "count": 1
+    },
+    {
+      "id": "KN-21",
+      "count": 1
+    },
+    {
+      "id": "CY-23",
+      "count": 1
+    },
+    {
+      "id": "KN-22",
+      "count": 1
+    },
+    {
+      "id": "KN-24",
+      "count": 1
+    }
+  ]
+}
