@@ -240,20 +240,20 @@ export function toAction(cat: Catalog, s: GameState, step: Record<string, unknow
   switch (step.type) {
     case 'playUnit': {
       const card = handUid(s, p, step.card as string, used);
-      return { type: 'playUnit', player: p, card, cell: parseCellName(step.cell as string), enhance: !!step.enhance, targets: targets(), reserve: step.reserve as number | undefined };
+      return { type: 'playUnit', player: p, card, cell: parseCellName(step.cell as string), enhance: !!step.enhance, targets: targets() };
     }
     case 'castSpell': {
       const card = handUid(s, p, step.card as string, used);
-      return { type: 'castSpell', player: p, card, enhance: !!step.enhance, targets: targets(), reserve: step.reserve as number | undefined };
+      return { type: 'castSpell', player: p, card, enhance: !!step.enhance, targets: targets() };
     }
     case 'advance':
       return { type: 'advance', player: p, cell: parseCellName(step.cell as string) };
     case 'mobileMove':
       return { type: 'mobileMove', player: p, unit: unitUid(s, `${p}:${step.unit as string}`), to: parseCellName(step.to as string) };
     case 'activate':
-      return { type: 'activate', player: p, unit: unitUid(s, `${p}:${step.unit as string}`), ability: (step.ability as number) ?? firstActivated(cat, s, p, step.unit as string), targets: targets(), reserve: step.reserve as number | undefined };
+      return { type: 'activate', player: p, unit: unitUid(s, `${p}:${step.unit as string}`), ability: (step.ability as number) ?? firstActivated(cat, s, p, step.unit as string), targets: targets() };
     case 'leaderAbility':
-      return { type: 'leaderAbility', player: p, leader: step.leader as number, targets: targets(), reserve: step.reserve as number | undefined };
+      return { type: 'leaderAbility', player: p, leader: step.leader as number, targets: targets() };
     case 'pass':
       return { type: 'pass', player: p };
     case 'choose': {

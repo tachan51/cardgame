@@ -14,7 +14,6 @@ export interface Selection {
   cell?: number;
   to?: number;
   picks: Record<string, TargetValue[]>;
-  reserve?: number;
   confirmed?: boolean;
 }
 
@@ -23,12 +22,11 @@ export type Step =
   | { kind: 'enhance'; options: { enhance: boolean; cost: number }[] }
   | { kind: 'cell' | 'to'; cells: number[] }
   | { kind: 'target'; id: string; spec: TargetSpec | undefined; values: TargetValue[]; picked: TargetValue[]; need: number }
-  | { kind: 'reserve'; options: { reserve: number; mana: number }[] }
   | { kind: 'confirm'; action: Action }
   | { kind: 'ready'; action: Action }
   | { kind: 'none' };
 
-type WithTargets = Action & { targets?: Record<string, TargetValue[]>; enhance?: boolean; reserve?: number };
+type WithTargets = Action & { targets?: Record<string, TargetValue[]>; enhance?: boolean };
 
 function sourceMatches(a: Action, src: Source): boolean {
   switch (src.kind) {
@@ -47,7 +45,7 @@ const key = (v: TargetValue) => canonical([v]);
 
 /** 手札のカードなどが使える合法手（同名カードの重複を除かずに、そのカードの uid で並べる） */
 export function allLegal(state: GameState): Action[] {
-  const base = legalActions(cat, state, { paymentSplits: true });
+  const base = legalActions(cat, state);
   // legalActions は同名・同コストの手札を1枚にまとめるので、他の同名カードの分も同じ手を複製する
   const out: Action[] = [...base];
   const hand = state.players[HUMAN].hand;
@@ -77,7 +75,6 @@ export function candidates(all: Action[], sel: Selection, state: GameState): Wit
       const have = new Set((a.targets?.[id] ?? []).map(key));
       if (!picked.every((v) => have.has(key(v)))) return false;
     }
-    if (sel.reserve !== undefined && (a.reserve ?? -1) !== sel.reserve) return false;
     return true;
   });
 }
@@ -133,42 +130,9 @@ export function nextStep(all: Action[], sel: Selection, state: GameState): Step 
     const need = Math.max(...cands.map((a) => (a.targets?.[id] ?? []).length));
     return { kind: 'target', id, spec: specFor(state, sel.source, !!first.enhance, id), values: [...values.values()], picked, need };
   }
-  if (sel.reserve === undefined) {
-    const opts = distinct((a) => a.reserve ?? null).filter((x): x is number => x !== null);
-    if (opts.length > 1) {
-      const r = new Runner(cat, state);
-      return {
-        kind: 'reserve',
-        options: opts
-          .map((reserve) => {
-            const a = cands.find((x) => x.reserve === reserve)!;
-            const plan = planFor(r, a);
-            return { reserve, mana: plan };
-          })
-          .sort((a, b) => b.reserve - a.reserve),
-      };
-    }
-  }
   // 1クリックで決まってしまう手（対象のないスペルなど）は確認してから行う
   const action = first;
-  const clicks = [Object.keys(sel.picks).length ? true : undefined, sel.cell, sel.to, sel.enhance, sel.reserve].filter((x) => x !== undefined).length;
+  const clicks = [Object.keys(sel.picks).length ? true : undefined, sel.cell, sel.to, sel.enhance].filter((x) => x !== undefined).length;
   if (clicks === 0 && !sel.confirmed) return { kind: 'confirm', action };
   return { kind: 'ready', action };
-}
-
-/** その手で払う通常マナ */
-function planFor(r: Runner, a: WithTargets): number {
-  const p = HUMAN;
-  let normal = 0;
-  let flex = 0;
-  if (a.type === 'playUnit' || a.type === 'castSpell') {
-    const c = r.pl(p).hand.find((x) => x.uid === a.card)!;
-    normal = r.cardCost(p, c);
-    if (a.enhance) flex = r.enhanceCost(p, getCard(cat, c.cardId));
-  } else if (a.type === 'activate') {
-    const u = r.findUnit(a.unit)!;
-    const ab = getCard(cat, u.unit.cardId).abilities![a.ability];
-    flex = ab.kind === 'activated' ? ab.cost : 0;
-  } else if (a.type === 'leaderAbility') flex = r.leaderCost(p, a.leader);
-  return normal + flex - (a.reserve ?? 0);
 }

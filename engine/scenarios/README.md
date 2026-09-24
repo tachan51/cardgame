@@ -53,12 +53,12 @@ TypeScript 版のエンジンは `npm test` ですべて実行する（`test/sce
 
 | type | 項目 |
 |---|---|
-| `playUnit` | `card`（手札のカードID）, `cell`（`"2前"`）, `enhance?`, `targets?`, `reserve?` |
-| `castSpell` | `card`, `enhance?`, `targets?`, `reserve?` |
+| `playUnit` | `card`（手札のカードID）, `cell`（`"2前"`）, `enhance?`, `targets?` |
+| `castSpell` | `card`, `enhance?`, `targets?` |
 | `advance` | `cell`（後列のマス） |
 | `mobileMove` | `unit`（自分のマス）, `to` |
-| `activate` | `unit`（自分のマス）, `ability?`（abilities の番号。省略時は最初の起動能力）, `targets?`, `reserve?` |
-| `leaderAbility` | `leader`（0 か 1）, `targets?`, `reserve?` |
+| `activate` | `unit`（自分のマス）, `ability?`（abilities の番号。省略時は最初の起動能力）, `targets?` |
+| `leaderAbility` | `leader`（0 か 1）, `targets?` |
 | `pass` | |
 | `choose` | `card`（選択肢のカードID。山札の上から見て選ぶときなど） |
 
@@ -72,7 +72,7 @@ TypeScript 版のエンジンは `npm test` ですべて実行する（`test/sce
 | `{ "player": "B" }` | プレイヤー本体 |
 | `{ "card": "AC-02" }` | 自分の手札のカード |
 
-`reserve` は、強化・起動・リーダー能力のコストのうち予備マナで払う分。省略すると予備マナから優先して払う。
+強化・起動・リーダー能力のコストは、予備マナから必ず先に払う（16.2）。
 
 ### 手順を飛ばす
 

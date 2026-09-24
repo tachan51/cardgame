@@ -363,14 +363,12 @@ export type Action =
       enhance?: boolean;
       /** 配置時の効果の対象 */
       targets?: Targets;
-      /** 強化のコストのうち予備マナで払う分（省略時は予備マナから優先して払う） */
-      reserve?: number;
     }
-  | { type: 'castSpell'; player: PlayerId; card: number; enhance?: boolean; targets?: Targets; reserve?: number }
+  | { type: 'castSpell'; player: PlayerId; card: number; enhance?: boolean; targets?: Targets }
   | { type: 'advance'; player: PlayerId; cell: number }
   | { type: 'mobileMove'; player: PlayerId; unit: number; to: number }
-  | { type: 'activate'; player: PlayerId; unit: number; ability: number; targets?: Targets; reserve?: number }
-  | { type: 'leaderAbility'; player: PlayerId; leader: number; targets?: Targets; reserve?: number }
+  | { type: 'activate'; player: PlayerId; unit: number; ability: number; targets?: Targets }
+  | { type: 'leaderAbility'; player: PlayerId; leader: number; targets?: Targets }
   | { type: 'pass'; player: PlayerId }
   | { type: 'choose'; player: PlayerId; option: number };
 

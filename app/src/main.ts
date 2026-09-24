@@ -1,10 +1,12 @@
 import './style.css';
 import { Game } from './game';
 import { renderBattle, resetBattleUi } from './ui/battle';
-import { renderSetup } from './ui/setup';
+import { openBuilder, renderBuilder } from './ui/builder';
+import { renderSetup, selectHumanDeck } from './ui/setup';
 
 const app = document.getElementById('app')!;
 const game = new Game();
+let screen: 'setup' | 'builder' = 'setup';
 
 function hasSave(): boolean {
   try {
@@ -14,32 +16,50 @@ function hasSave(): boolean {
   }
 }
 
+function clearHandlers(): void {
+  app.onclick = null;
+  app.onmouseover = null;
+  app.oncontextmenu = null;
+}
+
 function render(): void {
-  if (!game.match) {
-    app.onclick = null;
-    app.onmouseover = null;
-    return renderSetup(app, game, hasSave());
+  clearHandlers();
+  if (game.match) {
+    return renderBattle(
+      app,
+      game,
+      () => {
+        resetBattleUi();
+        game.quit();
+      },
+      () => {
+        const d = game.match!.decks;
+        resetBattleUi();
+        game.start(d.human, d.ai, 'random');
+      },
+    );
   }
-  renderBattle(
-    app,
-    game,
-    () => {
-      resetBattleUi();
-      game.quit();
-    },
-    () => {
-      const d = game.match!.decks;
-      resetBattleUi();
-      game.start(d.human, d.ai, 'random');
-    },
-  );
+  if (screen === 'builder') {
+    return renderBuilder(app, {
+      back: (deckId) => {
+        if (deckId) selectHumanDeck(deckId);
+        screen = 'setup';
+        render();
+      },
+    });
+  }
+  renderSetup(app, game, hasSave(), (deckId) => {
+    openBuilder(deckId);
+    screen = 'builder';
+    render();
+  });
 }
 
 game.subscribe(render);
 render();
 
 document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape') {
+  if (e.key === 'Escape' && game.match) {
     resetBattleUi();
     render();
   }

@@ -22,7 +22,6 @@ npm run dev      # http://localhost:5173 を開く
 - 取り消し Ctrl+Z、やり直し Ctrl+Y、メニューや配置の取りやめ Esc。
 - 試合はブラウザに自動保存される。「試合を保存」で JSON に書き出せる。
 
-## 公開（GitHub Pages）
+## 公開
 
-main に push すると `.github/workflows/pages.yml` がテスト・ビルドして GitHub Pages に公開します（`mockup/`・`data/` に変更があるときだけ。Actions 画面から手動でも実行可）。
-初回だけ、リポジトリの Settings → Pages で Source を「GitHub Actions」にしておく必要があります。
+GitHub Pages での公開は停止した（公開しているのは `app/` の AI 対戦の試遊版だけ）。手元で `npm run dev` すれば今までどおり使える。

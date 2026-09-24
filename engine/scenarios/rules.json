@@ -509,7 +509,6 @@
           "type": "leaderAbility",
           "player": "A",
           "leader": 0,
-          "reserve": 1,
           "targets": {
             "ally": {
               "unit": "A:1後"
@@ -1315,14 +1314,14 @@
       }
     },
     {
-      "name": "予備マナの内訳を指定して払う",
+      "name": "強化・起動・リーダー能力のコストは予備マナから必ず先に払う",
       "refs": [
         "16.2"
       ],
       "setup": {
         "A": {
           "maxMana": 4,
-          "reserve": 2,
+          "reserve": 1,
           "hand": [
             "KN-06"
           ],
@@ -1338,7 +1337,6 @@
           "player": "A",
           "card": "KN-06",
           "enhance": true,
-          "reserve": 1,
           "targets": {
             "ally": {
               "unit": "A:1前"
@@ -1349,7 +1347,7 @@
       "expect": {
         "A": {
           "mana": 1,
-          "reserve": 1
+          "reserve": 0
         }
       }
     }
