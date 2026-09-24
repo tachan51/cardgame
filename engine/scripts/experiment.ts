@@ -15,31 +15,21 @@ interface Variant {
   cards?: Record<string, Partial<CardDef>>;
   leaders?: Record<string, (l: LeaderDef) => void>;
   startLife?: number;
+  /** 見本デッキの中身を差し替える（デッキID → 増減するカードと枚数） */
+  decks?: Record<string, Record<string, number>>;
 }
 
-const LEADER_PATCHES = {
-  'leader-alto': (l: LeaderDef) => void (l.growth.threshold = 4),
-  'leader-rei': (l: LeaderDef) => void (l.growth.threshold = 2),
-  'leader-noel': (l: LeaderDef) => void (l.ability!.cost = 12),
+/** 学院のデッキのスペルを減らし、ユニットを増やす（ユニットの少なさが原因かを確かめる） */
+const MORE_UNITS: Variant['decks'] = {
+  'sample-cyber-academy': { 'AC-14': -2, 'CY-09': -2, 'AC-06': -1, 'CY-13': -1, 'AC-11': 3, 'AC-23': 2, 'AC-04': 1 },
+  'sample-knights-academy': { 'AC-14': -2, 'AC-05': -2, 'AC-15': -1, 'AC-11': 1, 'AC-23': 2, 'KN-03': 2 },
 };
 
 const VARIANTS: Variant[] = [
-  { name: '現在', note: 'data/ のまま' },
-  { name: 'A: 軽い先制を弱める', note: 'CY-04 ストリートサムライ 3/2→2/2、KN-14 突撃騎兵 5/1→4/1', cards: { 'CY-04': { attack: 2 }, 'KN-14': { attack: 4 } } },
-  {
-    name: 'B: 学院の序盤を強める',
-    note: 'AC-03 見習い魔法使い 1/1→1/2、AC-13 学院の石像 0/3→1/3、AC-12 結界術の教師 コスト4→3',
-    cards: { 'AC-03': { health: 2 }, 'AC-13': { attack: 1 }, 'AC-12': { cost: 3 } },
-  },
-  { name: 'C: リーダーを成長しやすく', note: 'アルト 6→4回、レイ 4→2回、ノエルの能力 20→12', leaders: LEADER_PATCHES },
-  { name: 'D: 初期ライフ25', note: '初期ライフ 20→25（試合を長くして重いカードを出せるように）', startLife: 25 },
-  {
-    name: 'A+B+C+D',
-    note: 'A・B・C・D をすべて',
-    cards: { 'CY-04': { attack: 2 }, 'KN-14': { attack: 4 }, 'AC-03': { health: 2 }, 'AC-13': { attack: 1 }, 'AC-12': { cost: 3 } },
-    leaders: LEADER_PATCHES,
-    startLife: 25,
-  },
+  { name: '現在', note: 'data/ のまま（カードリスト v0.7）' },
+  { name: 'E: 学院のデッキのユニットを増やす', note: '電脳＋学院・騎士団＋学院のスペル5〜6枚を、動く氷像・水の精霊などのユニットに入れ替える', decks: MORE_UNITS },
+  { name: 'F: 遅延のスペルを強める', note: '火球 2→3ダメージ、軌道レーザー照準 3→2コスト、EMPグレネード 4→3コスト', cards: { 'CY-17': { cost: 2 }, 'CY-11': { cost: 3 } } },
+  { name: 'E+F', note: 'E と F の両方', decks: MORE_UNITS, cards: { 'CY-17': { cost: 2 }, 'CY-11': { cost: 3 } } },
 ];
 
 const DATA = join(import.meta.dirname, '..', '..', 'data');
@@ -48,13 +38,31 @@ const load = <T>(dir: string): T[] =>
     .filter((f) => f.endsWith('.json'))
     .sort()
     .map((f) => JSON.parse(readFileSync(join(DATA, dir, f), 'utf8')) as T);
-const decks = load<DeckDef>('decks');
+const baseDecks = load<DeckDef>('decks');
+const decks = baseDecks;
+
+function decksFor(v: Variant): DeckDef[] {
+  return baseDecks.map((d) => {
+    const diff = v.decks?.[d.id];
+    if (!diff) return d;
+    const counts = new Map(d.cards.map((c) => [c.id, c.count]));
+    for (const [id, n] of Object.entries(diff)) counts.set(id, (counts.get(id) ?? 0) + n);
+    const cards = [...counts.entries()].filter(([, n]) => n > 0).map(([id, count]) => ({ id, count }));
+    return { ...d, cards };
+  });
+}
 
 function catalogFor(v: Variant) {
   const files = load<FactionFile>('cards');
   for (const f of files) {
     for (const c of f.cards) Object.assign(c, v.cards?.[c.id] ?? {});
     v.leaders?.[f.leader.id]?.(f.leader);
+    // 火球のダメージ（F）
+    if (v.name.includes('F')) {
+      const fire = f.cards.find((c) => c.id === 'AC-02');
+      const dmg = (fire?.effects?.[0] as { effects?: { amount: number }[] } | undefined)?.effects?.[0];
+      if (dmg) dmg.amount = 3;
+    }
   }
   return buildCatalog(files);
 }
@@ -69,10 +77,11 @@ if (!isMainThread) {
   const job = workerData as Job;
   const v = VARIANTS[job.variant];
   const cat = catalogFor(v);
+  const vd = decksFor(v);
   const out: GameRecord[] = [];
   let k = 0;
-  for (const a of decks)
-    for (const b of decks)
+  for (const a of vd)
+    for (const b of vd)
       for (let g = 0; g < job.games; g++) out.push(playGame(cat, { A: a, B: b }, { seed: job.seeds[0] + k++, levels: { A: 'normal', B: 'normal' }, startLife: v.startLife }));
   parentPort!.postMessage(out);
 } else {

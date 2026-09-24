@@ -3,7 +3,6 @@ import type { Catalog } from './catalog';
 import { getCard } from './catalog';
 import { CELLS } from './constants';
 import { onPlayTargetSpecs, spellTargetSpecs } from './engine';
-import { otherRow, rowOf } from './board';
 import { Runner } from './runner';
 import type { Action, GameState, PlayerId } from './types';
 
@@ -54,9 +53,8 @@ export function legalActions(cat: Catalog, state: GameState): Action[] {
   }
 
   // 盤面のユニット
-  st.board.forEach((u, i) => {
+  st.board.forEach((u) => {
     if (!u) return;
-    if (rowOf(i) === 'back' && !st.board[otherRow(i)]) out.push({ type: 'advance', player: p, cell: i });
     if (!u.mobileUsed && r.hasKeyword(u, 'mobile')) {
       for (let to = 0; to < CELLS; to++) if (!st.board[to]) out.push({ type: 'mobileMove', player: p, unit: u.uid, to });
     }

@@ -59,6 +59,8 @@ export type Selector =
         cardId?: string;
         where?: Condition;
         random?: number;
+        /** このユニット自身を除く（「他の味方」） */
+        other?: boolean;
       };
     }
   | { cell: { owner: 'ally' | 'enemy'; lane: LaneRef; row: Row } }
@@ -69,7 +71,7 @@ export type Selector =
 export type Value =
   | number
   | { attackOf: Selector; ifGone?: number }
-  | { count: 'spellsCastThisGame' }
+  | { count: 'spellsCastThisGame' | 'unitMovesThisGame' }
   | { max: Value; cap: number };
 
 export type Duration = 'permanent' | 'thisRound';
@@ -89,10 +91,11 @@ export type Effect =
   | { op: 'draw'; count: Value }
   | { op: 'drawUntil'; handSize: number }
   | { op: 'lookAtTopPickOne'; look: number }
-  | { op: 'tutorRandom'; where: Condition; count: number }
+  | { op: 'tutorRandom'; where: Condition; count: number; distinctNames?: boolean; as?: string }
   | { op: 'generate'; cardId: string; count?: number }
   | { op: 'generateFromCastSpells'; count: number; distinctNames: boolean }
   | { op: 'gainReserve'; amount: Value }
+  | { op: 'gainLife'; amount: Value }
   | { op: 'refillMana' }
   | { op: 'fight'; a: Selector; b: Selector }
   | { op: 'resolveCombat'; lanes: LaneRef }
@@ -119,7 +122,9 @@ export type Ability =
   | { kind: 'trigger'; when: TriggerType; condition?: Condition; targets?: TargetSpec[]; effects: Effect[] }
   | { kind: 'static'; modifiers: StaticModifier[] }
   | { kind: 'activated'; cost: number; targets?: TargetSpec[]; effects: Effect[] }
-  | { kind: 'inHand'; when: TriggerType; effects: Effect[] };
+  | { kind: 'inHand'; when: TriggerType; effects: Effect[] }
+  /** 手札にある間、コストを by だけ下げる（by はそのカードの持ち主から見た値。AC-22・CY-21） */
+  | { kind: 'costReduction'; by: Value };
 
 export interface Enhance {
   cost: number;
@@ -152,7 +157,7 @@ export interface LeaderAbility {
   effects: Effect[];
 }
 
-export type GrowthCounter = 'allyEnduredCombatDamage' | 'enemyMoved' | 'leaderAbilityUsed';
+export type GrowthCounter = 'allyEnduredCombatDamage' | 'unitMoved' | 'leaderAbilityUsed';
 
 export interface LeaderDef {
   id: string;
@@ -348,6 +353,8 @@ export interface GameState {
   nextOrder: number;
   /** 行動フェイズに行ったアクションの数（このラウンド） */
   actionsThisRound: number;
+  /** この試合でユニット（敵味方問わず）が移動した回数（CY-21） */
+  unitMoves?: number;
   log: LogEntry[];
 }
 
@@ -365,7 +372,6 @@ export type Action =
       targets?: Targets;
     }
   | { type: 'castSpell'; player: PlayerId; card: number; enhance?: boolean; targets?: Targets }
-  | { type: 'advance'; player: PlayerId; cell: number }
   | { type: 'mobileMove'; player: PlayerId; unit: number; to: number }
   | { type: 'activate'; player: PlayerId; unit: number; ability: number; targets?: Targets }
   | { type: 'leaderAbility'; player: PlayerId; leader: number; targets?: Targets }

@@ -186,3 +186,6 @@ button.wide { width: 100%; margin-top: 6px; }
 .delay-item { margin-bottom: 6px; cursor: help; }
 .delay-item .ctext { color: #c3c8d4; margin-top: 2px; line-height: 1.4; }
 .dmark-cell, .dmark { cursor: help; }
+.kw.ready { background: #1f3b2c; color: #9be3b8; font-weight: bold; }
+.kw.act { border: 1px solid #3b6b4f; }
+.kw.used { background: #5a2a2f; color: #ffc4c8; font-weight: bold; border: 1px solid #8a3a42; }

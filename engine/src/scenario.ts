@@ -246,8 +246,6 @@ export function toAction(cat: Catalog, s: GameState, step: Record<string, unknow
       const card = handUid(s, p, step.card as string, used);
       return { type: 'castSpell', player: p, card, enhance: !!step.enhance, targets: targets() };
     }
-    case 'advance':
-      return { type: 'advance', player: p, cell: parseCellName(step.cell as string) };
     case 'mobileMove':
       return { type: 'mobileMove', player: p, unit: unitUid(s, `${p}:${step.unit as string}`), to: parseCellName(step.to as string) };
     case 'activate':

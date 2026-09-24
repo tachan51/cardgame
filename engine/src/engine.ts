@@ -1,5 +1,5 @@
 // 試合の開始とアクションの適用（「状態 + アクション → 新しい状態」。ルール仕様書 18章）
-import { cellName, laneOf, opponent, otherRow, rowOf } from './board';
+import { cellName, opponent } from './board';
 import type { Catalog } from './catalog';
 import { getCard, getLeader, validateDeck } from './catalog';
 import { CELLS, START_HAND, START_LIFE } from './constants';
@@ -133,9 +133,6 @@ function execute(r: Runner, a: Action): void {
     case 'castSpell':
       quick = castSpell(r, a);
       break;
-    case 'advance':
-      advance(r, a.player, a.cell);
-      break;
     case 'mobileMove':
       mobileMove(r, a.player, a.unit, a.to);
       break;
@@ -158,11 +155,11 @@ function execute(r: Runner, a: Action): void {
   // 即効なら追加の手番（14.2）
   s.activePlayer = quick ? a.player : opponent(a.player);
   if (quick) r.log('quickTurn', { player: a.player });
-  advance_(r);
+  proceed(r);
 }
 
 /** 行動権を持つプレイヤーの判断が必要になるまで進める（遅延の発動、戦闘、ラウンドの切り替え） */
-function advance_(r: Runner): void {
+function proceed(r: Runner): void {
   const s = r.s;
   for (let guard = 0; guard < 1000 && !s.result; guard++) {
     if (s.passStreak >= 2 && s.delayed.length === 0) {
@@ -206,7 +203,7 @@ function mulligan(r: Runner, p: PlayerId, uids: number[]): void {
   if (s.players.A.mulliganDone && s.players.B.mulliganDone) {
     s.phase = 'action';
     r.startRound(true);
-    advance_(r);
+    proceed(r);
   }
 }
 
@@ -298,14 +295,6 @@ function castSpell(r: Runner, a: Extract<Action, { type: 'castSpell' }>): boolea
   return (def.keywords ?? []).includes('quick');
 }
 
-function advance(r: Runner, p: PlayerId, cell: number): void {
-  const u = r.unitAt(p, cell);
-  if (!u || rowOf(cell) !== 'back') throw new IllegalAction('前進できるのは後列のユニットです');
-  if (r.unitAt(p, otherRow(cell))) throw new IllegalAction('同じレーンの前列が空いていません');
-  r.log('advance', { player: p, card: u.cardId, lane: laneOf(cell) });
-  r.moveUnits([{ from: { unit: u, p, i: cell }, to: otherRow(cell) }], p);
-}
-
 function mobileMove(r: Runner, p: PlayerId, uid: number, to: number): void {
   const loc = r.findUnit(uid);
   if (!loc || loc.p !== p) throw new IllegalAction('自分のユニットではありません');
@@ -314,7 +303,7 @@ function mobileMove(r: Runner, p: PlayerId, uid: number, to: number): void {
   if (!Number.isInteger(to) || to < 0 || to >= CELLS || r.unitAt(p, to)) throw new IllegalAction('移動先が空きマスではありません');
   loc.unit.mobileUsed = true;
   r.log('mobile', { player: p, card: loc.unit.cardId });
-  r.moveUnits([{ from: loc, to }], p);
+  r.moveUnits([{ from: loc, to }], p, false);
 }
 
 function activate(r: Runner, a: Extract<Action, { type: 'activate' }>): void {

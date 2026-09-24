@@ -30,7 +30,7 @@ export class CatalogError extends Error {
 const OPS = new Set([
   'damage', 'destroy', 'exile', 'heal', 'buff', 'grantKeyword', 'move', 'moveToOtherRow', 'swapCells',
   'returnToHand', 'summon', 'draw', 'drawUntil', 'lookAtTopPickOne', 'tutorRandom', 'generate',
-  'generateFromCastSpells', 'gainReserve', 'refillMana', 'fight', 'resolveCombat', 'modifyCost',
+  'generateFromCastSpells', 'gainReserve', 'gainLife', 'refillMana', 'fight', 'resolveCombat', 'modifyCost',
   'modifyLeaderAbilityCost', 'reveal', 'delay', 'atRoundEnd', 'if', 'forEach',
 ]);
 const TRIGGERS = new Set([
@@ -38,7 +38,7 @@ const TRIGGERS = new Set([
   'onAllyEndureCombatDamage', 'roundStart', 'roundEnd', 'combatStart', 'combatEnd',
 ]);
 const TARGET_KINDS = new Set(['unit', 'cell', 'lane', 'unitOrPlayer', 'cardInHand']);
-const GROWTH = new Set(['allyEnduredCombatDamage', 'enemyMoved', 'leaderAbilityUsed']);
+const GROWTH = new Set(['allyEnduredCombatDamage', 'unitMoved', 'leaderAbilityUsed']);
 
 /** 勢力ファイルからカタログを作る。問題があれば CatalogError を投げる */
 export function buildCatalog(files: FactionFile[]): Catalog {
@@ -146,7 +146,7 @@ class Checker {
     if (typeof v === 'number') return;
     if ('attackOf' in v) this.selector(v.attackOf, refs);
     else if ('count' in v) {
-      if (v.count !== 'spellsCastThisGame') this.add(`数値 ${v.count} は使えません`);
+      if (v.count !== 'spellsCastThisGame' && v.count !== 'unitMovesThisGame') this.add(`数値 ${v.count} は使えません`);
     } else if ('max' in v) this.value(v.max, refs);
   }
 
@@ -171,6 +171,8 @@ class Checker {
       if ('where' in e) this.condition(e.where);
       if ('condition' in e) this.condition(e.condition);
       if (e.op === 'resolveCombat') this.lane(e.lanes, refs);
+      // 山札から加えたカードに名前を付け、後の効果で参照できる
+      if (e.op === 'tutorRandom' && e.as) refs.add(e.as);
       if (e.op === 'delay') {
         hasDelay = true;
         this.effects(e.effects, refs);
@@ -195,6 +197,9 @@ class Checker {
         for (const r of extraRefs) refs.add(r);
         return this.effects(a.effects, refs);
       }
+      case 'costReduction':
+        this.value(a.by, new Set());
+        return false;
       case 'inHand':
         if (!TRIGGERS.has(a.when)) this.add(`きっかけ ${a.when} は使えません`);
         this.effects(a.effects, new Set());

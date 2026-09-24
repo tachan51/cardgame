@@ -34,7 +34,7 @@
     },
     "growth": {
       "counter": "allyEnduredCombatDamage",
-      "threshold": 6
+      "threshold": 4
     },
     "grown": {
       "ability": {
@@ -79,7 +79,7 @@
         }
       ]
     },
-    "text": "**盾の誓い**（4）: 味方ユニット1体に盾を与える。成長条件: 味方が戦闘ダメージを合計6回耐える。成長後: **盾の誓い**（3）: 味方ユニット1体に盾を与える。（パッシブ）：盾を持つ味方ユニットすべては+2/+0される"
+    "text": "**盾の誓い**（4）: 味方ユニット1体に盾を与える。成長条件: 味方が戦闘ダメージを合計4回耐える。成長後: **盾の誓い**（3）: 味方ユニット1体に盾を与える。（パッシブ）：盾を持つ味方ユニットすべては+2/+0される"
   },
   "cards": [
     {
@@ -140,7 +140,7 @@
           "duration": "permanent"
         }
       ],
-      "text": "味方ユニット1体に機動を与える"
+      "text": "味方ユニット1体に遊撃を与える"
     },
     {
       "id": "KN-03",
@@ -352,7 +352,7 @@
       "type": "unit",
       "cost": 3,
       "attack": 3,
-      "health": 3,
+      "health": 2,
       "keywords": [
         "shield"
       ],
@@ -486,7 +486,7 @@
       "name": "突撃騎兵",
       "faction": "knights",
       "type": "unit",
-      "cost": 4,
+      "cost": 5,
       "attack": 5,
       "health": 1,
       "keywords": [
@@ -586,7 +586,7 @@
       "faction": "knights",
       "type": "unit",
       "cost": 5,
-      "attack": 3,
+      "attack": 2,
       "health": 6,
       "keywords": [
         "shield"
@@ -599,13 +599,13 @@
             {
               "op": "buff",
               "target": "self",
-              "attack": 1,
+              "attack": 2,
               "duration": "permanent"
             }
           ]
         }
       ],
-      "text": "味方が戦闘ダメージを耐えるたび、このユニットを+1/+0する"
+      "text": "味方が戦闘ダメージを耐えるたび、このユニットを+2/+0する"
     },
     {
       "id": "KN-17",
@@ -672,9 +672,9 @@
       "name": "軽装騎兵",
       "faction": "knights",
       "type": "unit",
-      "cost": 3,
-      "attack": 3,
-      "health": 2,
+      "cost": 4,
+      "attack": 4,
+      "health": 1,
       "keywords": [
         "mobile"
       ],
@@ -746,7 +746,8 @@
               "op": "buff",
               "target": {
                 "units": {
-                  "side": "ally"
+                  "side": "ally",
+                  "other": true
                 }
               },
               "health": 2,
@@ -755,7 +756,7 @@
           ]
         }
       ],
-      "text": "配置時: 味方ユニットすべてを+0/+2"
+      "text": "配置時: 他の味方ユニットすべてを+0/+2"
     },
     {
       "id": "KN-22",

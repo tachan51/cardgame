@@ -41,7 +41,7 @@
       ]
     },
     "growth": {
-      "counter": "enemyMoved",
+      "counter": "unitMoved",
       "threshold": 4
     },
     "grown": {
@@ -75,7 +75,7 @@
         ]
       }
     },
-    "text": "**強制転送**（5）: ユニット1体を、その持ち主の盤面の空きマスへ移動させる。成長条件: 敵ユニットを合計4回移動させる。成長後: **強制転送**（4）: 同じプレイヤーの盤面のマスを2つ選び、その中身を入れ替える（空きマスも選べる。片方が空きマスなら、もう片方のユニットをそこへ移動させることになる）"
+    "text": "**強制転送**（5）: ユニット1体を、その持ち主の盤面の空きマスへ移動させる。成長条件: ユニットを合計4回移動させる。成長後: **強制転送**（4）: 同じプレイヤーの盤面のマスを2つ選び、その中身を入れ替える（空きマスも選べる。片方が空きマスなら、もう片方のユニットをそこへ移動させることになる）"
   },
   "cards": [
     {
@@ -83,7 +83,7 @@
       "name": "偵察ドローン",
       "faction": "cyber",
       "type": "unit",
-      "cost": 1,
+      "cost": 2,
       "attack": 1,
       "health": 1,
       "keywords": [
@@ -122,7 +122,7 @@
       "name": "警備ドローンMk-II",
       "faction": "cyber",
       "type": "unit",
-      "cost": 2,
+      "cost": 3,
       "attack": 2,
       "health": 1,
       "keywords": [
@@ -153,7 +153,7 @@
       "type": "unit",
       "cost": 2,
       "attack": 3,
-      "health": 2,
+      "health": 1,
       "keywords": [
         "firstStrike"
       ],
@@ -165,30 +165,9 @@
       "faction": "cyber",
       "type": "unit",
       "cost": 2,
-      "attack": 1,
+      "attack": 2,
       "health": 3,
       "abilities": [
-        {
-          "kind": "trigger",
-          "when": "onPlay",
-          "targets": [
-            {
-              "id": "enemy",
-              "kind": "unit",
-              "side": "enemy"
-            }
-          ],
-          "effects": [
-            {
-              "op": "buff",
-              "target": {
-                "ref": "enemy"
-              },
-              "attack": -2,
-              "duration": "thisRound"
-            }
-          ]
-        },
         {
           "kind": "activated",
           "cost": 2,
@@ -211,7 +190,7 @@
           ]
         }
       ],
-      "text": "配置時: 敵ユニット1体を、このラウンド中攻撃力−2。起動（2）: 同じ効果"
+      "text": "起動(2): 敵ユニット1体を、このラウンド中攻撃力−2"
     },
     {
       "id": "CY-06",
@@ -282,7 +261,7 @@
       "name": "ゴーストハッカー",
       "faction": "cyber",
       "type": "unit",
-      "cost": 3,
+      "cost": 4,
       "attack": 3,
       "health": 1,
       "keywords": [
@@ -297,13 +276,13 @@
       "faction": "cyber",
       "type": "spell",
       "cost": 2,
-      "keywords": [
-        "delay"
-      ],
       "targets": [
         {
           "id": "unit",
-          "kind": "unit"
+          "kind": "unit",
+          "where": {
+            "attackAtMost": 3
+          }
         },
         {
           "id": "cell",
@@ -318,32 +297,16 @@
       ],
       "effects": [
         {
-          "op": "delay",
-          "effects": [
-            {
-              "op": "if",
-              "subject": {
-                "ref": "unit"
-              },
-              "condition": {
-                "attackAtMost": 3
-              },
-              "then": [
-                {
-                  "op": "move",
-                  "target": {
-                    "ref": "unit"
-                  },
-                  "to": {
-                    "ref": "cell"
-                  }
-                }
-              ]
-            }
-          ]
+          "op": "move",
+          "target": {
+            "ref": "unit"
+          },
+          "to": {
+            "ref": "cell"
+          }
         }
       ],
-      "text": "ユニット1体と、その持ち主の盤面の空きマス1つを指定する。遅延: そのユニットの攻撃力が3以下なら、指定したマスへ移動させる（空きマスでなくなっていれば何もしない）"
+      "text": "攻撃力3以下のユニット1体を、その持ち主の盤面の空きマスへ移動させる"
     },
     {
       "id": "CY-10",
@@ -351,8 +314,8 @@
       "faction": "cyber",
       "type": "unit",
       "cost": 3,
-      "attack": 1,
-      "health": 2,
+      "attack": 0,
+      "health": 1,
       "keywords": [
         "mobile"
       ],
@@ -494,7 +457,7 @@
       "name": "ハッキング網",
       "faction": "cyber",
       "type": "spell",
-      "cost": 2,
+      "cost": 3,
       "targets": [
         {
           "id": "unit",
@@ -522,7 +485,7 @@
         }
       ],
       "enhance": {
-        "cost": 2,
+        "cost": 1,
         "mode": "replace",
         "appliesTo": "effects",
         "targets": [
@@ -554,14 +517,14 @@
           }
         ]
       },
-      "text": "味方ユニット1体を、自分の盤面の空きマスへ移動させる。強化（2）: 代わりに、敵ユニット1体を相手の盤面の空きマスへ移動させてもよい"
+      "text": "味方ユニット1体を、自分の盤面の空きマスへ移動させる。強化（1）: 代わりに、敵ユニット1体を相手の盤面の空きマスへ移動させてもよい"
     },
     {
       "id": "CY-16",
       "name": "ドローン管制官",
       "faction": "cyber",
       "type": "unit",
-      "cost": 5,
+      "cost": 6,
       "attack": 3,
       "health": 5,
       "abilities": [
@@ -580,7 +543,7 @@
         },
         {
           "kind": "activated",
-          "cost": 2,
+          "cost": 3,
           "targets": [
             {
               "id": "cell",
@@ -602,7 +565,7 @@
           ]
         }
       ],
-      "text": "配置時: 左右隣のマスに「偵察ドローン」（CY-01）を1体ずつ出す（空きマスでなければ出さない）。起動（2）: 自分の空きマス1つに偵察ドローンを出す"
+      "text": "配置時: 左右隣のマスに「偵察ドローン」（CY-01）を1体ずつ出す（空きマスでなければ出さない）。起動（3）: 自分の空きマス1つに偵察ドローンを出す"
     },
     {
       "id": "CY-17",
@@ -666,7 +629,6 @@
       "attack": 4,
       "health": 3,
       "keywords": [
-        "firstStrike",
         "mobile"
       ],
       "abilities": [
@@ -708,7 +670,7 @@
       "abilities": [
         {
           "kind": "activated",
-          "cost": 3,
+          "cost": 4,
           "effects": [
             {
               "op": "grantKeyword",
@@ -724,16 +686,16 @@
           ]
         }
       ],
-      "text": "起動（3）: このラウンド中、このユニットは射撃・機動・先制・貫通を得る"
+      "text": "起動（4）: このラウンド中、このユニットは射撃・遊撃・先制・貫通を得る"
     },
     {
       "id": "CY-20",
       "name": "ドローンエンジニア",
       "faction": "cyber",
       "type": "unit",
-      "cost": 6,
-      "attack": 5,
-      "health": 6,
+      "cost": 4,
+      "attack": 3,
+      "health": 5,
       "abilities": [
         {
           "kind": "static",
@@ -745,9 +707,8 @@
                   "cardId": "CY-01"
                 }
               },
-              "keywords": [
-                "ranged"
-              ]
+              "attack": 1,
+              "health": 2
             }
           ]
         },
@@ -772,7 +733,7 @@
           ]
         }
       ],
-      "text": "味方の偵察ドローンすべては射撃を持つ。配置時とラウンド開始時: 偵察ドローン（CY-01）1枚を手札に生成する"
+      "text": "味方の偵察ドローンすべては+1/+2を持つ。配置時とラウンド開始時: 偵察ドローン（CY-01）1枚を手札に生成する"
     },
     {
       "id": "CY-21",
@@ -788,18 +749,13 @@
       ],
       "abilities": [
         {
-          "kind": "inHand",
-          "when": "onAnyUnitMove",
-          "effects": [
-            {
-              "op": "modifyCost",
-              "target": "self",
-              "amount": -1
-            }
-          ]
+          "kind": "costReduction",
+          "by": {
+            "count": "unitMovesThisGame"
+          }
         }
       ],
-      "text": "手札にある間、ユニット（敵味方問わず、前進を含む）が移動するたび、このカードのコストを−1"
+      "text": "この試合中にユニット（敵味方問わず）が移動した回数、このカードのコストを−1"
     },
     {
       "id": "CY-22",

@@ -224,7 +224,10 @@ export class Runner {
 
   cardCost(p: PlayerId, inst: CardInstance): number {
     const def = this.card(inst.cardId);
-    const mod = def.type === 'spell' ? this.statics().players[p].spellCost : 0;
+    let mod = def.type === 'spell' ? this.statics().players[p].spellCost : 0;
+    for (const a of def.abilities ?? []) {
+      if (a.kind === 'costReduction') mod -= this.value(a.by, { controller: p, source: { kind: 'hand', cardId: def.id, uid: inst.uid }, targets: {} });
+    }
     return Math.max(0, def.cost + inst.costMod + mod);
   }
 
@@ -357,6 +360,7 @@ export class Runner {
     }
     const f = sel.units;
     let list = this.allUnits().filter((x) => this.sideMatches(f.side, x.p, ctx.controller));
+    if (f.other) list = list.filter((x) => x.unit.uid !== ctx.selfUid);
     if (f.relative) {
       const self = this.findUnit(ctx.selfUid);
       if (!self) return [];
@@ -435,7 +439,7 @@ export class Runner {
       const u = this.units(v.attackOf, ctx)[0];
       return u ? this.attack(u.unit) : (v.ifGone ?? 0);
     }
-    if ('count' in v) return this.pl(ctx.controller).spellsCast;
+    if ('count' in v) return v.count === 'unitMovesThisGame' ? (this.s.unitMoves ?? 0) : this.pl(ctx.controller).spellsCast;
     return Math.min(this.value(v.max, ctx), v.cap);
   }
 
@@ -674,14 +678,16 @@ export class Runner {
   }
 
   /** ユニットを移動させる（12章）。by は移動させたプレイヤー */
-  moveUnits(moves: { from: Located; to: number }[], by: PlayerId): void {
+  moveUnits(moves: { from: Located; to: number }[], by: PlayerId, byEffect = true): void {
     if (!moves.length) return;
     for (const m of moves) this.pl(m.from.p).board[m.from.i] = null;
     const events: GameEvent[] = [];
     for (const m of moves) {
       this.pl(m.from.p).board[m.to] = m.from.unit;
       this.log('move', { uid: m.from.unit.uid, card: m.from.unit.cardId, player: m.from.p, from: cellName(m.from.i), to: cellName(m.to), by });
-      if (by !== m.from.unit.owner) this.addProgress(by, 'enemyMoved', 1);
+      this.s.unitMoves = (this.s.unitMoves ?? 0) + 1;
+      // レイの成長条件: 自分のカード・能力の効果でユニットを移動させた回数（遊撃による移動は数えない）
+      if (byEffect) this.addProgress(by, 'unitMoved', 1);
       events.push({ type: 'move', uid: m.from.unit.uid, owner: m.from.unit.owner });
     }
     this.touch();
@@ -971,13 +977,20 @@ export class Runner {
         const st = this.pl(me);
         const room = Math.max(0, HAND_LIMIT - st.hand.length);
         const candidates = st.deck.filter((c) => this.cardMatches(c.cardId, e.where));
-        const picked = pickRandom(this.s, candidates, Math.min(e.count, room));
+        let picked: CardInstance[];
+        if (e.distinctNames) {
+          // 名前の異なるカード: まず名前を選び、その名前のカードを1枚ずつ取る
+          const names = pickRandom(this.s, [...new Set(candidates.map((c) => c.cardId))], Math.min(e.count, room));
+          picked = names.map((id) => pickRandom(this.s, candidates.filter((c) => c.cardId === id), 1)[0]);
+        } else picked = pickRandom(this.s, candidates, Math.min(e.count, room));
         for (const c of picked) {
           st.deck.splice(st.deck.indexOf(c), 1);
           st.hand.push(c);
         }
         shuffleInPlace(this.s, st.deck);
         this.log('tutor', { player: me, count: picked.length });
+        // 加えたカードを後の効果（公開・コストの変化など）で参照できるようにする
+        if (e.as) ctx.targets[e.as] = picked.map((c): TargetValue => ({ kind: 'card', uid: c.uid }));
         return;
       }
       case 'generate':
@@ -993,8 +1006,15 @@ export class Runner {
       }
       case 'gainReserve': {
         const st = this.pl(me);
-        st.reserve = Math.min(st.maxMana, st.reserve + this.value(e.amount, ctx));
+        st.reserve += this.value(e.amount, ctx);
         this.log('gainReserve', { player: me, reserve: st.reserve });
+        return;
+      }
+      case 'gainLife': {
+        const st = this.pl(me);
+        const n = this.value(e.amount, ctx);
+        st.life += n;
+        this.log('gainLife', { player: me, amount: n, life: st.life });
         return;
       }
       case 'refillMana':
@@ -1138,7 +1158,7 @@ export class Runner {
 
   // ================================================================ リーダーの成長（13.4）
 
-  addProgress(p: PlayerId, counter: 'allyEnduredCombatDamage' | 'enemyMoved' | 'leaderAbilityUsed', n: number, leader?: number): void {
+  addProgress(p: PlayerId, counter: 'allyEnduredCombatDamage' | 'unitMoved' | 'leaderAbilityUsed', n: number, leader?: number): void {
     this.pl(p).leaders.forEach((l, idx) => {
       if (l.grown) return;
       if (leader !== undefined && leader !== idx) return;
@@ -1197,7 +1217,7 @@ export class Runner {
     for (const p of ['A', 'B'] as const) {
       const st = this.pl(p);
       st.maxMana = Math.min(MAX_MANA_CAP, st.maxMana + 1);
-      st.reserve = Math.min(st.maxMana, st.reserve + st.unusedMana);
+      st.reserve += st.unusedMana;
       st.unusedMana = 0;
       st.mana = st.maxMana;
     }

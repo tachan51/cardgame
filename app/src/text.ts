@@ -10,7 +10,7 @@ export const KEYWORD_LABEL: Record<Keyword, string> = {
   pierce: '貫通',
   firstStrike: '先制',
   shield: '盾',
-  mobile: '機動',
+  mobile: '遊撃',
   delay: '遅延',
   quick: '即効',
 };
@@ -70,10 +70,8 @@ export function logText(e: LogEntry): string | null {
       return `${p}が${c()}を${e.cell}に配置${e.enhanced ? '（強化）' : ''}`;
     case 'castSpell':
       return `${p}が${c()}を使用${e.enhanced ? '（強化）' : ''}`;
-    case 'advance':
-      return `${p}の${c()}が前進`;
     case 'mobile':
-      return `${p}の${c()}が機動で移動`;
+      return `${p}の${c()}が遊撃で移動`;
     case 'move':
       return `${who(e.player)}の${c()}が${e.from}→${e.to}へ移動`;
     case 'activate':
@@ -124,6 +122,8 @@ export function logText(e: LogEntry): string | null {
       return `${p}が山札の上から見て1枚手札に加えた`;
     case 'gainReserve':
       return `${p}の予備マナが${e.reserve}に`;
+    case 'gainLife':
+      return `${p}のライフが${e.amount}回復（ライフ${e.life}）`;
     case 'refillMana':
       return `${p}の通常マナが全回復`;
     case 'reveal':

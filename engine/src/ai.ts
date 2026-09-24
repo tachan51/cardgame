@@ -174,7 +174,7 @@ export function evaluate(cat: Catalog, s: GameState, me: PlayerId, w: AiWeights 
     let v = st.life * w.life - Math.max(0, 8 - st.life) * w.lowLife;
     for (const u of st.board) if (u) v += unitValue(r, u, w);
     for (const c of st.hand) v += w.hand + (w.handCost ? w.handCost * Math.min(6, cardCostGuess(cat, c)) : 0);
-    const futureReserve = roundOver ? st.reserve : Math.min(st.maxMana + 1, st.reserve + st.mana);
+    const futureReserve = roundOver ? st.reserve : st.reserve + st.mana;
     v += futureReserve * w.reserve;
     st.leaders.forEach((l, idx) => {
       const def = getLeader(cat, l.id);

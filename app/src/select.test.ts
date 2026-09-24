@@ -80,7 +80,7 @@ describe('操作の組み立て', () => {
     }
   });
 
-  it('機動は移動先を選ぶ', () => {
+  it('遊撃は移動先を選ぶ', () => {
     const s = buildState(cat, { A: { board: { '1前': 'CY-01' } } });
     const uid = s.players.A.board[0]!.uid;
     const sel: Selection = { source: { kind: 'unit', uid, mode: 'mobileMove' }, picks: {}, confirmed: true };

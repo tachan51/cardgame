@@ -6,7 +6,7 @@ import { Runner } from '../../engine/src/runner';
 import { cat } from './data';
 import { HUMAN } from './text';
 
-export type Source = { kind: 'hand'; uid: number } | { kind: 'unit'; uid: number; mode: 'advance' | 'mobileMove' | 'activate'; ability?: number } | { kind: 'leader'; idx: number };
+export type Source = { kind: 'hand'; uid: number } | { kind: 'unit'; uid: number; mode: 'mobileMove' | 'activate'; ability?: number } | { kind: 'leader'; idx: number };
 
 export interface Selection {
   source: Source;
@@ -33,7 +33,6 @@ function sourceMatches(a: Action, src: Source): boolean {
     case 'hand':
       return (a.type === 'playUnit' || a.type === 'castSpell') && a.card === src.uid;
     case 'unit':
-      if (src.mode === 'advance') return a.type === 'advance';
       if (src.mode === 'mobileMove') return a.type === 'mobileMove' && a.unit === src.uid;
       return a.type === 'activate' && a.unit === src.uid && a.ability === src.ability;
     case 'leader':
@@ -60,14 +59,9 @@ export function allLegal(state: GameState): Action[] {
   return out;
 }
 
-export function candidates(all: Action[], sel: Selection, state: GameState): WithTargets[] {
+export function candidates(all: Action[], sel: Selection, _state: GameState): WithTargets[] {
   return (all as WithTargets[]).filter((a) => {
     if (!sourceMatches(a, sel.source)) return false;
-    const src = sel.source;
-    if (src.kind === 'unit' && src.mode === 'advance') {
-      const u = state.players[HUMAN].board.findIndex((x) => x?.uid === src.uid);
-      if (a.type !== 'advance' || a.cell !== u) return false;
-    }
     if (sel.enhance !== undefined && !!a.enhance !== sel.enhance) return false;
     if (sel.cell !== undefined && a.type === 'playUnit' && a.cell !== sel.cell) return false;
     if (sel.to !== undefined && a.type === 'mobileMove' && a.to !== sel.to) return false;
