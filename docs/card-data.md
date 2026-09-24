@@ -103,7 +103,7 @@ type StaticModifier = {
   attack?: number;            // +X/+Y
   health?: number;
   keywords?: Keyword[];       // キーワードを持たせる
-  enhanceCost?: number;       // 強化コストの増減（AC-16）
+  enhanceCost?: number;       // スペルの強化コストの増減（AC-16）
   spellCost?: number;         // スペルのコストの増減（ノエル成長後）
 };
 ```

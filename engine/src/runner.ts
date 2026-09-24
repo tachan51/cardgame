@@ -230,7 +230,9 @@ export class Runner {
 
   enhanceCost(p: PlayerId, def: CardDef): number {
     if (!def.enhance) return 0;
-    return Math.max(0, def.enhance.cost + this.statics().players[p].enhanceCost);
+    // enhanceCost の増減はスペルの強化だけにかかる（AC-16）
+    const mod = def.type === 'spell' ? this.statics().players[p].enhanceCost : 0;
+    return Math.max(0, def.enhance.cost + mod);
   }
 
   leaderAbility(p: PlayerId, idx: number): LeaderAbility | undefined {
