@@ -254,12 +254,11 @@ export class Runner {
 
   /**
    * 支払えるかを調べる。normal は通常マナでしか払えない分、flex は予備マナ／通常マナで払える分。
-   * reserve は flex のうち予備マナで払う分（省略時は予備マナから優先）。払えなければ null
+   * flex は予備マナから必ず先に払う（16.2）。払えなければ null
    */
-  paymentPlan(p: PlayerId, normal: number, flex: number, reserve?: number): { reserve: number; mana: number } | null {
+  paymentPlan(p: PlayerId, normal: number, flex: number): { reserve: number; mana: number } | null {
     const st = this.pl(p);
-    const r = reserve ?? Math.min(st.reserve, flex);
-    if (!Number.isInteger(r) || r < 0 || r > flex || r > st.reserve) return null;
+    const r = Math.min(st.reserve, flex);
     const mana = normal + flex - r;
     if (mana > st.mana) return null;
     return { reserve: r, mana };

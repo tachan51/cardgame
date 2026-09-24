@@ -1,7 +1,7 @@
 # AI 対戦の試遊版（M2）
 
 ルールエンジン（[engine/](../engine)）を使って、見本デッキで AI と対戦する画面。
-公開先: GitHub Pages の `play/`（手動モックアップのページからもリンクしている）。
+公開先: GitHub Pages のルート（https://tachan51.github.io/cardgame/）。
 
 ## 動かし方
 

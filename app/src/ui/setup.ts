@@ -23,7 +23,7 @@ export function renderSetup(root: HTMLElement, game: Game, hasSave: boolean): vo
   const opts = (sel: string) => decks.map((d) => `<option value="${esc(d.id)}" ${d.id === sel ? 'selected' : ''}>${esc(d.name)}</option>`).join('');
   root.innerHTML = `<div class="setup">
     <h1>カードゲーム 試遊版</h1>
-    <p class="muted">見本デッキを選んで AI と対戦します。ルールはすべて自動で処理されます。　<a href="../">手で動かすモックアップ</a></p>
+    <p class="muted">見本デッキを選んで AI と対戦します。ルールはすべて自動で処理されます。</p>
     <div class="setup-cols">
       <section><h2>あなたのデッキ</h2><select data-sel="human">${opts(choice.human)}</select>${deckInfo(choice.human)}</section>
       <section><h2>AI のデッキ</h2><select data-sel="ai">${opts(choice.ai)}</select>${deckInfo(choice.ai)}</section>

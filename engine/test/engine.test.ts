@@ -109,10 +109,13 @@ describe('合法手（18章）', () => {
     expect(JSON.stringify(s)).toBe(before);
   });
 
-  it('支払いの内訳を並べるオプション', () => {
+  it('強化のコストは予備マナから必ず先に払う（内訳違いの手はない）', () => {
     const s = buildState(cat, { A: { maxMana: 5, reserve: 3, hand: ['KN-06'], board: { '1前': 'KN-04' } } });
-    const splits = legalActions(cat, s, { paymentSplits: true }).filter((a) => a.type === 'castSpell' && a.enhance);
-    expect(splits.map((a) => (a as { reserve?: number }).reserve)).toEqual([0, 1, 2]);
+    const acts = legalActions(cat, s).filter((a) => a.type === 'castSpell' && a.enhance);
+    expect(acts.length).toBe(1);
+    const next = applyAction(cat, s, acts[0]);
+    expect(next.players.A.reserve).toBe(1);
+    expect(next.players.A.mana).toBe(3);
   });
 
   it('対象を選べないスペルは合法手に入らない', () => {

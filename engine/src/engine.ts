@@ -241,7 +241,7 @@ function playUnit(r: Runner, a: Extract<Action, { type: 'playUnit' }>): void {
   if (!Number.isInteger(a.cell) || a.cell < 0 || a.cell >= CELLS || r.unitAt(p, a.cell)) throw new IllegalAction('そのマスには置けません');
   const enhanced = !!a.enhance;
   if (enhanced && !def.enhance) throw new IllegalAction('強化できないカードです');
-  const plan = r.paymentPlan(p, r.cardCost(p, inst), enhanced ? r.enhanceCost(p, def) : 0, a.reserve);
+  const plan = r.paymentPlan(p, r.cardCost(p, inst), enhanced ? r.enhanceCost(p, def) : 0);
   if (!plan) throw new IllegalAction('マナが足りません');
   const specs = onPlayTargetSpecs(r, inst.cardId, enhanced);
   const err = r.checkTargets(specs, a.targets, p, false, inst.uid);
@@ -271,7 +271,7 @@ function castSpell(r: Runner, a: Extract<Action, { type: 'castSpell' }>): boolea
   if (def.type !== 'spell') throw new IllegalAction('スペルではありません');
   const enhanced = !!a.enhance;
   if (enhanced && !def.enhance) throw new IllegalAction('強化できないカードです');
-  const plan = r.paymentPlan(p, r.cardCost(p, inst), enhanced ? r.enhanceCost(p, def) : 0, a.reserve);
+  const plan = r.paymentPlan(p, r.cardCost(p, inst), enhanced ? r.enhanceCost(p, def) : 0);
   if (!plan) throw new IllegalAction('マナが足りません');
   const specs = spellTargetSpecs(r, inst.cardId, enhanced);
   const err = r.checkTargets(specs, a.targets, p, true, inst.uid);
@@ -322,7 +322,7 @@ function activate(r: Runner, a: Extract<Action, { type: 'activate' }>): void {
   const ab = def.abilities?.[a.ability];
   if (!ab || ab.kind !== 'activated') throw new IllegalAction('起動能力がありません');
   if (loc.unit.activatedUsed.includes(a.ability)) throw new IllegalAction('このラウンドはもう使いました');
-  const plan = r.paymentPlan(p, 0, ab.cost, a.reserve);
+  const plan = r.paymentPlan(p, 0, ab.cost);
   if (!plan) throw new IllegalAction('マナが足りません');
   const err = r.checkTargets(ab.targets, a.targets, p, true);
   if (err) throw new IllegalAction(err);
@@ -340,7 +340,7 @@ function leaderAbility(r: Runner, a: Extract<Action, { type: 'leaderAbility' }>)
   const ab = r.leaderAbility(p, a.leader);
   if (!ab) throw new IllegalAction('リーダー能力を使えません');
   if (st.usedThisRound) throw new IllegalAction('このラウンドはもう使いました');
-  const plan = r.paymentPlan(p, 0, r.leaderCost(p, a.leader), a.reserve);
+  const plan = r.paymentPlan(p, 0, r.leaderCost(p, a.leader));
   if (!plan) throw new IllegalAction('マナが足りません');
   const err = r.checkTargets(ab.targets, a.targets, p, true);
   if (err) throw new IllegalAction(err);

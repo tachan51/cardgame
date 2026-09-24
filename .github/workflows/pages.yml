@@ -1,13 +1,11 @@
-# 手動モックアップ（mockup/）と AI 対戦の試遊版（app/）をビルドして GitHub Pages に公開する
-#   /       … 手動モックアップ
-#   /play/  … AI 対戦の試遊版
+# AI 対戦の試遊版（app/）をビルドして GitHub Pages のルートに公開する
+# 手動モックアップ（mockup/）は公開しない（手元でだけ使う）
 name: Deploy to GitHub Pages
 
 on:
   push:
     branches: [main]
     paths:
-      - 'mockup/**'
       - 'app/**'
       - 'engine/**'
       - 'data/**'
@@ -31,12 +29,6 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - name: 手動モックアップ
-        working-directory: mockup
-        run: |
-          npm ci
-          npm test
-          npm run build
       - name: ルールエンジンのテスト
         working-directory: engine
         run: |
@@ -50,15 +42,9 @@ jobs:
           npm ci
           npm test
           npm run build
-      - name: まとめる
-        run: |
-          mkdir -p site
-          cp -r mockup/dist/. site/
-          mkdir -p site/play
-          cp -r app/dist/. site/play/
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: site
+          path: app/dist
 
   deploy:
     needs: build

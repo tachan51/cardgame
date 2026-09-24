@@ -27,19 +27,15 @@ describe('操作の組み立て', () => {
     expect(nextStep(all, sel, s)).toMatchObject({ kind: 'ready', action: { type: 'castSpell' } });
   });
 
-  it('強化するかを選び、予備マナの内訳を選ぶ', () => {
+  it('強化するかを選ぶ。予備マナは必ず先に払うので、支払い方は聞かない', () => {
     const s = buildState(cat, { A: { maxMana: 5, reserve: 2, hand: ['KN-06'], board: { '1前': 'KN-04' } } });
     const sel: Selection = { source: { kind: 'hand', uid: handUid(s, 'KN-06') }, picks: {} };
     const all = allLegal(s);
     const st = nextStep(all, sel, s);
     expect(st).toMatchObject({ kind: 'enhance', options: [{ enhance: false, cost: 2 }, { enhance: true, cost: 4 }] });
     sel.enhance = true;
-    // 対象の味方は1体だけなので自動で決まり、支払い方を選ぶ
-    const st2 = nextStep(all, sel, s);
-    expect(st2.kind).toBe('reserve');
-    if (st2.kind === 'reserve') expect(st2.options.map((o) => o.reserve)).toEqual([2, 1, 0]);
-    sel.reserve = 1;
-    expect(nextStep(all, sel, s)).toMatchObject({ kind: 'ready', action: { type: 'castSpell', enhance: true, reserve: 1 } });
+    // 対象の味方は1体だけなので自動で決まる
+    expect(nextStep(all, sel, s)).toMatchObject({ kind: 'ready', action: { type: 'castSpell', enhance: true } });
   });
 
   it('ユニット → その持ち主の空きマス の順に選ぶ（小型転送）', () => {

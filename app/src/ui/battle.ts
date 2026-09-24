@@ -353,8 +353,12 @@ function promptHtml(s: GameState, step: Step | null, game: Game): string {
   switch (step.kind) {
     case 'enhance':
       body = `強化しますか？ ${step.options
-        .map((o) => `<button data-btn="enhance-${o.enhance ? 1 : 0}">${o.enhance ? '強化して使う' : 'そのまま使う'}（${o.cost}）</button>`)
-        .join(' ')}`;
+        .map((o) => {
+          const base = step.options[0].cost;
+          const cost = o.enhance ? `${base}＋強化${o.cost - base}` : `${base}`;
+          return `<button data-btn="enhance-${o.enhance ? 1 : 0}">${o.enhance ? '強化して使う' : 'そのまま使う'}（${cost}）</button>`;
+        })
+        .join(' ')} <span class="muted small">強化の分は予備マナから先に払います</span>`;
       break;
     case 'cell':
       body = 'ユニットを置くマスを選んでください（光っているマス）';
@@ -367,11 +371,6 @@ function promptHtml(s: GameState, step: Step | null, game: Game): string {
       body = `${targetPrompt(step)}${n}`;
       break;
     }
-    case 'reserve':
-      body = `支払い方を選んでください: ${step.options
-        .map((o) => `<button data-btn="reserve-${o.reserve}">予備マナ ${o.reserve} ＋ 通常マナ ${o.mana}</button>`)
-        .join(' ')}`;
-      break;
     case 'confirm':
       body = `<button class="primary" data-btn="confirm">${esc(src)} を使う</button>`;
       break;
@@ -606,10 +605,6 @@ function onClick(e: MouseEvent, root: HTMLElement, game: Game, all: Action[], on
     const step = nextStep(all, ui.sel, s);
     if (btn?.startsWith('enhance-') && step.kind === 'enhance') {
       ui.sel.enhance = btn === 'enhance-1';
-      return advanceSelection(game, all, rerender);
-    }
-    if (btn?.startsWith('reserve-') && step.kind === 'reserve') {
-      ui.sel.reserve = Number(btn.slice(8));
       return advanceSelection(game, all, rerender);
     }
     if (btn === 'confirm' && step.kind === 'confirm') {

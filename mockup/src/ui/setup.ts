@@ -64,7 +64,6 @@ export function renderSetup(root: HTMLElement, store: Store): void {
   root.innerHTML = `<div class="setup">
     <h1>手動モックアップ — 試合の準備</h1>
     <p class="muted">ルールの判定はしません。カードの移動や数値の変更は手で行い、ルールが正しいかは遊ぶ人が判断します。</p>
-    <p><a href="./play/">ルールを自動で処理する AI 対戦の試遊版はこちら →</a></p>
     <div class="setup-cols">${playerColumn('A')}${playerColumn('B')}</div>
     <div class="setup-foot">
       <label>第1ラウンドの先手
