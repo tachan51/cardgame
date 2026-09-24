@@ -1,0 +1,3318 @@
+{
+ "description": "王国騎士団（KN-01〜KN-25）とリーダー アルトのカード別シナリオ",
+ "scenarios": [
+  {
+   "name": "KN-01 見習い従者: 強化しなければ2/2、強化コストが払えなければ強化できない",
+   "refs": [
+    "KN-01",
+    "15.1"
+   ],
+   "setup": {
+    "A": {
+     "maxMana": 1,
+     "hand": [
+      "KN-01"
+     ]
+    },
+    "B": {}
+   },
+   "steps": [
+    {
+     "type": "playUnit",
+     "player": "A",
+     "card": "KN-01",
+     "cell": "1前",
+     "enhance": true,
+     "illegal": true
+    },
+    {
+     "type": "playUnit",
+     "player": "A",
+     "card": "KN-01",
+     "cell": "1前"
+    }
+   ],
+   "expect": {
+    "A": {
+     "mana": 0,
+     "board": {
+      "1前": {
+       "card": "KN-01",
+       "attack": 2,
+       "health": 2,
+       "maxHealth": 2
+      }
+     }
+    }
+   }
+  },
+  {
+   "name": "KN-01 見習い従者: 強化（1）で+0/+2（予備マナで払える・永続）",
+   "refs": [
+    "KN-01",
+    "15.1",
+    "16.2",
+    "10.4"
+   ],
+   "setup": {
+    "A": {
+     "maxMana": 1,
+     "reserve": 1,
+     "hand": [
+      "KN-01"
+     ]
+    },
+    "B": {}
+   },
+   "steps": [
+    {
+     "type": "playUnit",
+     "player": "A",
+     "card": "KN-01",
+     "cell": "1前",
+     "enhance": true
+    },
+    {
+     "expect": {
+      "A": {
+       "mana": 0,
+       "reserve": 0,
+       "board": {
+        "1前": {
+         "attack": 2,
+         "health": 4,
+         "maxHealth": 4
+        }
+       }
+      }
+     }
+    },
+    {
+     "do": "endRound"
+    }
+   ],
+   "expect": {
+    "A": {
+     "board": {
+      "1前": {
+       "card": "KN-01",
+       "attack": 2,
+       "maxHealth": 4
+      }
+     }
+    }
+   }
+  },
+  {
+   "name": "KN-02 陣形変更: 味方に機動を与え、即効で同じプレイヤーがすぐ機動で動かせる",
+   "refs": [
+    "KN-02",
+    "14",
+    "14.2"
+   ],
+   "setup": {
+    "A": {
+     "maxMana": 3,
+     "hand": [
+      "KN-02"
+     ],
+     "board": {
+      "1前": "KN-04"
+     }
+    },
+    "B": {
+     "board": {
+      "1前": "KN-03"
+     }
+    }
+   },
+   "steps": [
+    {
+     "type": "castSpell",
+     "player": "A",
+     "card": "KN-02",
+     "targets": {
+      "ally": {
+       "unit": "B:1前"
+      }
+     },
+     "illegal": true
+    },
+    {
+     "type": "castSpell",
+     "player": "A",
+     "card": "KN-02",
+     "targets": {
+      "ally": {
+       "unit": "A:1前"
+      }
+     }
+    },
+    {
+     "expect": {
+      "activePlayer": "A",
+      "A": {
+       "mana": 0,
+       "spellsCast": 1,
+       "trash": [
+        "KN-02"
+       ],
+       "board": {
+        "1前": {
+         "keywords": [
+          "mobile"
+         ]
+        }
+       }
+      },
+      "B": {
+       "board": {
+        "1前": {
+         "noKeywords": [
+          "mobile"
+         ]
+        }
+       }
+      }
+     }
+    },
+    {
+     "type": "mobileMove",
+     "player": "A",
+     "unit": "1前",
+     "to": "3後"
+    },
+    {
+     "expect": {
+      "activePlayer": "B",
+      "A": {
+       "board": {
+        "1前": null,
+        "3後": {
+         "card": "KN-04"
+        }
+       }
+      }
+     }
+    },
+    {
+     "do": "endRound"
+    }
+   ],
+   "expect": {
+    "A": {
+     "board": {
+      "3後": {
+       "card": "KN-04",
+       "keywords": [
+        "mobile"
+       ]
+      }
+     }
+    }
+   }
+  },
+  {
+   "name": "KN-03 王都の弓兵: 射撃で後列から攻撃する。前列が空いていれば後列が攻撃される",
+   "refs": [
+    "KN-03",
+    "8.2",
+    "8.3"
+   ],
+   "setup": {
+    "A": {
+     "board": {
+      "1後": "KN-03",
+      "2後": "KN-03"
+     }
+    },
+    "B": {
+     "board": {
+      "1前": "KN-04"
+     }
+    }
+   },
+   "steps": [
+    {
+     "do": "combat"
+    }
+   ],
+   "expect": {
+    "A": {
+     "life": 20,
+     "board": {
+      "1後": null,
+      "2後": {
+       "damage": 0
+      }
+     },
+     "trash": [
+      "KN-03"
+     ]
+    },
+    "B": {
+     "life": 18,
+     "board": {
+      "1前": {
+       "card": "KN-04",
+       "damage": 2,
+       "health": 1
+      }
+     }
+    }
+   }
+  },
+  {
+   "name": "KN-04 巡回騎士: 左右隣の味方だけ+0/+1（前後・レーン1と4・敵は対象外）",
+   "refs": [
+    "KN-04",
+    "5.2",
+    "11.5"
+   ],
+   "setup": {
+    "A": {
+     "board": {
+      "1前": "KN-04",
+      "2前": "KN-03",
+      "2後": "KN-03",
+      "1後": "KN-03",
+      "4前": "KN-03"
+     }
+    },
+    "B": {
+     "board": {
+      "2前": "KN-03"
+     }
+    }
+   },
+   "steps": [],
+   "expect": {
+    "A": {
+     "board": {
+      "1前": {
+       "attack": 2,
+       "health": 3
+      },
+      "2前": {
+       "attack": 2,
+       "health": 3,
+       "maxHealth": 3
+      },
+      "2後": {
+       "health": 2
+      },
+      "1後": {
+       "health": 2
+      },
+      "4前": {
+       "health": 2
+      }
+     }
+    },
+    "B": {
+     "board": {
+      "2前": {
+       "health": 2
+      }
+     }
+    }
+   }
+  },
+  {
+   "name": "KN-04 巡回騎士: 隣の+0/+1で戦闘を生き残る",
+   "refs": [
+    "KN-04",
+    "11.5"
+   ],
+   "setup": {
+    "A": {
+     "board": {
+      "1前": "KN-04",
+      "2前": "KN-03"
+     }
+    },
+    "B": {
+     "board": {
+      "2前": "KN-03"
+     }
+    }
+   },
+   "steps": [
+    {
+     "do": "combat"
+    }
+   ],
+   "expect": {
+    "A": {
+     "board": {
+      "2前": {
+       "card": "KN-03",
+       "damage": 2,
+       "health": 1
+      }
+     }
+    },
+    "B": {
+     "board": {
+      "2前": null
+     }
+    }
+   }
+  },
+  {
+   "name": "KN-05 従軍僧侶: ラウンド終了時に同じレーンのもう一方の列の味方だけ回復2",
+   "refs": [
+    "KN-05",
+    "6.4",
+    "11.6"
+   ],
+   "setup": {
+    "A": {
+     "board": {
+      "1後": {
+       "card": "KN-05",
+       "damage": 1
+      },
+      "1前": {
+       "card": "KN-20",
+       "shield": false,
+       "damage": 3
+      },
+      "2前": "KN-05",
+      "2後": {
+       "card": "KN-03",
+       "damage": 1
+      },
+      "3前": {
+       "card": "KN-03",
+       "damage": 1
+      }
+     }
+    },
+    "B": {
+     "board": {
+      "1前": {
+       "card": "KN-04",
+       "damage": 1
+      }
+     }
+    }
+   },
+   "steps": [
+    {
+     "do": "roundEnd"
+    }
+   ],
+   "expect": {
+    "A": {
+     "board": {
+      "1前": {
+       "damage": 1
+      },
+      "2後": {
+       "damage": 0
+      },
+      "3前": {
+       "damage": 1
+      },
+      "1後": {
+       "damage": 1
+      }
+     }
+    },
+    "B": {
+     "board": {
+      "1前": {
+       "damage": 1
+      }
+     }
+    }
+   }
+  },
+  {
+   "name": "KN-06 守りの祈り: +0/+2（永続）、即効で追加の手番、敵は選べない",
+   "refs": [
+    "KN-06",
+    "14.2",
+    "10.4"
+   ],
+   "setup": {
+    "A": {
+     "maxMana": 2,
+     "hand": [
+      "KN-06"
+     ],
+     "board": {
+      "1前": "KN-04"
+     }
+    },
+    "B": {
+     "board": {
+      "1前": "KN-03"
+     }
+    }
+   },
+   "steps": [
+    {
+     "type": "castSpell",
+     "player": "A",
+     "card": "KN-06",
+     "targets": {
+      "ally": {
+       "unit": "B:1前"
+      }
+     },
+     "illegal": true
+    },
+    {
+     "type": "castSpell",
+     "player": "A",
+     "card": "KN-06",
+     "targets": {
+      "ally": {
+       "unit": "A:1前"
+      }
+     }
+    },
+    {
+     "expect": {
+      "activePlayer": "A",
+      "A": {
+       "mana": 0,
+       "board": {
+        "1前": {
+         "health": 5,
+         "maxHealth": 5
+        }
+       }
+      }
+     }
+    },
+    {
+     "do": "endRound"
+    }
+   ],
+   "expect": {
+    "A": {
+     "board": {
+      "1前": {
+       "maxHealth": 5
+      }
+     }
+    }
+   }
+  },
+  {
+   "name": "KN-06 守りの祈り 強化: 代わりに+0/+3（合計+0/+5にはならない）",
+   "refs": [
+    "KN-06",
+    "15.1"
+   ],
+   "setup": {
+    "A": {
+     "maxMana": 4,
+     "hand": [
+      "KN-06"
+     ],
+     "board": {
+      "1前": "KN-04"
+     }
+    },
+    "B": {}
+   },
+   "steps": [
+    {
+     "type": "castSpell",
+     "player": "A",
+     "card": "KN-06",
+     "enhance": true,
+     "targets": {
+      "ally": {
+       "unit": "A:1前"
+      }
+     }
+    }
+   ],
+   "expect": {
+    "activePlayer": "A",
+    "A": {
+     "mana": 0,
+     "board": {
+      "1前": {
+       "attack": 2,
+       "health": 6,
+       "maxHealth": 6
+      }
+     }
+    }
+   }
+  },
+  {
+   "name": "KN-07 騎士の決闘: 遅延で指定レーンの前列同士が攻撃力分のダメージを与え合う（戦闘ではない）",
+   "refs": [
+    "KN-07",
+    "14.1",
+    "11.7"
+   ],
+   "setup": {
+    "A": {
+     "maxMana": 2,
+     "hand": [
+      "KN-07"
+     ],
+     "board": {
+      "2前": "KN-04",
+      "1前": "KN-03"
+     }
+    },
+    "B": {
+     "board": {
+      "2前": "KN-03",
+      "1前": "KN-03"
+     }
+    }
+   },
+   "steps": [
+    {
+     "type": "castSpell",
+     "player": "A",
+     "card": "KN-07",
+     "targets": {
+      "lane": {
+       "lane": 2
+      }
+     }
+    },
+    {
+     "expect": {
+      "activePlayer": "B",
+      "A": {
+       "mana": 0,
+       "delayed": [
+        "KN-07"
+       ],
+       "spellsCast": 1,
+       "board": {
+        "2前": {
+         "damage": 0
+        }
+       }
+      }
+     }
+    },
+    {
+     "type": "pass",
+     "player": "B"
+    }
+   ],
+   "expect": {
+    "activePlayer": "B",
+    "round": 1,
+    "A": {
+     "delayed": [],
+     "trash": [
+      "KN-07"
+     ],
+     "leaders": [
+      {
+       "progress": 0
+      }
+     ],
+     "board": {
+      "2前": {
+       "card": "KN-04",
+       "damage": 2,
+       "health": 1
+      },
+      "1前": {
+       "damage": 0
+      }
+     }
+    },
+    "B": {
+     "life": 20,
+     "board": {
+      "2前": null,
+      "1前": {
+       "damage": 0
+      }
+     },
+     "trash": [
+      "KN-03"
+     ]
+    }
+   }
+  },
+  {
+   "name": "KN-07 騎士の決闘 強化: 前列の味方がこのラウンド中+0/+2で耐え、ラウンド終了時に一時的な体力の分のダメージも消える",
+   "refs": [
+    "KN-07",
+    "15.1",
+    "10.4"
+   ],
+   "setup": {
+    "A": {
+     "maxMana": 4,
+     "hand": [
+      "KN-07"
+     ],
+     "board": {
+      "2前": "KN-04",
+      "2後": "KN-03"
+     }
+    },
+    "B": {
+     "board": {
+      "2前": {
+       "card": "KN-20",
+       "shield": false
+      }
+     }
+    }
+   },
+   "steps": [
+    {
+     "type": "castSpell",
+     "player": "A",
+     "card": "KN-07",
+     "enhance": true,
+     "targets": {
+      "lane": {
+       "lane": 2
+      }
+     }
+    },
+    {
+     "expect": {
+      "A": {
+       "mana": 0,
+       "board": {
+        "2前": {
+         "health": 5,
+         "maxHealth": 5
+        },
+        "2後": {
+         "health": 2
+        }
+       }
+      }
+     }
+    },
+    {
+     "type": "pass",
+     "player": "B"
+    },
+    {
+     "expect": {
+      "A": {
+       "board": {
+        "2前": {
+         "card": "KN-04",
+         "health": 2,
+         "damage": 3
+        }
+       }
+      },
+      "B": {
+       "board": {
+        "2前": {
+         "damage": 2
+        }
+       }
+      }
+     }
+    },
+    {
+     "do": "roundEnd"
+    }
+   ],
+   "expect": {
+    "A": {
+     "board": {
+      "2前": {
+       "card": "KN-04",
+       "health": 2,
+       "maxHealth": 3,
+       "damage": 1
+      }
+     }
+    }
+   }
+  },
+  {
+   "name": "KN-07 騎士の決闘: 発動時に相手の前列が空きマスなら何も起きない（機動で逃げた）",
+   "refs": [
+    "KN-07",
+    "14.1"
+   ],
+   "setup": {
+    "A": {
+     "maxMana": 2,
+     "hand": [
+      "KN-07"
+     ],
+     "board": {
+      "2前": "KN-04"
+     }
+    },
+    "B": {
+     "board": {
+      "2前": "KN-19"
+     }
+    }
+   },
+   "steps": [
+    {
+     "type": "castSpell",
+     "player": "A",
+     "card": "KN-07",
+     "targets": {
+      "lane": {
+       "lane": 2
+      }
+     }
+    },
+    {
+     "type": "mobileMove",
+     "player": "B",
+     "unit": "2前",
+     "to": "2後"
+    }
+   ],
+   "expect": {
+    "activePlayer": "B",
+    "A": {
+     "delayed": [],
+     "trash": [
+      "KN-07"
+     ],
+     "board": {
+      "2前": {
+       "damage": 0
+      }
+     }
+    },
+    "B": {
+     "board": {
+      "2前": null,
+      "2後": {
+       "card": "KN-19",
+       "damage": 0
+      }
+     }
+    }
+   }
+  },
+  {
+   "name": "KN-08 槍兵隊長: 左右隣の味方は+1/+1（2体に挟まれると重なる）、戦闘でも修正後の値",
+   "refs": [
+    "KN-08",
+    "11.5",
+    "8.4"
+   ],
+   "setup": {
+    "A": {
+     "board": {
+      "1前": "KN-03",
+      "2前": "KN-08",
+      "3前": "KN-03",
+      "4前": "KN-08",
+      "3後": "KN-03"
+     }
+    },
+    "B": {
+     "board": {
+      "1前": "KN-04"
+     }
+    }
+   },
+   "steps": [
+    {
+     "expect": {
+      "A": {
+       "board": {
+        "1前": {
+         "attack": 3,
+         "health": 3
+        },
+        "2前": {
+         "attack": 2,
+         "health": 4
+        },
+        "3前": {
+         "attack": 4,
+         "health": 4
+        },
+        "4前": {
+         "attack": 2,
+         "health": 4
+        },
+        "3後": {
+         "attack": 2,
+         "health": 2
+        }
+       }
+      }
+     }
+    },
+    {
+     "do": "combat"
+    }
+   ],
+   "expect": {
+    "A": {
+     "board": {
+      "1前": {
+       "card": "KN-03",
+       "damage": 2,
+       "health": 1
+      }
+     }
+    },
+    "B": {
+     "board": {
+      "1前": null
+     },
+     "trash": [
+      "KN-04"
+     ]
+    }
+   }
+  },
+  {
+   "name": "KN-09 盾持ちの衛兵: 盾は1回分のダメージだけ防ぐ（同じステップの2体目のダメージは通る）",
+   "refs": [
+    "KN-09",
+    "14",
+    "8.4"
+   ],
+   "setup": {
+    "A": {
+     "maxMana": 3,
+     "hand": [
+      "KN-09"
+     ]
+    },
+    "B": {
+     "board": {
+      "1前": "KN-03",
+      "1後": "KN-03"
+     }
+    }
+   },
+   "steps": [
+    {
+     "type": "playUnit",
+     "player": "A",
+     "card": "KN-09",
+     "cell": "1前"
+    },
+    {
+     "expect": {
+      "A": {
+       "mana": 0,
+       "board": {
+        "1前": {
+         "shield": true,
+         "attack": 3,
+         "health": 3
+        }
+       }
+      }
+     }
+    },
+    {
+     "type": "pass",
+     "player": "B"
+    },
+    {
+     "do": "combat"
+    }
+   ],
+   "expect": {
+    "A": {
+     "board": {
+      "1前": {
+       "card": "KN-09",
+       "shield": false,
+       "damage": 2,
+       "health": 1
+      }
+     }
+    },
+    "B": {
+     "board": {
+      "1前": null,
+      "1後": {
+       "damage": 0
+      }
+     }
+    }
+   }
+  },
+  {
+   "name": "KN-10 近衛弓兵長: 起動（2）でこのラウンド中+2/+0、予備マナで払える、ラウンド終了で戻る",
+   "refs": [
+    "KN-10",
+    "15.2",
+    "16.2",
+    "10.4"
+   ],
+   "setup": {
+    "A": {
+     "maxMana": 1,
+     "reserve": 2,
+     "board": {
+      "1後": "KN-10"
+     }
+    },
+    "B": {
+     "board": {
+      "1後": {
+       "card": "KN-20",
+       "shield": false
+      }
+     }
+    }
+   },
+   "steps": [
+    {
+     "type": "activate",
+     "player": "A",
+     "unit": "1後"
+    },
+    {
+     "expect": {
+      "activePlayer": "B",
+      "A": {
+       "mana": 1,
+       "reserve": 0,
+       "board": {
+        "1後": {
+         "attack": 5
+        }
+       }
+      }
+     }
+    },
+    {
+     "do": "combat"
+    },
+    {
+     "expect": {
+      "B": {
+       "board": {
+        "1後": {
+         "damage": 5
+        }
+       }
+      }
+     }
+    },
+    {
+     "do": "roundEnd"
+    }
+   ],
+   "expect": {
+    "A": {
+     "board": {
+      "1後": {
+       "card": "KN-10",
+       "attack": 3,
+       "damage": 0
+      }
+     }
+    }
+   }
+  },
+  {
+   "name": "KN-11 鼓舞の号令: 味方すべて+1/+1（永続）。敵と後から出したユニットは対象外",
+   "refs": [
+    "KN-11",
+    "10.4"
+   ],
+   "setup": {
+    "A": {
+     "maxMana": 5,
+     "hand": [
+      "KN-11",
+      "KN-03"
+     ],
+     "board": {
+      "1前": "KN-03",
+      "2後": "KN-04"
+     }
+    },
+    "B": {
+     "board": {
+      "1前": "KN-03"
+     }
+    }
+   },
+   "steps": [
+    {
+     "type": "castSpell",
+     "player": "A",
+     "card": "KN-11"
+    },
+    {
+     "expect": {
+      "activePlayer": "B",
+      "A": {
+       "mana": 2,
+       "spellsCast": 1,
+       "board": {
+        "1前": {
+         "attack": 3,
+         "health": 3
+        },
+        "2後": {
+         "attack": 3,
+         "health": 4
+        }
+       }
+      },
+      "B": {
+       "board": {
+        "1前": {
+         "attack": 2,
+         "health": 2
+        }
+       }
+      }
+     }
+    },
+    {
+     "type": "pass",
+     "player": "B"
+    },
+    {
+     "type": "playUnit",
+     "player": "A",
+     "card": "KN-03",
+     "cell": "3前"
+    },
+    {
+     "do": "endRound"
+    }
+   ],
+   "expect": {
+    "A": {
+     "board": {
+      "1前": {
+       "attack": 3,
+       "maxHealth": 3
+      },
+      "2後": {
+       "attack": 3,
+       "maxHealth": 4
+      },
+      "3前": {
+       "attack": 2,
+       "maxHealth": 2
+      }
+     }
+    }
+   }
+  },
+  {
+   "name": "KN-11 鼓舞の号令 強化: 代わりに+2/+1",
+   "refs": [
+    "KN-11",
+    "15.1"
+   ],
+   "setup": {
+    "A": {
+     "maxMana": 6,
+     "hand": [
+      "KN-11"
+     ],
+     "board": {
+      "1前": "KN-03",
+      "2後": "KN-04"
+     }
+    },
+    "B": {}
+   },
+   "steps": [
+    {
+     "type": "castSpell",
+     "player": "A",
+     "card": "KN-11",
+     "enhance": true
+    }
+   ],
+   "expect": {
+    "A": {
+     "mana": 0,
+     "board": {
+      "1前": {
+       "attack": 4,
+       "health": 3
+      },
+      "2後": {
+       "attack": 4,
+       "health": 4
+      }
+     }
+    }
+   }
+  },
+  {
+   "name": "KN-12 城壁の守り手: 配置時に左右隣の味方すべてに盾（自分・前後・離れたマス・敵には与えない）",
+   "refs": [
+    "KN-12",
+    "7.1",
+    "5.2"
+   ],
+   "setup": {
+    "A": {
+     "maxMana": 5,
+     "hand": [
+      "KN-12"
+     ],
+     "board": {
+      "1前": "KN-03",
+      "3前": "KN-04",
+      "2後": "KN-03",
+      "4前": "KN-03"
+     }
+    },
+    "B": {
+     "board": {
+      "2前": "KN-03"
+     }
+    }
+   },
+   "steps": [
+    {
+     "type": "playUnit",
+     "player": "A",
+     "card": "KN-12",
+     "cell": "2前"
+    },
+    {
+     "do": "endRound"
+    }
+   ],
+   "expect": {
+    "A": {
+     "board": {
+      "1前": {
+       "shield": true
+      },
+      "3前": {
+       "shield": true
+      },
+      "2後": {
+       "shield": false
+      },
+      "4前": {
+       "shield": false
+      },
+      "2前": {
+       "card": "KN-12",
+       "shield": false
+      }
+     }
+    },
+    "B": {
+     "board": {
+      "2前": {
+       "shield": false
+      }
+     }
+    }
+   }
+  },
+  {
+   "name": "KN-13 白銀の盾騎士: 起動（2）で盾。1ラウンド1回、次のラウンドにまた使える",
+   "refs": [
+    "KN-13",
+    "15.2",
+    "14"
+   ],
+   "setup": {
+    "A": {
+     "maxMana": 10,
+     "board": {
+      "1前": "KN-13"
+     }
+    },
+    "B": {
+     "board": {
+      "1前": {
+       "card": "KN-21",
+       "shield": false
+      }
+     }
+    }
+   },
+   "steps": [
+    {
+     "type": "activate",
+     "player": "A",
+     "unit": "1前"
+    },
+    {
+     "expect": {
+      "A": {
+       "mana": 8,
+       "board": {
+        "1前": {
+         "shield": true
+        }
+       }
+      }
+     }
+    },
+    {
+     "type": "pass",
+     "player": "B"
+    },
+    {
+     "type": "activate",
+     "player": "A",
+     "unit": "1前",
+     "illegal": true
+    },
+    {
+     "do": "combat"
+    },
+    {
+     "expect": {
+      "A": {
+       "board": {
+        "1前": {
+         "card": "KN-13",
+         "shield": false,
+         "damage": 0
+        }
+       }
+      },
+      "B": {
+       "board": {
+        "1前": {
+         "damage": 3
+        }
+       }
+      }
+     }
+    },
+    {
+     "do": "endRound"
+    },
+    {
+     "type": "pass",
+     "player": "B"
+    },
+    {
+     "type": "activate",
+     "player": "A",
+     "unit": "1前"
+    }
+   ],
+   "expect": {
+    "round": 2,
+    "A": {
+     "board": {
+      "1前": {
+       "shield": true
+      }
+     }
+    }
+   }
+  },
+  {
+   "name": "KN-14 突撃騎兵: 先制で倒せば反撃を受けない。強化なしは貫通しない。機動で動ける",
+   "refs": [
+    "KN-14",
+    "8.1",
+    "14"
+   ],
+   "setup": {
+    "A": {
+     "maxMana": 4,
+     "hand": [
+      "KN-14"
+     ]
+    },
+    "B": {
+     "board": {
+      "1前": "KN-04",
+      "1後": "KN-05"
+     }
+    }
+   },
+   "steps": [
+    {
+     "type": "playUnit",
+     "player": "A",
+     "card": "KN-14",
+     "cell": "4後"
+    },
+    {
+     "expect": {
+      "A": {
+       "mana": 0,
+       "board": {
+        "4後": {
+         "attack": 5,
+         "health": 1,
+         "keywords": [
+          "firstStrike",
+          "mobile"
+         ],
+         "noKeywords": [
+          "pierce"
+         ]
+        }
+       }
+      }
+     }
+    },
+    {
+     "type": "pass",
+     "player": "B"
+    },
+    {
+     "type": "mobileMove",
+     "player": "A",
+     "unit": "4後",
+     "to": "1前"
+    },
+    {
+     "do": "combat"
+    }
+   ],
+   "expect": {
+    "A": {
+     "board": {
+      "1前": {
+       "card": "KN-14",
+       "damage": 0
+      }
+     }
+    },
+    "B": {
+     "life": 20,
+     "board": {
+      "1前": null,
+      "1後": {
+       "damage": 0
+      }
+     }
+    }
+   }
+  },
+  {
+   "name": "KN-14 突撃騎兵 強化: +2/+0と貫通で後列から本体まで貫く",
+   "refs": [
+    "KN-14",
+    "15.1",
+    "8.4",
+    "14"
+   ],
+   "setup": {
+    "A": {
+     "maxMana": 6,
+     "hand": [
+      "KN-14"
+     ]
+    },
+    "B": {
+     "board": {
+      "1前": "KN-04",
+      "1後": "KN-01"
+     }
+    }
+   },
+   "steps": [
+    {
+     "type": "playUnit",
+     "player": "A",
+     "card": "KN-14",
+     "cell": "1前",
+     "enhance": true
+    },
+    {
+     "expect": {
+      "A": {
+       "mana": 0,
+       "board": {
+        "1前": {
+         "attack": 7,
+         "health": 1,
+         "keywords": [
+          "firstStrike",
+          "mobile",
+          "pierce"
+         ]
+        }
+       }
+      }
+     }
+    },
+    {
+     "do": "combat"
+    }
+   ],
+   "expect": {
+    "A": {
+     "board": {
+      "1前": {
+       "card": "KN-14",
+       "damage": 0
+      }
+     }
+    },
+    "B": {
+     "life": 18,
+     "board": {
+      "1前": null,
+      "1後": null
+     }
+    }
+   }
+  },
+  {
+   "name": "KN-15 審判の槌: 遅延が発動した時点の味方の攻撃力でダメージ（予約後に隣の槍兵隊長が倒された）",
+   "refs": [
+    "KN-15",
+    "14.1",
+    "11.5"
+   ],
+   "setup": {
+    "A": {
+     "maxMana": 4,
+     "hand": [
+      "KN-15"
+     ],
+     "board": {
+      "1前": {
+       "card": "KN-08",
+       "damage": 1
+      },
+      "2前": "KN-03"
+     }
+    },
+    "B": {
+     "maxMana": 3,
+     "board": {
+      "1前": {
+       "card": "KN-20",
+       "shield": false
+      },
+      "4後": "KN-25"
+     }
+    }
+   },
+   "steps": [
+    {
+     "type": "castSpell",
+     "player": "A",
+     "card": "KN-15",
+     "targets": {
+      "ally": {
+       "unit": "A:2前"
+      },
+      "cell": {
+       "cell": "B:1前"
+      }
+     }
+    },
+    {
+     "expect": {
+      "activePlayer": "B",
+      "A": {
+       "mana": 0,
+       "delayed": [
+        "KN-15"
+       ],
+       "board": {
+        "2前": {
+         "attack": 3
+        }
+       }
+      }
+     }
+    },
+    {
+     "type": "activate",
+     "player": "B",
+     "unit": "4後",
+     "targets": {
+      "enemy": {
+       "unit": "A:1前"
+      }
+     }
+    }
+   ],
+   "expect": {
+    "activePlayer": "B",
+    "A": {
+     "delayed": [],
+     "trash": [
+      "KN-08",
+      "KN-15"
+     ],
+     "board": {
+      "2前": {
+       "attack": 2
+      }
+     }
+    },
+    "B": {
+     "board": {
+      "1前": {
+       "damage": 2
+      }
+     }
+    }
+   }
+  },
+  {
+   "name": "KN-15 審判の槌: 指定した味方が発動前に破壊されていればダメージは0",
+   "refs": [
+    "KN-15",
+    "14.1"
+   ],
+   "setup": {
+    "A": {
+     "maxMana": 4,
+     "hand": [
+      "KN-15"
+     ],
+     "board": {
+      "2前": "KN-03"
+     }
+    },
+    "B": {
+     "maxMana": 3,
+     "board": {
+      "1前": "KN-04",
+      "4後": "KN-25"
+     }
+    }
+   },
+   "steps": [
+    {
+     "type": "castSpell",
+     "player": "A",
+     "card": "KN-15",
+     "targets": {
+      "ally": {
+       "unit": "A:2前"
+      },
+      "cell": {
+       "cell": "B:1前"
+      }
+     }
+    },
+    {
+     "type": "activate",
+     "player": "B",
+     "unit": "4後",
+     "targets": {
+      "enemy": {
+       "unit": "A:2前"
+      }
+     }
+    }
+   ],
+   "expect": {
+    "A": {
+     "delayed": [],
+     "trash": [
+      "KN-03",
+      "KN-15"
+     ]
+    },
+    "B": {
+     "board": {
+      "1前": {
+       "card": "KN-04",
+       "damage": 0
+      }
+     }
+    }
+   }
+  },
+  {
+   "name": "KN-15 審判の槌 強化: 味方がこのラウンド中+2/+0され、その攻撃力でダメージ",
+   "refs": [
+    "KN-15",
+    "15.1",
+    "10.4"
+   ],
+   "setup": {
+    "A": {
+     "maxMana": 6,
+     "hand": [
+      "KN-15"
+     ],
+     "board": {
+      "2前": "KN-04"
+     }
+    },
+    "B": {
+     "board": {
+      "1前": {
+       "card": "KN-20",
+       "shield": false
+      }
+     }
+    }
+   },
+   "steps": [
+    {
+     "type": "castSpell",
+     "player": "A",
+     "card": "KN-15",
+     "enhance": true,
+     "targets": {
+      "ally": {
+       "unit": "A:2前"
+      },
+      "cell": {
+       "cell": "B:1前"
+      }
+     }
+    },
+    {
+     "expect": {
+      "A": {
+       "mana": 0,
+       "board": {
+        "2前": {
+         "attack": 4
+        }
+       }
+      }
+     }
+    },
+    {
+     "type": "pass",
+     "player": "B"
+    },
+    {
+     "expect": {
+      "B": {
+       "board": {
+        "1前": {
+         "damage": 4
+        }
+       }
+      }
+     }
+    },
+    {
+     "do": "roundEnd"
+    }
+   ],
+   "expect": {
+    "A": {
+     "board": {
+      "2前": {
+       "attack": 2
+      }
+     }
+    }
+   }
+  },
+  {
+   "name": "KN-15 審判の槌: マス指定なので、発動時にそのマスへ移動してきたユニットに当たる",
+   "refs": [
+    "KN-15",
+    "14.1"
+   ],
+   "setup": {
+    "A": {
+     "maxMana": 4,
+     "hand": [
+      "KN-15"
+     ],
+     "board": {
+      "2前": "KN-04"
+     }
+    },
+    "B": {
+     "board": {
+      "4前": "KN-19"
+     }
+    }
+   },
+   "steps": [
+    {
+     "type": "castSpell",
+     "player": "A",
+     "card": "KN-15",
+     "targets": {
+      "ally": {
+       "unit": "A:2前"
+      },
+      "cell": {
+       "cell": "B:3前"
+      }
+     }
+    },
+    {
+     "type": "mobileMove",
+     "player": "B",
+     "unit": "4前",
+     "to": "3前"
+    }
+   ],
+   "expect": {
+    "B": {
+     "board": {
+      "3前": null,
+      "4前": null
+     },
+     "trash": [
+      "KN-19"
+     ]
+    }
+   }
+  },
+  {
+   "name": "KN-16 誓いの聖騎士: 味方が戦闘ダメージを耐えるたび+1/+0（盾で防いだ場合も数える、破壊された味方・敵は数えない）",
+   "refs": [
+    "KN-16",
+    "11.7",
+    "14"
+   ],
+   "setup": {
+    "A": {
+     "board": {
+      "1後": "KN-16",
+      "2前": "KN-09",
+      "3前": "KN-12",
+      "4前": "KN-03"
+     }
+    },
+    "B": {
+     "board": {
+      "2前": "KN-03",
+      "3前": "KN-03",
+      "3後": "KN-03",
+      "4前": "KN-04"
+     }
+    }
+   },
+   "steps": [
+    {
+     "do": "combat"
+    }
+   ],
+   "expect": {
+    "A": {
+     "leaders": [
+      {
+       "progress": 2
+      }
+     ],
+     "board": {
+      "1後": {
+       "card": "KN-16",
+       "attack": 5
+      },
+      "2前": {
+       "shield": false,
+       "damage": 0
+      },
+      "3前": {
+       "damage": 4
+      },
+      "4前": null
+     }
+    },
+    "B": {
+     "board": {
+      "2前": null,
+      "4前": {
+       "damage": 2
+      }
+     }
+    }
+   }
+  },
+  {
+   "name": "KN-16 誓いの聖騎士: 盾で防いだだけでも耐えたと数える",
+   "refs": [
+    "KN-16",
+    "11.7"
+   ],
+   "setup": {
+    "A": {
+     "board": {
+      "1後": "KN-16",
+      "2前": "KN-09"
+     }
+    },
+    "B": {
+     "board": {
+      "2前": {
+       "card": "KN-20",
+       "shield": false
+      }
+     }
+    }
+   },
+   "steps": [
+    {
+     "do": "combat"
+    }
+   ],
+   "expect": {
+    "A": {
+     "leaders": [
+      {
+       "progress": 1
+      }
+     ],
+     "board": {
+      "1後": {
+       "attack": 4
+      },
+      "2前": {
+       "shield": false,
+       "damage": 0
+      }
+     }
+    },
+    "B": {
+     "board": {
+      "2前": {
+       "damage": 3
+      }
+     }
+    }
+   }
+  },
+  {
+   "name": "KN-16 誓いの聖騎士: 先制ステップと通常ステップで別々に耐えれば2回",
+   "refs": [
+    "KN-16",
+    "8.1",
+    "11.7"
+   ],
+   "setup": {
+    "A": {
+     "board": {
+      "2後": "KN-16",
+      "1前": "KN-12"
+     }
+    },
+    "B": {
+     "board": {
+      "1前": {
+       "card": "KN-03",
+       "keywords": [
+        "firstStrike"
+       ]
+      },
+      "1後": "KN-03"
+     }
+    }
+   },
+   "steps": [
+    {
+     "do": "combat"
+    }
+   ],
+   "expect": {
+    "A": {
+     "leaders": [
+      {
+       "progress": 2
+      }
+     ],
+     "board": {
+      "2後": {
+       "attack": 5
+      },
+      "1前": {
+       "damage": 4,
+       "health": 1
+      }
+     }
+    },
+    "B": {
+     "board": {
+      "1前": {
+       "damage": 1
+      }
+     }
+    }
+   }
+  },
+  {
+   "name": "KN-17 王国の軍師: 起動（3）遅延でこのレーンだけ戦闘。耐えた数に入り、通常の戦闘は別に行う",
+   "refs": [
+    "KN-17",
+    "11.7",
+    "14.1"
+   ],
+   "setup": {
+    "A": {
+     "maxMana": 3,
+     "board": {
+      "2前": "KN-17",
+      "1前": "KN-03"
+     }
+    },
+    "B": {
+     "board": {
+      "2前": "KN-04",
+      "1前": "KN-03"
+     }
+    }
+   },
+   "steps": [
+    {
+     "type": "activate",
+     "player": "A",
+     "unit": "2前"
+    },
+    {
+     "expect": {
+      "activePlayer": "B",
+      "A": {
+       "mana": 0,
+       "delayed": [
+        "KN-17"
+       ]
+      }
+     }
+    },
+    {
+     "type": "pass",
+     "player": "B"
+    },
+    {
+     "expect": {
+      "round": 1,
+      "activePlayer": "B",
+      "passStreak": 0,
+      "A": {
+       "delayed": [],
+       "leaders": [
+        {
+         "progress": 1
+        }
+       ],
+       "board": {
+        "2前": {
+         "damage": 2
+        },
+        "1前": {
+         "damage": 0
+        }
+       }
+      },
+      "B": {
+       "life": 20,
+       "board": {
+        "2前": null,
+        "1前": {
+         "damage": 0
+        }
+       }
+      }
+     }
+    },
+    {
+     "type": "pass",
+     "player": "B"
+    },
+    {
+     "type": "pass",
+     "player": "A"
+    }
+   ],
+   "expect": {
+    "round": 2,
+    "A": {
+     "life": 20,
+     "leaders": [
+      {
+       "progress": 1
+      }
+     ],
+     "board": {
+      "1前": null,
+      "2前": {
+       "card": "KN-17",
+       "damage": 2
+      }
+     }
+    },
+    "B": {
+     "life": 16,
+     "board": {
+      "1前": null
+     }
+    }
+   }
+  },
+  {
+   "name": "KN-18 兵士招集: 山札からユニットカードだけを2枚手札に加える",
+   "refs": [
+    "KN-18",
+    "11.7"
+   ],
+   "setup": {
+    "A": {
+     "maxMana": 4,
+     "hand": [
+      "KN-18"
+     ],
+     "deck": [
+      "KN-06",
+      "KN-03",
+      "KN-07",
+      "KN-04",
+      "KN-11"
+     ]
+    },
+    "B": {}
+   },
+   "steps": [
+    {
+     "type": "castSpell",
+     "player": "A",
+     "card": "KN-18"
+    }
+   ],
+   "expect": {
+    "activePlayer": "B",
+    "A": {
+     "mana": 0,
+     "hand": [
+      "KN-03",
+      "KN-04"
+     ],
+     "deckCount": 3,
+     "trash": [
+      "KN-18"
+     ],
+     "spellsCast": 1
+    }
+   }
+  },
+  {
+   "name": "KN-18 兵士招集 強化: 代わりに3枚",
+   "refs": [
+    "KN-18",
+    "15.1"
+   ],
+   "setup": {
+    "A": {
+     "maxMana": 6,
+     "hand": [
+      "KN-18"
+     ],
+     "deck": [
+      "KN-06",
+      "KN-03",
+      "KN-07",
+      "KN-04",
+      "KN-09",
+      "KN-11"
+     ]
+    },
+    "B": {}
+   },
+   "steps": [
+    {
+     "type": "castSpell",
+     "player": "A",
+     "card": "KN-18",
+     "enhance": true
+    }
+   ],
+   "expect": {
+    "A": {
+     "mana": 0,
+     "hand": [
+      "KN-03",
+      "KN-04",
+      "KN-09"
+     ],
+     "deckCount": 3
+    }
+   }
+  },
+  {
+   "name": "KN-18 兵士招集: ユニットカードが足りなければあるだけ加える",
+   "refs": [
+    "KN-18",
+    "11.7"
+   ],
+   "setup": {
+    "A": {
+     "maxMana": 6,
+     "hand": [
+      "KN-18"
+     ],
+     "deck": [
+      "KN-06",
+      "KN-23",
+      "KN-07"
+     ]
+    },
+    "B": {}
+   },
+   "steps": [
+    {
+     "type": "castSpell",
+     "player": "A",
+     "card": "KN-18",
+     "enhance": true
+    }
+   ],
+   "expect": {
+    "A": {
+     "hand": [
+      "KN-23"
+     ],
+     "deckCount": 2
+    }
+   }
+  },
+  {
+   "name": "KN-19 軽装騎兵: 機動で動き、起動（1）でこのラウンド中先制を得て反撃を受けずに倒す",
+   "refs": [
+    "KN-19",
+    "14",
+    "15.2",
+    "10.4"
+   ],
+   "setup": {
+    "A": {
+     "maxMana": 1,
+     "board": {
+      "3後": "KN-19"
+     }
+    },
+    "B": {
+     "board": {
+      "1前": "KN-04"
+     }
+    }
+   },
+   "steps": [
+    {
+     "type": "mobileMove",
+     "player": "A",
+     "unit": "3後",
+     "to": "1前"
+    },
+    {
+     "type": "pass",
+     "player": "B"
+    },
+    {
+     "type": "activate",
+     "player": "A",
+     "unit": "1前"
+    },
+    {
+     "expect": {
+      "A": {
+       "mana": 0,
+       "board": {
+        "1前": {
+         "keywords": [
+          "firstStrike",
+          "mobile"
+         ]
+        }
+       }
+      }
+     }
+    },
+    {
+     "do": "combat"
+    },
+    {
+     "expect": {
+      "A": {
+       "board": {
+        "1前": {
+         "card": "KN-19",
+         "damage": 0
+        }
+       }
+      },
+      "B": {
+       "board": {
+        "1前": null
+       }
+      }
+     }
+    },
+    {
+     "do": "roundEnd"
+    }
+   ],
+   "expect": {
+    "A": {
+     "board": {
+      "1前": {
+       "keywords": [
+        "mobile"
+       ],
+       "noKeywords": [
+        "firstStrike"
+       ]
+      }
+     }
+    }
+   }
+  },
+  {
+   "name": "KN-19 軽装騎兵: 起動しなければ先制はなく相打ち",
+   "refs": [
+    "KN-19",
+    "8.4"
+   ],
+   "setup": {
+    "A": {
+     "board": {
+      "1前": "KN-19"
+     }
+    },
+    "B": {
+     "board": {
+      "1前": "KN-04"
+     }
+    }
+   },
+   "steps": [
+    {
+     "do": "combat"
+    }
+   ],
+   "expect": {
+    "A": {
+     "board": {
+      "1前": null
+     }
+    },
+    "B": {
+     "board": {
+      "1前": null
+     }
+    }
+   }
+  },
+  {
+   "name": "KN-20 王城の大盾兵: 盾を持ち、左右隣の味方は+1/+2",
+   "refs": [
+    "KN-20",
+    "11.5"
+   ],
+   "setup": {
+    "A": {
+     "board": {
+      "2前": "KN-20",
+      "1前": "KN-03",
+      "3前": "KN-03",
+      "2後": "KN-03",
+      "4前": "KN-03"
+     }
+    },
+    "B": {}
+   },
+   "steps": [],
+   "expect": {
+    "A": {
+     "board": {
+      "2前": {
+       "attack": 3,
+       "health": 7,
+       "shield": true
+      },
+      "1前": {
+       "attack": 3,
+       "health": 4
+      },
+      "3前": {
+       "attack": 3,
+       "health": 4
+      },
+      "2後": {
+       "attack": 2,
+       "health": 2
+      },
+      "4前": {
+       "attack": 2,
+       "health": 2
+      }
+     }
+    }
+   }
+  },
+  {
+   "name": "KN-20 王城の大盾兵: 大盾兵が破壊されると、+0/+2で生きていた隣の味方も破壊される",
+   "refs": [
+    "KN-20",
+    "11.5",
+    "10.3"
+   ],
+   "setup": {
+    "activePlayer": "B",
+    "A": {
+     "board": {
+      "2前": {
+       "card": "KN-20",
+       "shield": false,
+       "damage": 5
+      },
+      "1前": {
+       "card": "KN-03",
+       "damage": 3
+      }
+     }
+    },
+    "B": {
+     "maxMana": 3,
+     "board": {
+      "4後": "KN-25"
+     }
+    }
+   },
+   "steps": [
+    {
+     "expect": {
+      "A": {
+       "board": {
+        "1前": {
+         "health": 1
+        }
+       }
+      }
+     }
+    },
+    {
+     "type": "activate",
+     "player": "B",
+     "unit": "4後",
+     "targets": {
+      "enemy": {
+       "unit": "A:2前"
+      }
+     }
+    }
+   ],
+   "expect": {
+    "A": {
+     "board": {
+      "2前": null,
+      "1前": null
+     },
+     "trash": [
+      "KN-20",
+      "KN-03"
+     ]
+    }
+   }
+  },
+  {
+   "name": "KN-21 老将ガラハド: 配置時に味方ユニットすべて（自身を含む）を+0/+2（永続）。敵は対象外",
+   "refs": [
+    "KN-21",
+    "7.1",
+    "10.4"
+   ],
+   "setup": {
+    "A": {
+     "maxMana": 7,
+     "hand": [
+      "KN-21"
+     ],
+     "board": {
+      "1前": {
+       "card": "KN-03",
+       "damage": 1
+      },
+      "4後": "KN-04"
+     }
+    },
+    "B": {
+     "board": {
+      "1前": "KN-03"
+     }
+    }
+   },
+   "steps": [
+    {
+     "type": "playUnit",
+     "player": "A",
+     "card": "KN-21",
+     "cell": "2前"
+    },
+    {
+     "expect": {
+      "A": {
+       "mana": 0,
+       "board": {
+        "2前": {
+         "attack": 6,
+         "maxHealth": 9,
+         "shield": true
+        },
+        "1前": {
+         "maxHealth": 4,
+         "health": 3
+        },
+        "4後": {
+         "maxHealth": 5
+        }
+       }
+      },
+      "B": {
+       "board": {
+        "1前": {
+         "maxHealth": 2
+        }
+       }
+      }
+     }
+    },
+    {
+     "do": "endRound"
+    }
+   ],
+   "expect": {
+    "A": {
+     "board": {
+      "1前": {
+       "maxHealth": 4
+      },
+      "4後": {
+       "maxHealth": 5
+      },
+      "2前": {
+       "maxHealth": 9
+      }
+     }
+    }
+   }
+  },
+  {
+   "name": "KN-22 聖堂騎士長: 起動（4）遅延で全レーンの戦闘。その後ラウンドの戦闘も別に行う",
+   "refs": [
+    "KN-22",
+    "11.7",
+    "14.1",
+    "6.2"
+   ],
+   "setup": {
+    "A": {
+     "maxMana": 4,
+     "board": {
+      "1前": "KN-22",
+      "3後": "KN-03"
+     }
+    },
+    "B": {
+     "board": {
+      "1前": "KN-04",
+      "2前": "KN-03"
+     }
+    }
+   },
+   "steps": [
+    {
+     "type": "activate",
+     "player": "A",
+     "unit": "1前"
+    },
+    {
+     "expect": {
+      "A": {
+       "mana": 0,
+       "delayed": [
+        "KN-22"
+       ]
+      }
+     }
+    },
+    {
+     "type": "pass",
+     "player": "B"
+    },
+    {
+     "expect": {
+      "round": 1,
+      "activePlayer": "B",
+      "A": {
+       "life": 18,
+       "delayed": [],
+       "leaders": [
+        {
+         "progress": 1
+        }
+       ],
+       "board": {
+        "1前": {
+         "damage": 2
+        }
+       }
+      },
+      "B": {
+       "life": 18,
+       "board": {
+        "1前": null,
+        "2前": {
+         "damage": 0
+        }
+       }
+      }
+     }
+    },
+    {
+     "type": "pass",
+     "player": "B"
+    },
+    {
+     "type": "pass",
+     "player": "A"
+    }
+   ],
+   "expect": {
+    "round": 2,
+    "A": {
+     "life": 16,
+     "board": {
+      "1前": {
+       "card": "KN-22",
+       "damage": 2
+      }
+     }
+    },
+    "B": {
+     "life": 10
+    }
+   }
+  },
+  {
+   "name": "KN-22 聖堂騎士長: 起動コストが足りなければ使えない",
+   "refs": [
+    "KN-22",
+    "15.2"
+   ],
+   "setup": {
+    "A": {
+     "maxMana": 3,
+     "reserve": 0,
+     "board": {
+      "1前": "KN-22"
+     }
+    },
+    "B": {}
+   },
+   "steps": [
+    {
+     "type": "activate",
+     "player": "A",
+     "unit": "1前",
+     "illegal": true
+    }
+   ],
+   "expect": {
+    "A": {
+     "mana": 3,
+     "delayed": []
+    }
+   }
+  },
+  {
+   "name": "KN-23 竜殺しの英雄: 先制で倒し、貫通の超えた分は後列へ（本体までは届かない）",
+   "refs": [
+    "KN-23",
+    "8.1",
+    "8.4",
+    "14"
+   ],
+   "setup": {
+    "A": {
+     "board": {
+      "1前": "KN-23"
+     }
+    },
+    "B": {
+     "board": {
+      "1前": {
+       "card": "KN-21",
+       "shield": false
+      },
+      "1後": {
+       "card": "KN-20",
+       "shield": false
+      }
+     }
+    }
+   },
+   "steps": [
+    {
+     "do": "combat"
+    }
+   ],
+   "expect": {
+    "A": {
+     "board": {
+      "1前": {
+       "card": "KN-23",
+       "damage": 0
+      }
+     }
+    },
+    "B": {
+     "life": 20,
+     "board": {
+      "1前": null,
+      "1後": {
+       "card": "KN-20",
+       "damage": 5
+      }
+     }
+    }
+   }
+  },
+  {
+   "name": "KN-23 竜殺しの英雄: 貫通した先の後列の盾に防がれると本体には届かない",
+   "refs": [
+    "KN-23",
+    "14"
+   ],
+   "setup": {
+    "A": {
+     "board": {
+      "1前": "KN-23"
+     }
+    },
+    "B": {
+     "board": {
+      "1前": "KN-04",
+      "1後": "KN-09"
+     }
+    }
+   },
+   "steps": [
+    {
+     "do": "combat"
+    }
+   ],
+   "expect": {
+    "A": {
+     "board": {
+      "1前": {
+       "damage": 0
+      }
+     }
+    },
+    "B": {
+     "life": 20,
+     "board": {
+      "1前": null,
+      "1後": {
+       "card": "KN-09",
+       "shield": false,
+       "damage": 0
+      }
+     }
+    }
+   }
+  },
+  {
+   "name": "KN-24 天馬騎士団長: 配置時に味方ユニットすべて（自身を含む）に盾",
+   "refs": [
+    "KN-24",
+    "7.1",
+    "14"
+   ],
+   "setup": {
+    "A": {
+     "maxMana": 9,
+     "hand": [
+      "KN-24"
+     ],
+     "board": {
+      "1前": "KN-03",
+      "2後": "KN-04",
+      "4前": "KN-09"
+     }
+    },
+    "B": {
+     "board": {
+      "1前": "KN-03"
+     }
+    }
+   },
+   "steps": [
+    {
+     "type": "playUnit",
+     "player": "A",
+     "card": "KN-24",
+     "cell": "3前"
+    },
+    {
+     "expect": {
+      "A": {
+       "mana": 0,
+       "board": {
+        "1前": {
+         "shield": true
+        },
+        "2後": {
+         "shield": true
+        },
+        "4前": {
+         "shield": true
+        },
+        "3前": {
+         "shield": true
+        }
+       }
+      },
+      "B": {
+       "board": {
+        "1前": {
+         "shield": false
+        }
+       }
+      }
+     }
+    },
+    {
+     "do": "combat"
+    }
+   ],
+   "expect": {
+    "A": {
+     "board": {
+      "1前": {
+       "card": "KN-03",
+       "shield": false,
+       "damage": 0
+      }
+     }
+    },
+    "B": {
+     "board": {
+      "1前": null
+     }
+    }
+   }
+  },
+  {
+   "name": "KN-25 王国の守護竜: 起動（3）で敵ユニットに3ダメージ（味方は選べない・1ラウンド1回）、射撃で後列から攻撃",
+   "refs": [
+    "KN-25",
+    "15.2",
+    "14"
+   ],
+   "setup": {
+    "A": {
+     "maxMana": 6,
+     "board": {
+      "2後": "KN-25"
+     }
+    },
+    "B": {
+     "board": {
+      "1前": "KN-04",
+      "3前": "KN-04"
+     }
+    }
+   },
+   "steps": [
+    {
+     "expect": {
+      "A": {
+       "board": {
+        "2後": {
+         "attack": 9,
+         "health": 9,
+         "shield": true,
+         "keywords": [
+          "ranged"
+         ]
+        }
+       }
+      }
+     }
+    },
+    {
+     "type": "activate",
+     "player": "A",
+     "unit": "2後",
+     "targets": {
+      "enemy": {
+       "unit": "A:2後"
+      }
+     },
+     "illegal": true
+    },
+    {
+     "type": "activate",
+     "player": "A",
+     "unit": "2後",
+     "targets": {
+      "enemy": {
+       "unit": "B:1前"
+      }
+     }
+    },
+    {
+     "expect": {
+      "activePlayer": "B",
+      "A": {
+       "mana": 3
+      },
+      "B": {
+       "board": {
+        "1前": null
+       },
+       "trash": [
+        "KN-04"
+       ]
+      }
+     }
+    },
+    {
+     "type": "pass",
+     "player": "B"
+    },
+    {
+     "type": "activate",
+     "player": "A",
+     "unit": "2後",
+     "targets": {
+      "enemy": {
+       "unit": "B:3前"
+      }
+     },
+     "illegal": true
+    },
+    {
+     "do": "combat"
+    }
+   ],
+   "expect": {
+    "B": {
+     "life": 11
+    }
+   }
+  },
+  {
+   "name": "KN-25 王国の守護竜: 起動のダメージは盾で防がれる",
+   "refs": [
+    "KN-25",
+    "14"
+   ],
+   "setup": {
+    "A": {
+     "maxMana": 3,
+     "board": {
+      "2後": "KN-25"
+     }
+    },
+    "B": {
+     "board": {
+      "3前": "KN-09"
+     }
+    }
+   },
+   "steps": [
+    {
+     "type": "activate",
+     "player": "A",
+     "unit": "2後",
+     "targets": {
+      "enemy": {
+       "unit": "B:3前"
+      }
+     }
+    }
+   ],
+   "expect": {
+    "B": {
+     "board": {
+      "3前": {
+       "card": "KN-09",
+       "shield": false,
+       "damage": 0
+      }
+     }
+    }
+   }
+  },
+  {
+   "name": "アルト 盾の誓い: コスト4で味方1体に盾。敵は選べず、1ラウンド1回",
+   "refs": [
+    "leader-alto",
+    "13.2",
+    "7.4"
+   ],
+   "setup": {
+    "A": {
+     "maxMana": 8,
+     "board": {
+      "1前": "KN-04"
+     }
+    },
+    "B": {
+     "board": {
+      "1前": "KN-03"
+     }
+    }
+   },
+   "steps": [
+    {
+     "expect": {
+      "A": {
+       "leaders": [
+        {
+         "cost": 4,
+         "used": false,
+         "grown": false
+        }
+       ]
+      }
+     }
+    },
+    {
+     "type": "leaderAbility",
+     "player": "A",
+     "leader": 0,
+     "targets": {
+      "ally": {
+       "unit": "B:1前"
+      }
+     },
+     "illegal": true
+    },
+    {
+     "type": "leaderAbility",
+     "player": "A",
+     "leader": 0,
+     "targets": {
+      "ally": {
+       "unit": "A:1前"
+      }
+     }
+    },
+    {
+     "expect": {
+      "activePlayer": "B",
+      "A": {
+       "mana": 4,
+       "leaders": [
+        {
+         "used": true
+        }
+       ],
+       "board": {
+        "1前": {
+         "shield": true,
+         "attack": 2
+        }
+       }
+      }
+     }
+    },
+    {
+     "type": "pass",
+     "player": "B"
+    },
+    {
+     "type": "leaderAbility",
+     "player": "A",
+     "leader": 0,
+     "targets": {
+      "ally": {
+       "unit": "A:1前"
+      }
+     },
+     "illegal": true
+    },
+    {
+     "do": "combat"
+    }
+   ],
+   "expect": {
+    "A": {
+     "leaders": [
+      {
+       "progress": 1,
+       "grown": false
+      }
+     ],
+     "board": {
+      "1前": {
+       "shield": false,
+       "damage": 0
+      }
+     }
+    },
+    "B": {
+     "board": {
+      "1前": null
+     }
+    }
+   }
+  },
+  {
+   "name": "アルト 成長: 味方が戦闘ダメージを6回耐えると成長し、盾を持つ味方すべてが+2/+0",
+   "refs": [
+    "leader-alto",
+    "13.3",
+    "13.4",
+    "11.7"
+   ],
+   "setup": {
+    "A": {
+     "leaders": [
+      {
+       "id": "leader-alto",
+       "progress": 5
+      },
+      "leader-rei"
+     ],
+     "board": {
+      "1前": "KN-04",
+      "2後": "KN-09"
+     }
+    },
+    "B": {
+     "board": {
+      "1前": "KN-03",
+      "3後": "KN-09"
+     }
+    }
+   },
+   "steps": [
+    {
+     "expect": {
+      "A": {
+       "leaders": [
+        {
+         "grown": false,
+         "progress": 5,
+         "cost": 4
+        }
+       ],
+       "board": {
+        "2後": {
+         "attack": 3
+        }
+       }
+      }
+     }
+    },
+    {
+     "do": "combat"
+    }
+   ],
+   "expect": {
+    "A": {
+     "leaders": [
+      {
+       "grown": true,
+       "cost": 3
+      }
+     ],
+     "board": {
+      "1前": {
+       "attack": 2,
+       "damage": 2
+      },
+      "2後": {
+       "attack": 5
+      }
+     }
+    },
+    "B": {
+     "board": {
+      "3後": {
+       "attack": 3
+      }
+     }
+    }
+   }
+  },
+  {
+   "name": "アルト 成長後: 盾の誓い（3）で盾を与えると+2/+0、盾がなくなると元に戻る",
+   "refs": [
+    "leader-alto",
+    "13.3"
+   ],
+   "setup": {
+    "A": {
+     "maxMana": 3,
+     "leaders": [
+      {
+       "id": "leader-alto",
+       "grown": true
+      },
+      "leader-rei"
+     ],
+     "board": {
+      "1前": "KN-04"
+     }
+    },
+    "B": {
+     "board": {
+      "1前": "KN-03"
+     }
+    }
+   },
+   "steps": [
+    {
+     "expect": {
+      "A": {
+       "leaders": [
+        {
+         "cost": 3
+        }
+       ],
+       "board": {
+        "1前": {
+         "attack": 2
+        }
+       }
+      }
+     }
+    },
+    {
+     "type": "leaderAbility",
+     "player": "A",
+     "leader": 0,
+     "targets": {
+      "ally": {
+       "unit": "A:1前"
+      }
+     }
+    },
+    {
+     "expect": {
+      "A": {
+       "mana": 0,
+       "board": {
+        "1前": {
+         "shield": true,
+         "attack": 4
+        }
+       }
+      }
+     }
+    },
+    {
+     "do": "combat"
+    }
+   ],
+   "expect": {
+    "A": {
+     "board": {
+      "1前": {
+       "shield": false,
+       "damage": 0,
+       "attack": 2
+      }
+     }
+    },
+    "B": {
+     "board": {
+      "1前": null
+     }
+    }
+   }
+  },
+  {
+   "name": "アルト 成長: 同じラウンドに能力を使った後で成長しても使用済みのまま",
+   "refs": [
+    "leader-alto",
+    "13.4"
+   ],
+   "setup": {
+    "A": {
+     "maxMana": 8,
+     "leaders": [
+      {
+       "id": "leader-alto",
+       "progress": 5
+      },
+      "leader-rei"
+     ],
+     "board": {
+      "1前": "KN-04"
+     }
+    },
+    "B": {
+     "board": {
+      "1前": "KN-03"
+     }
+    }
+   },
+   "steps": [
+    {
+     "type": "leaderAbility",
+     "player": "A",
+     "leader": 0,
+     "targets": {
+      "ally": {
+       "unit": "A:1前"
+      }
+     }
+    },
+    {
+     "do": "combat"
+    },
+    {
+     "expect": {
+      "A": {
+       "leaders": [
+        {
+         "grown": true,
+         "used": true,
+         "cost": 3
+        }
+       ],
+       "board": {
+        "1前": {
+         "shield": false,
+         "damage": 0
+        }
+       }
+      }
+     }
+    },
+    {
+     "type": "pass",
+     "player": "B"
+    },
+    {
+     "type": "leaderAbility",
+     "player": "A",
+     "leader": 0,
+     "targets": {
+      "ally": {
+       "unit": "A:1前"
+      }
+     },
+     "illegal": true
+    }
+   ],
+   "expect": {
+    "A": {
+     "mana": 4
+    }
+   }
+  }
+ ]
+}
