@@ -1,20 +1,22 @@
-# ルールエンジン（engine/）のテスト
+# ルールエンジン（engine/）と AI 対戦の試遊版（app/）のテスト
 name: Engine tests
 
 on:
   push:
     paths:
       - 'engine/**'
+      - 'app/**'
       - 'data/**'
       - '.github/workflows/engine.yml'
   pull_request:
     paths:
       - 'engine/**'
+      - 'app/**'
       - 'data/**'
       - '.github/workflows/engine.yml'
 
 jobs:
-  test:
+  engine:
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -31,3 +33,19 @@ jobs:
       - run: npm test
         env:
           SIM_GAMES: 200
+
+  app:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+      - run: npm ci
+      - run: npm test
+      - run: npm run build

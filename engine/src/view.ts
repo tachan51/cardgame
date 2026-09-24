@@ -39,13 +39,19 @@ export interface CombatPreview {
   destroyed: number[];
 }
 
-/** 「このまま戦闘になったら」の結果を計算する（元の状態は変えない） */
-export function previewCombat(cat: Catalog, state: GameState): CombatPreview {
+/**
+ * 「このまま戦闘になったら」の結果を計算する（元の状態は変えない）。
+ * 予約中の遅延効果は戦闘の前に必ず発動するので（6.2）、行動権を持つプレイヤーの分から先に発動させてから戦闘を行う
+ */
+export function previewCombat(cat: Catalog, state: GameState, opts: { withDelays?: boolean } = {}): CombatPreview {
   const s = structuredClone(state);
   s.pending = null;
-  const before = new Set(new Runner(cat, s).allUnits().map((x) => x.unit.uid));
   const r = new Runner(cat, s);
-  r.combatPhase();
+  const before = new Set(r.allUnits().map((x) => x.unit.uid));
+  if (opts.withDelays ?? true) {
+    for (const p of [s.activePlayer, opponent(s.activePlayer)]) if (!s.result) r.resolveDelays(p);
+  }
+  if (!s.result) r.combatPhase();
   const after = new Set(r.allUnits().map((x) => x.unit.uid));
   return {
     state: s,
