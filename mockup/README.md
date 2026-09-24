@@ -21,3 +21,8 @@ npm run dev      # http://localhost:5173 を開く
 - ユニット・マス・手札・山札・リーダーはクリックするとメニューが出る。
 - 取り消し Ctrl+Z、やり直し Ctrl+Y、メニューや配置の取りやめ Esc。
 - 試合はブラウザに自動保存される。「試合を保存」で JSON に書き出せる。
+
+## 公開（GitHub Pages）
+
+main に push すると `.github/workflows/pages.yml` がテスト・ビルドして GitHub Pages に公開します（`mockup/`・`data/` に変更があるときだけ。Actions 画面から手動でも実行可）。
+初回だけ、リポジトリの Settings → Pages で Source を「GitHub Actions」にしておく必要があります。
