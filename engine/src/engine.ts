@@ -13,6 +13,8 @@ export interface NewGameOptions {
   firstPlayer?: PlayerId;
   /** デッキの条件を確かめない（テスト用） */
   skipDeckCheck?: boolean;
+  /** 初期ライフ（調整の実験用。省略時はルールどおり） */
+  startLife?: number;
   /** 山札をシャッフルしない（テスト用。デッキに書いた順で山札の上から並ぶ） */
   noShuffle?: boolean;
 }
@@ -74,6 +76,7 @@ export function newGame(cat: Catalog, decks: Record<PlayerId, DeckDef>, opts: Ne
     }
     if (!opts.noShuffle) shuffleInPlace(s, s.players[p].deck);
   }
+  if (opts.startLife !== undefined) for (const p of ['A', 'B'] as const) s.players[p].life = opts.startLife;
   s.firstPlayer = opts.firstPlayer ?? (randomInt(s, 2) === 0 ? 'A' : 'B');
   s.activePlayer = s.firstPlayer;
   const r = new Runner(cat, s);

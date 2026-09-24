@@ -14,7 +14,7 @@ import {
 } from '../../../engine/src';
 import { canonical } from '../../../engine/src/runner';
 import { cat } from '../data';
-import type { Game } from '../game';
+import { LEVEL_LABEL, type Game } from '../game';
 import { allLegal, nextStep, type Selection, type Source, type Step } from '../select';
 import { AI, cardName, cardTypeLabel, esc, HUMAN, KEYWORD_LABEL, leaderLabel, logText, richText, targetText, who } from '../text';
 
@@ -52,7 +52,7 @@ export function renderBattle(root: HTMLElement, game: Game, onQuit: () => void, 
   root.innerHTML = `
   <div class="battle">
     <header class="topbar">
-      <div class="title">第${s.round}ラウンド <span class="muted">先手: ${who(s.firstPlayer)}</span></div>
+      <div class="title">第${s.round}ラウンド <span class="muted">先手: ${who(s.firstPlayer)}　AI: ${LEVEL_LABEL[m.level ?? 'normal']}</span></div>
       <div class="status ${humanTurn ? 'mine' : ''}">${statusText(game, s)}</div>
       <div class="actions">
         <button data-btn="pass" class="primary" ${humanTurn && s.phase === 'action' && !s.pending ? '' : 'disabled'}>パス${s.passStreak === 1 && s.activePlayer === HUMAN ? '（戦闘へ）' : ''}</button>
@@ -196,10 +196,12 @@ interface Marks {
   cells: Map<string, string[]>;
   lanes: Map<number, string[]>;
   players: Map<PlayerId, string[]>;
+  /** 印の場所ごとの予約したカード（詳細表示用） */
+  cards: Map<string, string>;
 }
 
 function delayMarks(s: GameState, r: Runner): Marks {
-  const m: Marks = { cells: new Map(), lanes: new Map(), players: new Map() };
+  const m: Marks = { cells: new Map(), lanes: new Map(), players: new Map(), cards: new Map() };
   const add = <K>(map: Map<K, string[]>, k: K, label: string) => map.set(k, [...(map.get(k) ?? []), label]);
   for (const d of s.delayed) {
     const label = `${who(d.owner)}の${cardName(d.cardId)}`;
@@ -207,13 +209,26 @@ function delayMarks(s: GameState, r: Runner): Marks {
       for (const v of vals) {
         if (v.kind === 'unit') {
           const loc = r.findUnit(v.uid);
-          if (loc) add(m.cells, `${loc.p}:${loc.i}`, label);
-        } else if (v.kind === 'cell') add(m.cells, `${v.p}:${v.i}`, label);
-        else if (v.kind === 'lane') add(m.lanes, v.lane, label);
-        else if (v.kind === 'player') add(m.players, v.p, label);
+          if (loc) {
+            add(m.cells, `${loc.p}:${loc.i}`, label);
+            m.cards.set(`cell:${loc.p}:${loc.i}`, d.cardId);
+          }
+        } else if (v.kind === 'cell') {
+          add(m.cells, `${v.p}:${v.i}`, label);
+          m.cards.set(`cell:${v.p}:${v.i}`, d.cardId);
+        } else if (v.kind === 'lane') {
+          add(m.lanes, v.lane, label);
+          m.cards.set(`lane:${v.lane}`, d.cardId);
+        } else if (v.kind === 'player') {
+          add(m.players, v.p, label);
+          m.cards.set(`player:${v.p}`, d.cardId);
+        }
       }
     }
-    if (d.ctx.selfLane !== undefined && !Object.keys(d.ctx.targets).length) add(m.lanes, d.ctx.selfLane, label);
+    if (d.ctx.selfLane !== undefined && !Object.keys(d.ctx.targets).length) {
+      add(m.lanes, d.ctx.selfLane, label);
+      m.cards.set(`lane:${d.ctx.selfLane}`, d.cardId);
+    }
   }
   return m;
 }
@@ -227,7 +242,9 @@ function delaysHtml(s: GameState, r: Runner): string {
       .map((v) => targetText(v, units))
       .join('、');
     const lane = d.ctx.selfLane !== undefined && !ts ? `レーン${d.ctx.selfLane}` : '';
-    return `<li><b>${who(d.owner)}</b>: ${esc(cardName(d.cardId))}${d.enhanced ? '（強化）' : ''}${ts || lane ? ` → ${esc(ts || lane)}` : ''}</li>`;
+    const def = cat.cards.get(d.cardId);
+    return `<li data-card-id="${d.cardId}" class="delay-item"><b>${who(d.owner)}</b>: <span class="link">${esc(cardName(d.cardId))}</span>${d.enhanced ? '（強化）' : ''}${ts || lane ? ` → ${esc(ts || lane)}` : ''}
+      ${def ? `<div class="ctext small">${richText(def.text)}</div>` : ''}</li>`;
   });
   void r;
   return `<div class="box delays"><h3>⏳ 予約中の遅延効果</h3><ul>${items.join('')}</ul><div class="muted small">予約した人の次の手番の始めに発動します</div></div>`;
@@ -260,7 +277,7 @@ function playerPanel(s: GameState, r: Runner, p: PlayerId, hl: Highlights, pv: P
     .join('');
   return `<section class="player ${p === HUMAN ? 'me' : 'ai'}">
     <h2>${who(p)}${s.activePlayer === p && s.phase === 'action' && !s.result ? ' <span class="turn">手番</span>' : ''}</h2>
-    <div class="life ${hl.players.has(p) ? 'hl' : ''}" data-player="${p}">❤ ${st.life}${lifeAfter}${mark ? `<span class="dmark" title="${esc(mark.join('、'))}">⏳</span>` : ''}</div>
+    <div class="life ${hl.players.has(p) ? 'hl' : ''}" data-player="${p}">❤ ${st.life}${lifeAfter}${mark ? `<span class="dmark" data-card-id="${marks.cards.get(`player:${p}`)}" title="${esc(mark.join('、'))}">⏳</span>` : ''}</div>
     <div class="mana"><span class="normal" title="通常マナ（カードに使う）">◆ ${st.mana}/${st.maxMana}</span> <span class="reserve" title="予備マナ（リーダー能力・強化・起動に使う）">◇ ${st.reserve}</span></div>
     <div class="zones small">手札 ${st.hand.length}　山札 ${st.deck.length}　トラッシュ ${st.trash.length}${st.exile.length ? `　除外 ${st.exile.length}` : ''}　使ったスペル ${st.spellsCast}</div>
     ${p === AI && st.hand.some((c) => c.revealed) ? `<div class="small">公開: ${st.hand.filter((c) => c.revealed).map((c) => `<span data-card-id="${c.cardId}" class="link">${esc(cardName(c.cardId))}</span>`).join('、')}</div>` : ''}
@@ -275,7 +292,7 @@ function boardHtml(s: GameState, r: Runner, hl: Highlights, pv: PreviewInfo | nu
   const header = `<div class="lane-row">${lanes
     .map((l) => {
       const mk = marks.lanes.get(l);
-      return `<div class="lane-head ${hl.lanes.has(l) ? 'hl' : ''}" data-lane="${l}">レーン${l}${mk ? ` <span class="dmark" title="${esc(mk.join('、'))}">⏳</span>` : ''}</div>`;
+      return `<div class="lane-head ${hl.lanes.has(l) ? 'hl' : ''}" data-lane="${l}">レーン${l}${mk ? ` <span class="dmark" data-card-id="${marks.cards.get(`lane:${l}`)}" title="${esc(mk.join('、'))}">⏳</span>` : ''}</div>`;
     })
     .join('')}</div>`;
   const row = (p: PlayerId, rowName: 'front' | 'back') =>
@@ -293,7 +310,7 @@ function cellHtml(s: GameState, r: Runner, p: PlayerId, i: number, hl: Highlight
   const cls = ['cell', hl.cells.has(key) ? 'hl' : '', u && hl.source === `unit:${u.uid}` ? 'selected' : '', mk ? 'marked' : ''].join(' ');
   return `<div class="${cls}" data-cell="${key}" title="${cellName(i)}">
     ${u ? unitHtml(r, u, pv) : `<span class="cell-name">${cellName(i)}</span>`}
-    ${mk ? `<div class="dmark-cell" title="${esc(mk.join('、'))}">⏳ ${esc(mk.join('、'))}</div>` : ''}
+    ${mk ? `<div class="dmark-cell" data-card-id="${marks.cards.get(`cell:${key}`)}" title="${esc(mk.join('、'))}">⏳ ${esc(mk.join('、'))}</div>` : ''}
   </div>`;
 }
 
@@ -439,6 +456,7 @@ function chooseHtml(s: GameState): string {
     return `<div class="card usable fac-${def.faction}" data-choose="${o.uid}" data-card-id="${o.cardId}">
       <div class="cost">${def.cost}</div><div class="cname">${esc(def.name)}</div>
       <div class="ctype small">${cardTypeLabel(o.cardId)}${def.type === 'unit' ? `　⚔${def.attack} ♥${def.health}` : ''}</div>
+      <div class="kws">${(def.keywords ?? []).map((k) => `<span class="kw">${KEYWORD_LABEL[k]}</span>`).join('')}</div>
       <div class="ctext">${richText(def.text)}</div></div>`;
   });
   return `<div class="overlay"><div class="dialog"><h2>手札に加えるカードを1枚選んでください</h2><div class="choose-row">${opts.join('')}</div><div class="muted">残りは元の順番で山札の上に戻ります</div></div></div>`;
@@ -453,6 +471,7 @@ function mulliganHtml(s: GameState): string {
     return `<div class="card usable fac-${def.faction} ${back ? 'returning' : ''}" data-mull="${c.uid}" data-card-id="${c.cardId}">
       <div class="cost">${def.cost}</div><div class="cname">${esc(def.name)}</div>
       <div class="ctype small">${cardTypeLabel(c.cardId)}${def.type === 'unit' ? `　⚔${def.attack} ♥${def.health}` : ''}</div>
+      <div class="kws">${(def.keywords ?? []).map((k) => `<span class="kw">${KEYWORD_LABEL[k]}</span>`).join('')}</div>
       <div class="ctext">${richText(def.text)}</div>
       ${back ? '<div class="back-mark">戻す</div>' : ''}</div>`;
   });

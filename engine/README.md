@@ -12,6 +12,9 @@ npm install
 npm test            # 単体テスト・テストシナリオ・ランダムな対戦
 npm run typecheck
 SIM_GAMES=1000 npm run sim   # ランダムな対戦の数を増やす
+npm run stats -- --games 60 --levels normal,normal --out ../docs/stats.md   # AI 同士の自動対戦の集計（4-3）
+npm run stats -- --games 4 --levels hard,normal --swap                       # AI の強さの比較
+npm run experiment -- --games 20                                               # カードやルールを仮に変えて比べる（4-4）
 ```
 
 ## 使い方
@@ -34,7 +37,11 @@ while (!s.result) {
 - **効果の途中の選択**: 「山札の上から見て1枚選ぶ」のような選択は `state.pending` に選択肢が入る。`{ type: 'choose', option }` で答える。
 - **公開情報**: AI には `publicView(state, player)` を渡す。相手の手札（公開されたものを除く）と山札の中身が隠れる。
 - **戦闘のプレビュー**: `previewCombat(cat, state)` は「このまま戦闘になったら」の結果を返す（元の状態は変えない）。予約中の遅延効果は戦闘の前に必ず発動するので、先に発動させてから計算する。
-- **AI**: `chooseAction(cat, state, player)` が手を返す。公開情報だけを使い、合法手を1つずつ試して、このラウンドの戦闘の結果まで見た評価（ライフ・盤面・手札・予備マナ・リーダーの成長）が一番高い手を選ぶ。相手の応手は読まない（M4 で強くする）。
+- **AI**: `chooseAction(cat, state, player, { level })` が手を返す。相手の手札と山札の中身は見ない。強さは3段階。
+  - `easy`（段階1）: 合法手を1つずつ試し、このラウンドの戦闘の結果まで見た評価で選ぶ。評価に揺らぎを入れて手加減する。
+  - `normal`（段階2）: 評価に、手札のカードの重さ・予備マナ・次のラウンドに使えるリーダー能力の価値を加える（AI 同士の対戦で重みを調整）。
+  - `hard`（段階3）: 段階2で良さそうな手を6つに絞り、相手の手札と山札を相手の勢力のカードから推測した「ありうる状況」を3通り作る。それぞれでラウンドの終わりまで双方が段階2の方針で打ち進め（ロールアウト）、平均の評価で選ぶ。思考時間に上限がある。
+  - 強さの目安（AI 同士、先手とデッキを入れ替えて）: normal は easy に約56%、hard は normal に約63% 勝つ。1手の思考時間は normal 約8ms、hard 約170ms。
 - **決定性**: 乱数は状態の中（`rngState`）にある。同じシードと同じアクション列なら必ず同じ結果になる。
 - **ログ**: `state.log` に、すべてのアクションと出来事（ダメージ・破壊・移動・成長など）が順番に入る。
 
@@ -48,7 +55,10 @@ while (!s.result) {
 | `src/runner.ts` | 効果の処理、誘発、戦闘、ラウンドの進行、勝敗、リーダーの成長 |
 | `src/legal.ts` | 合法手の一覧 |
 | `src/view.ts` | 公開情報、戦闘のプレビュー（予約中の遅延効果を先に発動させる） |
-| `src/ai.ts` | ルールベースの AI（段階1）。`chooseAction(cat, state, player)` |
+| `src/ai.ts` | AI（段階1〜3）。`chooseAction(cat, state, player, { level })` |
+| `src/sim.ts` | AI 同士の自動対戦（`playGame`）と集計（`summarize`・`toMarkdown`） |
+| `scripts/stats.ts` | 自動対戦をまとめて行い、集計を Markdown で出す（CPU の数だけ並列に動かす） |
+| `scripts/experiment.ts` | カードやルールを仮に変えた「実験」ごとに自動対戦し、デッキの勝率・試合の長さ・リーダーの成長を比べる |
 | `src/scenario.ts` | テストシナリオの実行（[scenarios/README.md](scenarios/README.md)） |
 | `scenarios/*.json` | テストシナリオ（ルールの例、カードごとの動き） |
 | `test/` | 単体テスト、シナリオの実行、ランダムな対戦 |

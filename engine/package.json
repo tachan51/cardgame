@@ -6,10 +6,13 @@
   "scripts": {
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
-    "sim": "vitest run test/random.test.ts"
+    "sim": "vitest run test/random.test.ts",
+    "stats": "tsx scripts/stats.ts",
+    "experiment": "tsx scripts/experiment.ts"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
+    "tsx": "^4.23.15",
     "typescript": "^5.9.3",
     "vitest": "^5.0.1"
   }
