@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "id": "sample-knights-academy",
   "name": "見本: 壁の奥から大魔法（騎士団＋学院）",
-  "description": "騎士団の壁で時間を稼ぎながら、学院のスペルを重ねて使ったスペルの枚数を増やし、遅延の大魔法と大型ユニットで決着をつける。学院の修道女で魔力還元を補充し、予備マナを切らさない。",
+  "description": "騎士団の壁と学院の大型ユニットで時間を稼ぎ、ライフを回復しながらスペルを重ねて、魔法の剣や天空の大魔導師で決着をつける",
   "leaders": [
     "leader-alto",
     "leader-noel"
@@ -10,7 +10,11 @@
   "cards": [
     {
       "id": "AC-07",
-      "count": 2
+      "count": 1
+    },
+    {
+      "id": "AC-13",
+      "count": 1
     },
     {
       "id": "KN-01",
@@ -21,8 +25,16 @@
       "count": 2
     },
     {
+      "id": "AC-04",
+      "count": 2
+    },
+    {
       "id": "AC-05",
       "count": 2
+    },
+    {
+      "id": "KN-03",
+      "count": 1
     },
     {
       "id": "KN-04",
@@ -30,15 +42,27 @@
     },
     {
       "id": "KN-05",
-      "count": 2
+      "count": 1
+    },
+    {
+      "id": "KN-06",
+      "count": 1
+    },
+    {
+      "id": "AC-09",
+      "count": 1
     },
     {
       "id": "AC-11",
-      "count": 2
+      "count": 3
     },
     {
-      "id": "AC-15",
+      "id": "AC-14",
       "count": 1
+    },
+    {
+      "id": "AC-23",
+      "count": 2
     },
     {
       "id": "KN-08",
@@ -46,43 +70,39 @@
     },
     {
       "id": "KN-09",
-      "count": 3
+      "count": 2
     },
     {
       "id": "AC-12",
-      "count": 2
+      "count": 1
     },
     {
-      "id": "AC-14",
-      "count": 2
+      "id": "AC-17",
+      "count": 1
     },
     {
       "id": "AC-21",
-      "count": 2
+      "count": 1
     },
     {
       "id": "KN-13",
       "count": 2
     },
     {
-      "id": "KN-15",
-      "count": 1
-    },
-    {
       "id": "AC-16",
-      "count": 1
-    },
-    {
-      "id": "AC-17",
-      "count": 2
-    },
-    {
-      "id": "KN-12",
       "count": 1
     },
     {
       "id": "KN-16",
       "count": 2
+    },
+    {
+      "id": "AC-10",
+      "count": 1
+    },
+    {
+      "id": "AC-19",
+      "count": 1
     },
     {
       "id": "KN-20",
@@ -93,15 +113,11 @@
       "count": 1
     },
     {
-      "id": "AC-23",
+      "id": "AC-22",
       "count": 1
     },
     {
-      "id": "AC-24",
-      "count": 1
-    },
-    {
-      "id": "KN-25",
+      "id": "AC-25",
       "count": 1
     }
   ]
