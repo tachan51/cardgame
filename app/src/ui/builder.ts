@@ -78,8 +78,13 @@ function cannotAdd(card: CardDef): string | null {
 
 // ---------------------------------------------------------------- 描画
 
+/** 描画し直してもスクロールの位置が変わらないように、描き直す前の位置を覚えておく */
+const SCROLLERS = ['.builder .center', '.deck-list', '.builder .side'];
+
 export function renderBuilder(root: HTMLElement, cb: BuilderCallbacks): void {
   const rerender = () => renderBuilder(root, cb);
+  const scroll = SCROLLERS.map((sel) => root.querySelector(sel)?.scrollTop ?? 0);
+  const winY = window.scrollY;
   const d = b.draft;
   const problems = validateDeck(d, cat);
   const size = deckSize(d);
@@ -114,6 +119,12 @@ export function renderBuilder(root: HTMLElement, cb: BuilderCallbacks): void {
     </div>
     ${b.textBox ? textBoxHtml() : ''}
   </div>`;
+
+  SCROLLERS.forEach((sel, i) => {
+    const el = root.querySelector(sel);
+    if (el) el.scrollTop = scroll[i];
+  });
+  window.scrollTo(0, winY);
 
   root.onclick = (e) => onClick(e, root, cb, rerender);
   root.onmouseover = (e) => onHover(e, root);
@@ -233,7 +244,10 @@ function summaryHtml(d: DeckDef, size: number, problems: string[]): string {
   }
   const max = Math.max(4, ...curve);
   const bars = curve
-    .map((n, i) => `<div class="bar"><div class="fill" style="height:${(n / max) * 100}%"></div><div class="n">${n}</div><div class="c">${i === 6 ? '7+' : i + 1}</div></div>`)
+    .map(
+      (n, i) =>
+        `<div class="bar"><div class="n">${n}</div><div class="col"><div class="fill" style="height:${(n / max) * 100}%"></div></div><div class="c">${i === 6 ? '7+' : i + 1}</div></div>`,
+    )
     .join('');
   const list = d.cards
     .map(({ id, count }) => {
