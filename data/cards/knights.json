@@ -1,0 +1,868 @@
+{
+  "formatVersion": 1,
+  "faction": {
+    "id": "knights",
+    "name": "王国騎士団"
+  },
+  "leader": {
+    "id": "leader-alto",
+    "name": "アルト",
+    "title": "見習い騎士",
+    "faction": "knights",
+    "ability": {
+      "name": "盾の誓い",
+      "cost": 4,
+      "targets": [
+        {
+          "id": "ally",
+          "kind": "unit",
+          "side": "ally"
+        }
+      ],
+      "effects": [
+        {
+          "op": "grantKeyword",
+          "target": {
+            "ref": "ally"
+          },
+          "keywords": [
+            "shield"
+          ],
+          "duration": "permanent"
+        }
+      ]
+    },
+    "growth": {
+      "counter": "allyEnduredCombatDamage",
+      "threshold": 6
+    },
+    "grown": {
+      "ability": {
+        "name": "盾の誓い",
+        "cost": 3,
+        "targets": [
+          {
+            "id": "ally",
+            "kind": "unit",
+            "side": "ally"
+          }
+        ],
+        "effects": [
+          {
+            "op": "grantKeyword",
+            "target": {
+              "ref": "ally"
+            },
+            "keywords": [
+              "shield"
+            ],
+            "duration": "permanent"
+          }
+        ]
+      },
+      "passives": [
+        {
+          "kind": "static",
+          "modifiers": [
+            {
+              "target": {
+                "units": {
+                  "side": "ally",
+                  "where": {
+                    "hasKeyword": "shield"
+                  }
+                }
+              },
+              "attack": 2
+            }
+          ]
+        }
+      ]
+    },
+    "text": "**盾の誓い**（4）: 味方ユニット1体に盾を与える。成長条件: 味方が戦闘ダメージを合計6回耐える。成長後: **盾の誓い**（3）: 味方ユニット1体に盾を与える。（パッシブ）：盾を持つ味方ユニットすべては+2/+0される"
+  },
+  "cards": [
+    {
+      "id": "KN-01",
+      "name": "見習い従者",
+      "faction": "knights",
+      "type": "unit",
+      "cost": 1,
+      "attack": 2,
+      "health": 2,
+      "abilities": [
+        {
+          "kind": "trigger",
+          "when": "onPlay",
+          "effects": []
+        }
+      ],
+      "enhance": {
+        "cost": 1,
+        "mode": "add",
+        "appliesTo": 0,
+        "effects": [
+          {
+            "op": "buff",
+            "target": "self",
+            "health": 2,
+            "duration": "permanent"
+          }
+        ]
+      },
+      "text": "強化（1）: 配置時、このユニットを+0/+2"
+    },
+    {
+      "id": "KN-02",
+      "name": "陣形変更",
+      "faction": "knights",
+      "type": "spell",
+      "cost": 3,
+      "keywords": [
+        "quick"
+      ],
+      "targets": [
+        {
+          "id": "ally",
+          "kind": "unit",
+          "side": "ally"
+        }
+      ],
+      "effects": [
+        {
+          "op": "grantKeyword",
+          "target": {
+            "ref": "ally"
+          },
+          "keywords": [
+            "mobile"
+          ],
+          "duration": "permanent"
+        }
+      ],
+      "text": "味方ユニット1体に機動を与える"
+    },
+    {
+      "id": "KN-03",
+      "name": "王都の弓兵",
+      "faction": "knights",
+      "type": "unit",
+      "cost": 2,
+      "attack": 2,
+      "health": 2,
+      "keywords": [
+        "ranged"
+      ],
+      "text": ""
+    },
+    {
+      "id": "KN-04",
+      "name": "巡回騎士",
+      "faction": "knights",
+      "type": "unit",
+      "cost": 2,
+      "attack": 2,
+      "health": 3,
+      "abilities": [
+        {
+          "kind": "static",
+          "modifiers": [
+            {
+              "target": {
+                "units": {
+                  "side": "ally",
+                  "relative": "leftRight"
+                }
+              },
+              "health": 1
+            }
+          ]
+        }
+      ],
+      "text": "左右隣の味方は+0/+1"
+    },
+    {
+      "id": "KN-05",
+      "name": "従軍僧侶",
+      "faction": "knights",
+      "type": "unit",
+      "cost": 2,
+      "attack": 1,
+      "health": 4,
+      "abilities": [
+        {
+          "kind": "trigger",
+          "when": "roundEnd",
+          "effects": [
+            {
+              "op": "heal",
+              "target": {
+                "units": {
+                  "side": "ally",
+                  "relative": "sameLaneOther"
+                }
+              },
+              "amount": 2
+            }
+          ]
+        }
+      ],
+      "text": "ラウンド終了時: 同じレーンのもう一方の列の味方を回復2"
+    },
+    {
+      "id": "KN-06",
+      "name": "守りの祈り",
+      "faction": "knights",
+      "type": "spell",
+      "cost": 2,
+      "keywords": [
+        "quick"
+      ],
+      "targets": [
+        {
+          "id": "ally",
+          "kind": "unit",
+          "side": "ally"
+        }
+      ],
+      "effects": [
+        {
+          "op": "buff",
+          "target": {
+            "ref": "ally"
+          },
+          "health": 2,
+          "duration": "permanent"
+        }
+      ],
+      "enhance": {
+        "cost": 2,
+        "mode": "replace",
+        "appliesTo": "effects",
+        "effects": [
+          {
+            "op": "buff",
+            "target": {
+              "ref": "ally"
+            },
+            "health": 3,
+            "duration": "permanent"
+          }
+        ]
+      },
+      "text": "味方ユニット1体を+0/+2。強化（2）: 代わりに+0/+3"
+    },
+    {
+      "id": "KN-07",
+      "name": "騎士の決闘",
+      "faction": "knights",
+      "type": "spell",
+      "cost": 2,
+      "keywords": [
+        "delay"
+      ],
+      "targets": [
+        {
+          "id": "lane",
+          "kind": "lane"
+        }
+      ],
+      "effects": [
+        {
+          "op": "delay",
+          "effects": [
+            {
+              "op": "fight",
+              "a": {
+                "units": {
+                  "side": "ally",
+                  "lane": {
+                    "ref": "lane"
+                  },
+                  "row": "front"
+                }
+              },
+              "b": {
+                "units": {
+                  "side": "enemy",
+                  "lane": {
+                    "ref": "lane"
+                  },
+                  "row": "front"
+                }
+              }
+            }
+          ]
+        }
+      ],
+      "enhance": {
+        "cost": 2,
+        "mode": "add",
+        "appliesTo": "effects",
+        "effects": [
+          {
+            "op": "buff",
+            "target": {
+              "units": {
+                "side": "ally",
+                "lane": {
+                  "ref": "lane"
+                },
+                "row": "front"
+              }
+            },
+            "health": 2,
+            "duration": "thisRound"
+          }
+        ]
+      },
+      "text": "レーンを1つ指定する。強化（2）: そのレーンの前列の味方ユニットを、このラウンド中+0/+2。遅延: そのレーンの双方の前列のユニットが、互いに自分の攻撃力と同じダメージを与え合う（どちらかの前列が空きマスなら何も起きない）"
+    },
+    {
+      "id": "KN-08",
+      "name": "槍兵隊長",
+      "faction": "knights",
+      "type": "unit",
+      "cost": 3,
+      "attack": 2,
+      "health": 4,
+      "abilities": [
+        {
+          "kind": "static",
+          "modifiers": [
+            {
+              "target": {
+                "units": {
+                  "side": "ally",
+                  "relative": "leftRight"
+                }
+              },
+              "attack": 1,
+              "health": 1
+            }
+          ]
+        }
+      ],
+      "text": "左右隣の味方は+1/+1"
+    },
+    {
+      "id": "KN-09",
+      "name": "盾持ちの衛兵",
+      "faction": "knights",
+      "type": "unit",
+      "cost": 3,
+      "attack": 3,
+      "health": 3,
+      "keywords": [
+        "shield"
+      ],
+      "text": ""
+    },
+    {
+      "id": "KN-10",
+      "name": "近衛弓兵長",
+      "faction": "knights",
+      "type": "unit",
+      "cost": 3,
+      "attack": 3,
+      "health": 2,
+      "keywords": [
+        "ranged"
+      ],
+      "abilities": [
+        {
+          "kind": "activated",
+          "cost": 2,
+          "effects": [
+            {
+              "op": "buff",
+              "target": "self",
+              "attack": 2,
+              "duration": "thisRound"
+            }
+          ]
+        }
+      ],
+      "text": "起動（2）: このラウンド中、このユニットは+2/+0"
+    },
+    {
+      "id": "KN-11",
+      "name": "鼓舞の号令",
+      "faction": "knights",
+      "type": "spell",
+      "cost": 3,
+      "effects": [
+        {
+          "op": "buff",
+          "target": {
+            "units": {
+              "side": "ally"
+            }
+          },
+          "attack": 1,
+          "health": 1,
+          "duration": "permanent"
+        }
+      ],
+      "enhance": {
+        "cost": 3,
+        "mode": "replace",
+        "appliesTo": "effects",
+        "effects": [
+          {
+            "op": "buff",
+            "target": {
+              "units": {
+                "side": "ally"
+              }
+            },
+            "attack": 2,
+            "health": 1,
+            "duration": "permanent"
+          }
+        ]
+      },
+      "text": "味方ユニットすべてを+1/+1。強化（3）: 代わりに+2/+1"
+    },
+    {
+      "id": "KN-12",
+      "name": "城壁の守り手",
+      "faction": "knights",
+      "type": "unit",
+      "cost": 5,
+      "attack": 1,
+      "health": 5,
+      "abilities": [
+        {
+          "kind": "trigger",
+          "when": "onPlay",
+          "effects": [
+            {
+              "op": "grantKeyword",
+              "target": {
+                "units": {
+                  "side": "ally",
+                  "relative": "leftRight"
+                }
+              },
+              "keywords": [
+                "shield"
+              ],
+              "duration": "permanent"
+            }
+          ]
+        }
+      ],
+      "text": "配置時: 左右隣の味方すべてに盾を与える"
+    },
+    {
+      "id": "KN-13",
+      "name": "白銀の盾騎士",
+      "faction": "knights",
+      "type": "unit",
+      "cost": 4,
+      "attack": 3,
+      "health": 4,
+      "abilities": [
+        {
+          "kind": "activated",
+          "cost": 2,
+          "effects": [
+            {
+              "op": "grantKeyword",
+              "target": "self",
+              "keywords": [
+                "shield"
+              ],
+              "duration": "permanent"
+            }
+          ]
+        }
+      ],
+      "text": "起動（2）: このユニットに盾を与える"
+    },
+    {
+      "id": "KN-14",
+      "name": "突撃騎兵",
+      "faction": "knights",
+      "type": "unit",
+      "cost": 4,
+      "attack": 5,
+      "health": 1,
+      "keywords": [
+        "firstStrike",
+        "mobile"
+      ],
+      "abilities": [
+        {
+          "kind": "trigger",
+          "when": "onPlay",
+          "effects": []
+        }
+      ],
+      "enhance": {
+        "cost": 2,
+        "mode": "add",
+        "appliesTo": 0,
+        "effects": [
+          {
+            "op": "buff",
+            "target": "self",
+            "attack": 2,
+            "duration": "permanent"
+          },
+          {
+            "op": "grantKeyword",
+            "target": "self",
+            "keywords": [
+              "pierce"
+            ],
+            "duration": "permanent"
+          }
+        ]
+      },
+      "text": "強化（2）: 配置時、このユニットを+2/+0し、貫通を与える"
+    },
+    {
+      "id": "KN-15",
+      "name": "審判の槌",
+      "faction": "knights",
+      "type": "spell",
+      "cost": 4,
+      "keywords": [
+        "delay"
+      ],
+      "targets": [
+        {
+          "id": "ally",
+          "kind": "unit",
+          "side": "ally"
+        },
+        {
+          "id": "cell",
+          "kind": "cell",
+          "cellOwner": "enemy"
+        }
+      ],
+      "effects": [
+        {
+          "op": "delay",
+          "effects": [
+            {
+              "op": "damage",
+              "target": {
+                "ref": "cell"
+              },
+              "amount": {
+                "attackOf": {
+                  "ref": "ally"
+                },
+                "ifGone": 0
+              }
+            }
+          ]
+        }
+      ],
+      "enhance": {
+        "cost": 2,
+        "mode": "add",
+        "appliesTo": "effects",
+        "effects": [
+          {
+            "op": "buff",
+            "target": {
+              "ref": "ally"
+            },
+            "attack": 2,
+            "duration": "thisRound"
+          }
+        ]
+      },
+      "text": "味方ユニット1体と、相手の盤面のマス1つを指定する。強化（2）: その味方を、このラウンド中+2/+0。遅延: 指定したマスにいるユニットに、遅延が発動した時点のその味方の攻撃力と同じダメージ（その味方が破壊されていればダメージは0）"
+    },
+    {
+      "id": "KN-16",
+      "name": "誓いの聖騎士",
+      "faction": "knights",
+      "type": "unit",
+      "cost": 5,
+      "attack": 3,
+      "health": 6,
+      "keywords": [
+        "shield"
+      ],
+      "abilities": [
+        {
+          "kind": "trigger",
+          "when": "onAllyEndureCombatDamage",
+          "effects": [
+            {
+              "op": "buff",
+              "target": "self",
+              "attack": 1,
+              "duration": "permanent"
+            }
+          ]
+        }
+      ],
+      "text": "味方が戦闘ダメージを耐えるたび、このユニットを+1/+0する"
+    },
+    {
+      "id": "KN-17",
+      "name": "王国の軍師",
+      "faction": "knights",
+      "type": "unit",
+      "cost": 5,
+      "attack": 4,
+      "health": 5,
+      "abilities": [
+        {
+          "kind": "activated",
+          "cost": 3,
+          "effects": [
+            {
+              "op": "delay",
+              "effects": [
+                {
+                  "op": "resolveCombat",
+                  "lanes": {
+                    "laneOf": "self"
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "text": "起動（3）: 遅延: このユニットがいるレーンで戦闘を行う"
+    },
+    {
+      "id": "KN-18",
+      "name": "兵士招集",
+      "faction": "knights",
+      "type": "spell",
+      "cost": 4,
+      "effects": [
+        {
+          "op": "tutorRandom",
+          "where": {
+            "type": "unit"
+          },
+          "count": 2
+        }
+      ],
+      "enhance": {
+        "cost": 2,
+        "mode": "replace",
+        "appliesTo": "effects",
+        "effects": [
+          {
+            "op": "tutorRandom",
+            "where": {
+              "type": "unit"
+            },
+            "count": 3
+          }
+        ]
+      },
+      "text": "山札からランダムなユニットカード2枚を手札に加える。強化（2）: 代わりに3枚"
+    },
+    {
+      "id": "KN-19",
+      "name": "軽装騎兵",
+      "faction": "knights",
+      "type": "unit",
+      "cost": 3,
+      "attack": 3,
+      "health": 2,
+      "keywords": [
+        "mobile"
+      ],
+      "abilities": [
+        {
+          "kind": "activated",
+          "cost": 1,
+          "effects": [
+            {
+              "op": "grantKeyword",
+              "target": "self",
+              "keywords": [
+                "firstStrike"
+              ],
+              "duration": "thisRound"
+            }
+          ]
+        }
+      ],
+      "text": "起動（1）: このラウンド中、このユニットは先制を得る"
+    },
+    {
+      "id": "KN-20",
+      "name": "王城の大盾兵",
+      "faction": "knights",
+      "type": "unit",
+      "cost": 6,
+      "attack": 3,
+      "health": 7,
+      "keywords": [
+        "shield"
+      ],
+      "abilities": [
+        {
+          "kind": "static",
+          "modifiers": [
+            {
+              "target": {
+                "units": {
+                  "side": "ally",
+                  "relative": "leftRight"
+                }
+              },
+              "attack": 1,
+              "health": 2
+            }
+          ]
+        }
+      ],
+      "text": "左右隣の味方は+1/+2"
+    },
+    {
+      "id": "KN-21",
+      "name": "老将ガラハド",
+      "faction": "knights",
+      "type": "unit",
+      "cost": 7,
+      "attack": 6,
+      "health": 7,
+      "keywords": [
+        "shield"
+      ],
+      "abilities": [
+        {
+          "kind": "trigger",
+          "when": "onPlay",
+          "effects": [
+            {
+              "op": "buff",
+              "target": {
+                "units": {
+                  "side": "ally"
+                }
+              },
+              "health": 2,
+              "duration": "permanent"
+            }
+          ]
+        }
+      ],
+      "text": "配置時: 味方ユニットすべてを+0/+2"
+    },
+    {
+      "id": "KN-22",
+      "name": "聖堂騎士長",
+      "faction": "knights",
+      "type": "unit",
+      "cost": 8,
+      "attack": 6,
+      "health": 8,
+      "abilities": [
+        {
+          "kind": "activated",
+          "cost": 4,
+          "effects": [
+            {
+              "op": "delay",
+              "effects": [
+                {
+                  "op": "resolveCombat",
+                  "lanes": "all"
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "text": "起動（4）: 遅延: すべてのレーンで戦闘を行う"
+    },
+    {
+      "id": "KN-23",
+      "name": "竜殺しの英雄",
+      "faction": "knights",
+      "type": "unit",
+      "cost": 7,
+      "attack": 12,
+      "health": 2,
+      "keywords": [
+        "firstStrike",
+        "pierce"
+      ],
+      "text": ""
+    },
+    {
+      "id": "KN-24",
+      "name": "天馬騎士団長",
+      "faction": "knights",
+      "type": "unit",
+      "cost": 9,
+      "attack": 9,
+      "health": 9,
+      "abilities": [
+        {
+          "kind": "trigger",
+          "when": "onPlay",
+          "effects": [
+            {
+              "op": "grantKeyword",
+              "target": {
+                "units": {
+                  "side": "ally"
+                }
+              },
+              "keywords": [
+                "shield"
+              ],
+              "duration": "permanent"
+            }
+          ]
+        }
+      ],
+      "text": "配置時: 味方ユニットすべてに盾を与える"
+    },
+    {
+      "id": "KN-25",
+      "name": "王国の守護竜",
+      "faction": "knights",
+      "type": "unit",
+      "cost": 10,
+      "attack": 9,
+      "health": 9,
+      "keywords": [
+        "shield",
+        "ranged"
+      ],
+      "abilities": [
+        {
+          "kind": "activated",
+          "cost": 3,
+          "targets": [
+            {
+              "id": "enemy",
+              "kind": "unit",
+              "side": "enemy"
+            }
+          ],
+          "effects": [
+            {
+              "op": "damage",
+              "target": {
+                "ref": "enemy"
+              },
+              "amount": 3
+            }
+          ]
+        }
+      ],
+      "text": "起動（3）: 敵ユニット1体に3ダメージ"
+    }
+  ]
+}

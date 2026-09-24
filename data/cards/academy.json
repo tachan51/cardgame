@@ -1,0 +1,857 @@
+{
+  "formatVersion": 1,
+  "faction": {
+    "id": "academy",
+    "name": "魔法学院"
+  },
+  "leader": {
+    "id": "leader-noel",
+    "name": "ノエル",
+    "title": "落ちこぼれ魔法使い",
+    "faction": "academy",
+    "ability": {
+      "name": "英知の魔法",
+      "cost": 20,
+      "effects": [
+        {
+          "op": "drawUntil",
+          "handSize": 10
+        },
+        {
+          "op": "refillMana"
+        }
+      ]
+    },
+    "passives": [
+      {
+        "kind": "trigger",
+        "when": "onSpellCast",
+        "effects": [
+          {
+            "op": "modifyLeaderAbilityCost",
+            "amount": -1
+          }
+        ]
+      }
+    ],
+    "growth": {
+      "counter": "leaderAbilityUsed",
+      "threshold": 1
+    },
+    "grown": {
+      "passives": [
+        {
+          "kind": "static",
+          "modifiers": [
+            {
+              "target": "allyPlayer",
+              "spellCost": -1
+            }
+          ]
+        }
+      ]
+    },
+    "text": "**英知の魔法**（20）: 手札が10枚になるまでカードを引く。通常マナを最大まで回復する。（パッシブ）：スペルを使用するたび、この能力のコストを-1。成長条件: 英知の魔法を使う。成長後: **真実の英知**（パッシブ）: 自分のスペルすべてのコストは-1される。成長後は英知の魔法を使えない（リーダー能力はなく、パッシブのみ）"
+  },
+  "cards": [
+    {
+      "id": "AC-01",
+      "name": "魔力の矢",
+      "faction": "academy",
+      "type": "spell",
+      "cost": 1,
+      "keywords": [
+        "delay"
+      ],
+      "targets": [
+        {
+          "id": "cell",
+          "kind": "cell",
+          "cellOwner": "any"
+        }
+      ],
+      "effects": [
+        {
+          "op": "delay",
+          "effects": [
+            {
+              "op": "damage",
+              "target": {
+                "ref": "cell"
+              },
+              "amount": 1
+            }
+          ]
+        }
+      ],
+      "enhance": {
+        "cost": 2,
+        "mode": "add",
+        "appliesTo": "effects",
+        "effects": [
+          {
+            "op": "generate",
+            "cardId": "AC-01"
+          }
+        ]
+      },
+      "text": "マスを1つ指定する。遅延: そのマスにいるユニットに1ダメージ。強化（2）: 魔力の矢1枚を手札に生成する"
+    },
+    {
+      "id": "AC-02",
+      "name": "火球",
+      "faction": "academy",
+      "type": "spell",
+      "cost": 2,
+      "keywords": [
+        "delay"
+      ],
+      "targets": [
+        {
+          "id": "target",
+          "kind": "unitOrPlayer",
+          "side": "enemy"
+        }
+      ],
+      "effects": [
+        {
+          "op": "delay",
+          "effects": [
+            {
+              "op": "damage",
+              "target": {
+                "ref": "target"
+              },
+              "amount": 2
+            }
+          ]
+        }
+      ],
+      "text": "敵ユニット1体または相手プレイヤーを対象にする。遅延: 対象に2ダメージ"
+    },
+    {
+      "id": "AC-03",
+      "name": "見習い魔法使い",
+      "faction": "academy",
+      "type": "unit",
+      "cost": 2,
+      "attack": 1,
+      "health": 1,
+      "keywords": [
+        "ranged"
+      ],
+      "abilities": [
+        {
+          "kind": "trigger",
+          "when": "onSpellCast",
+          "effects": [
+            {
+              "op": "buff",
+              "target": "self",
+              "attack": 1,
+              "duration": "thisRound"
+            }
+          ]
+        }
+      ],
+      "text": "スペル使用時: このラウンド中、このユニットは+1/+0"
+    },
+    {
+      "id": "AC-04",
+      "name": "使い魔の黒猫",
+      "faction": "academy",
+      "type": "unit",
+      "cost": 2,
+      "attack": 2,
+      "health": 2,
+      "keywords": [
+        "mobile"
+      ],
+      "text": ""
+    },
+    {
+      "id": "AC-05",
+      "name": "居残り補習",
+      "faction": "academy",
+      "type": "spell",
+      "cost": 2,
+      "effects": [
+        {
+          "op": "draw",
+          "count": 1
+        }
+      ],
+      "enhance": {
+        "cost": 1,
+        "mode": "add",
+        "appliesTo": "effects",
+        "effects": [
+          {
+            "op": "generate",
+            "cardId": "AC-05"
+          }
+        ]
+      },
+      "text": "カードを1枚引く。強化（1）: 居残り補習1枚を手札に生成する"
+    },
+    {
+      "id": "AC-06",
+      "name": "瞬間移動",
+      "faction": "academy",
+      "type": "spell",
+      "cost": 2,
+      "keywords": [
+        "quick"
+      ],
+      "targets": [
+        {
+          "id": "ally",
+          "kind": "unit",
+          "side": "ally"
+        },
+        {
+          "id": "cell",
+          "kind": "cell",
+          "cellOwner": "ally",
+          "where": {
+            "empty": true
+          }
+        }
+      ],
+      "effects": [
+        {
+          "op": "move",
+          "target": {
+            "ref": "ally"
+          },
+          "to": {
+            "ref": "cell"
+          }
+        }
+      ],
+      "text": "味方ユニット1体を、自分の盤面の空きマスへ移動させる"
+    },
+    {
+      "id": "AC-07",
+      "name": "魔力還元",
+      "faction": "academy",
+      "type": "spell",
+      "cost": 1,
+      "keywords": [
+        "quick"
+      ],
+      "effects": [
+        {
+          "op": "gainReserve",
+          "amount": 2
+        }
+      ],
+      "text": "予備マナを2得る（上限は最大マナ）"
+    },
+    {
+      "id": "AC-08",
+      "name": "図書委員",
+      "faction": "academy",
+      "type": "unit",
+      "cost": 3,
+      "attack": 1,
+      "health": 4,
+      "abilities": [
+        {
+          "kind": "trigger",
+          "when": "onPlay",
+          "effects": [
+            {
+              "op": "tutorRandom",
+              "where": {
+                "type": "spell"
+              },
+              "count": 1
+            }
+          ]
+        }
+      ],
+      "text": "配置時: 山札からランダムなスペルカード1枚を手札に加える"
+    },
+    {
+      "id": "AC-09",
+      "name": "魔法剣士の先輩",
+      "faction": "academy",
+      "type": "unit",
+      "cost": 3,
+      "attack": 1,
+      "health": 2,
+      "abilities": [
+        {
+          "kind": "trigger",
+          "when": "onSpellCast",
+          "effects": [
+            {
+              "op": "buff",
+              "target": "self",
+              "attack": 1,
+              "health": 1,
+              "duration": "permanent"
+            }
+          ]
+        }
+      ],
+      "text": "スペル使用時: このユニットを+1/+1"
+    },
+    {
+      "id": "AC-10",
+      "name": "魔法の剣",
+      "faction": "academy",
+      "type": "spell",
+      "cost": 6,
+      "targets": [
+        {
+          "id": "ally",
+          "kind": "unit",
+          "side": "ally"
+        }
+      ],
+      "effects": [
+        {
+          "op": "buff",
+          "target": {
+            "ref": "ally"
+          },
+          "attack": {
+            "count": "spellsCastThisGame"
+          },
+          "duration": "permanent"
+        }
+      ],
+      "enhance": {
+        "cost": 3,
+        "mode": "add",
+        "appliesTo": "effects",
+        "effects": [
+          {
+            "op": "grantKeyword",
+            "target": {
+              "ref": "ally"
+            },
+            "keywords": [
+              "pierce"
+            ],
+            "duration": "thisRound"
+          }
+        ]
+      },
+      "text": "味方ユニット1体を、+X/+0（Xはこの試合で自分が使ったスペルの枚数）。強化（3）: さらに、このラウンド中そのユニットに貫通を与える"
+    },
+    {
+      "id": "AC-11",
+      "name": "氷の壁",
+      "faction": "academy",
+      "type": "spell",
+      "cost": 3,
+      "keywords": [
+        "quick"
+      ],
+      "targets": [
+        {
+          "id": "ally",
+          "kind": "unit",
+          "side": "ally"
+        }
+      ],
+      "effects": [
+        {
+          "op": "buff",
+          "target": {
+            "ref": "ally"
+          },
+          "health": 4,
+          "duration": "thisRound"
+        }
+      ],
+      "enhance": {
+        "cost": 3,
+        "mode": "add",
+        "appliesTo": "effects",
+        "effects": [
+          {
+            "op": "grantKeyword",
+            "target": {
+              "ref": "ally"
+            },
+            "keywords": [
+              "shield"
+            ],
+            "duration": "permanent"
+          }
+        ]
+      },
+      "text": "味方ユニット1体を、このラウンド中+0/+4。強化（3）: さらに盾を与える"
+    },
+    {
+      "id": "AC-12",
+      "name": "結界術の教師",
+      "faction": "academy",
+      "type": "unit",
+      "cost": 4,
+      "attack": 2,
+      "health": 6,
+      "abilities": [
+        {
+          "kind": "activated",
+          "cost": 3,
+          "targets": [
+            {
+              "id": "ally",
+              "kind": "unit",
+              "side": "ally"
+            }
+          ],
+          "effects": [
+            {
+              "op": "grantKeyword",
+              "target": {
+                "ref": "ally"
+              },
+              "keywords": [
+                "shield"
+              ],
+              "duration": "permanent"
+            }
+          ]
+        }
+      ],
+      "text": "起動（3）: 味方ユニット1体に盾を与える"
+    },
+    {
+      "id": "AC-13",
+      "name": "学院の石像",
+      "faction": "academy",
+      "type": "unit",
+      "cost": 1,
+      "attack": 0,
+      "health": 3,
+      "abilities": [
+        {
+          "kind": "trigger",
+          "when": "roundEnd",
+          "effects": [
+            {
+              "op": "heal",
+              "target": "self",
+              "amount": 2
+            }
+          ]
+        }
+      ],
+      "text": "ラウンド終了時: このユニットを回復2"
+    },
+    {
+      "id": "AC-14",
+      "name": "崩落の予言",
+      "faction": "academy",
+      "type": "spell",
+      "cost": 4,
+      "targets": [
+        {
+          "id": "cell",
+          "kind": "cell",
+          "cellOwner": "enemy"
+        }
+      ],
+      "effects": [
+        {
+          "op": "atRoundEnd",
+          "effects": [
+            {
+              "op": "destroy",
+              "target": {
+                "ref": "cell"
+              }
+            }
+          ]
+        }
+      ],
+      "text": "相手の盤面のマスを1つ指定する。ラウンド終了時、そのマスにいるユニットを破壊する"
+    },
+    {
+      "id": "AC-15",
+      "name": "召喚の魔法陣",
+      "faction": "academy",
+      "type": "spell",
+      "cost": 3,
+      "targets": [
+        {
+          "id": "cells",
+          "kind": "cell",
+          "cellOwner": "ally",
+          "count": 2,
+          "where": {
+            "empty": true
+          }
+        }
+      ],
+      "effects": [
+        {
+          "op": "summon",
+          "cardId": "AC-13",
+          "at": {
+            "ref": "cells"
+          }
+        }
+      ],
+      "enhance": {
+        "cost": 4,
+        "mode": "add",
+        "appliesTo": "effects",
+        "effects": [
+          {
+            "op": "buff",
+            "target": {
+              "units": {
+                "side": "ally",
+                "cardId": "AC-13"
+              }
+            },
+            "attack": 2,
+            "health": 2,
+            "duration": "permanent"
+          }
+        ]
+      },
+      "text": "自分の盤面の空きマス2つに「学院の石像」（AC-13）を1体ずつ出す。強化（4）: さらに、味方の学院の石像すべてを+2/+2"
+    },
+    {
+      "id": "AC-16",
+      "name": "首席の少女",
+      "faction": "academy",
+      "type": "unit",
+      "cost": 5,
+      "attack": 3,
+      "health": 4,
+      "abilities": [
+        {
+          "kind": "static",
+          "modifiers": [
+            {
+              "target": "allyPlayer",
+              "enhanceCost": -1
+            }
+          ]
+        }
+      ],
+      "text": "自分のスペルの強化コストは1少なくなる（0未満にはならない）"
+    },
+    {
+      "id": "AC-17",
+      "name": "雷鳴の詠唱",
+      "faction": "academy",
+      "type": "spell",
+      "cost": 5,
+      "keywords": [
+        "delay"
+      ],
+      "targets": [
+        {
+          "id": "lane",
+          "kind": "lane"
+        }
+      ],
+      "effects": [
+        {
+          "op": "delay",
+          "effects": [
+            {
+              "op": "damage",
+              "target": {
+                "units": {
+                  "side": "enemy",
+                  "lane": {
+                    "ref": "lane"
+                  }
+                }
+              },
+              "amount": 3
+            }
+          ]
+        }
+      ],
+      "enhance": {
+        "cost": 3,
+        "mode": "replace",
+        "appliesTo": "effects",
+        "effects": [
+          {
+            "op": "delay",
+            "effects": [
+              {
+                "op": "damage",
+                "target": {
+                  "units": {
+                    "side": "enemy",
+                    "lane": {
+                      "ref": "lane"
+                    }
+                  }
+                },
+                "amount": 3
+              },
+              {
+                "op": "damage",
+                "target": "enemyPlayer",
+                "amount": 3
+              }
+            ]
+          }
+        ]
+      },
+      "text": "レーンを1つ指定する。遅延: そのレーンの敵ユニットすべてに3ダメージ。強化（3）: 相手プレイヤーにも同じダメージ"
+    },
+    {
+      "id": "AC-18",
+      "name": "禁書の閲覧",
+      "faction": "academy",
+      "type": "spell",
+      "cost": 5,
+      "effects": [
+        {
+          "op": "generateFromCastSpells",
+          "count": 2,
+          "distinctNames": true
+        }
+      ],
+      "text": "この試合で自分が使ったスペルの中から、名前の異なる2枚をランダムに選び、手札に生成する"
+    },
+    {
+      "id": "AC-19",
+      "name": "炎の精霊",
+      "faction": "academy",
+      "type": "unit",
+      "cost": 6,
+      "attack": 6,
+      "health": 5,
+      "abilities": [
+        {
+          "kind": "trigger",
+          "when": "onSpellCast",
+          "effects": [
+            {
+              "op": "damage",
+              "target": {
+                "units": {
+                  "side": "enemy",
+                  "random": 1
+                }
+              },
+              "amount": 1
+            }
+          ]
+        }
+      ],
+      "text": "スペル使用時: ランダムな敵ユニット1体に1ダメージ"
+    },
+    {
+      "id": "AC-20",
+      "name": "学院長代理",
+      "faction": "academy",
+      "type": "unit",
+      "cost": 6,
+      "attack": 2,
+      "health": 4,
+      "abilities": [
+        {
+          "kind": "trigger",
+          "when": "onSpellCast",
+          "effects": [
+            {
+              "op": "draw",
+              "count": 1
+            }
+          ]
+        }
+      ],
+      "text": "スペル使用時: カードを1枚引く"
+    },
+    {
+      "id": "AC-21",
+      "name": "学院の修道女",
+      "faction": "academy",
+      "type": "unit",
+      "cost": 4,
+      "attack": 2,
+      "health": 4,
+      "abilities": [
+        {
+          "kind": "trigger",
+          "when": "onPlay",
+          "effects": [
+            {
+              "op": "generate",
+              "cardId": "AC-07"
+            }
+          ]
+        },
+        {
+          "kind": "trigger",
+          "when": "roundEnd",
+          "effects": [
+            {
+              "op": "generate",
+              "cardId": "AC-07"
+            }
+          ]
+        }
+      ],
+      "text": "配置時とラウンド終了時: 魔力還元（AC-07）1枚を手札に生成する"
+    },
+    {
+      "id": "AC-22",
+      "name": "魔導ゴーレム",
+      "faction": "academy",
+      "type": "unit",
+      "cost": 10,
+      "attack": 8,
+      "health": 5,
+      "abilities": [
+        {
+          "kind": "inHand",
+          "when": "onSpellCast",
+          "effects": [
+            {
+              "op": "modifyCost",
+              "target": "self",
+              "amount": -1
+            }
+          ]
+        }
+      ],
+      "text": "手札にある間、自分がスペルを使うたび、このカードのコストを−1"
+    },
+    {
+      "id": "AC-23",
+      "name": "大賢者の幻影",
+      "faction": "academy",
+      "type": "unit",
+      "cost": 8,
+      "attack": 8,
+      "health": 8,
+      "abilities": [
+        {
+          "kind": "trigger",
+          "when": "roundEnd",
+          "effects": [
+            {
+              "op": "damage",
+              "target": {
+                "units": {
+                  "side": "enemy",
+                  "random": 1
+                }
+              },
+              "amount": {
+                "count": "spellsCastThisGame"
+              }
+            }
+          ]
+        }
+      ],
+      "text": "ラウンド終了時: ランダムな敵ユニット1体に、この試合で自分が使ったスペルの枚数と同じダメージ"
+    },
+    {
+      "id": "AC-24",
+      "name": "禁呪「終焉の詠唱」",
+      "faction": "academy",
+      "type": "spell",
+      "cost": 9,
+      "keywords": [
+        "delay"
+      ],
+      "effects": [
+        {
+          "op": "delay",
+          "effects": [
+            {
+              "op": "exile",
+              "target": {
+                "units": {
+                  "side": "enemy",
+                  "where": {
+                    "healthAtMost": 3
+                  }
+                }
+              }
+            }
+          ]
+        }
+      ],
+      "enhance": {
+        "cost": 5,
+        "mode": "replace",
+        "appliesTo": "effects",
+        "effects": [
+          {
+            "op": "delay",
+            "effects": [
+              {
+                "op": "exile",
+                "target": {
+                  "units": {
+                    "side": "enemy",
+                    "where": {
+                      "healthAtMost": 5
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "text": "遅延: 体力3以下の敵ユニットすべてを除外する。強化（5）: 代わりに体力5以下"
+    },
+    {
+      "id": "AC-25",
+      "name": "天空の大魔導師",
+      "faction": "academy",
+      "type": "unit",
+      "cost": 10,
+      "attack": 10,
+      "health": 10,
+      "keywords": [
+        "firstStrike"
+      ],
+      "abilities": [
+        {
+          "kind": "trigger",
+          "when": "onPlay",
+          "targets": [
+            {
+              "id": "spells",
+              "kind": "cardInHand",
+              "side": "ally",
+              "count": 2,
+              "where": {
+                "type": "spell"
+              }
+            }
+          ],
+          "effects": [
+            {
+              "op": "reveal",
+              "target": {
+                "ref": "spells"
+              }
+            },
+            {
+              "op": "modifyCost",
+              "target": {
+                "ref": "spells"
+              },
+              "amount": -9
+            }
+          ]
+        }
+      ],
+      "text": "配置時: 自分の手札のスペル2枚を選んで相手に公開し、それらのコストを−9"
+    }
+  ]
+}
