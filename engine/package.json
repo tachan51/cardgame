@@ -7,7 +7,8 @@
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
     "sim": "vitest run test/random.test.ts",
-    "stats": "tsx scripts/stats.ts"
+    "stats": "tsx scripts/stats.ts",
+    "experiment": "tsx scripts/experiment.ts"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",

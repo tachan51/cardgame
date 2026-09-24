@@ -29,9 +29,9 @@ const now = () => (typeof performance !== 'undefined' ? performance.now() : Date
 export function playGame(
   cat: Catalog,
   decks: Record<PlayerId, DeckDef>,
-  opts: { seed: number; levels: Record<PlayerId, AiLevel>; ai?: Partial<Record<PlayerId, AiOptions>>; maxActions?: number },
+  opts: { seed: number; levels: Record<PlayerId, AiLevel>; ai?: Partial<Record<PlayerId, AiOptions>>; maxActions?: number; startLife?: number },
 ): GameRecord {
-  let s = newGame(cat, decks, { seed: opts.seed });
+  let s = newGame(cat, decks, { seed: opts.seed, startLife: opts.startLife });
   const think: Record<PlayerId, number> = { A: 0, B: 0 };
   let actions = 0;
   while (!s.result) {
