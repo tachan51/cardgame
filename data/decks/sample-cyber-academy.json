@@ -2,119 +2,67 @@
   "formatVersion": 1,
   "id": "sample-cyber-academy",
   "name": "見本: 動かして当てる（電脳＋学院）",
-  "description": "遅延の魔法で狙ったマスへ、電脳の移動で敵を動かして当てる。軽いユニットと動く氷像で盤面を支え、重装ガンシップと天空の大魔導師で押し切る",
   "leaders": [
     "leader-rei",
     "leader-noel"
   ],
+  "description": "スペル中心のデッキ。移動のスペルでユニットを動かしてレイを育て、遅延の魔法で狙ったマスに当てる。ライフの回復と学院の石像・水の精霊で粘り、スペルの枚数で強くなる魔法の剣で決着をつける",
   "cards": [
     {
-      "id": "AC-13",
-      "count": 1
-    },
-    {
-      "id": "AC-02",
-      "count": 2
-    },
-    {
-      "id": "AC-04",
-      "count": 2
-    },
-    {
-      "id": "AC-05",
-      "count": 1
-    },
-    {
-      "id": "CY-01",
-      "count": 2
-    },
-    {
-      "id": "CY-04",
-      "count": 2
-    },
-    {
-      "id": "CY-05",
-      "count": 2
-    },
-    {
-      "id": "CY-09",
-      "count": 1
-    },
-    {
-      "id": "CY-13",
-      "count": 1
-    },
-    {
-      "id": "AC-11",
+      "id": "AC-01",
       "count": 3
     },
     {
-      "id": "AC-14",
-      "count": 1
+      "id": "AC-07",
+      "count": 3
+    },
+    {
+      "id": "AC-13",
+      "count": 3
+    },
+    {
+      "id": "AC-02",
+      "count": 3
+    },
+    {
+      "id": "AC-04",
+      "count": 3
+    },
+    {
+      "id": "AC-05",
+      "count": 3
+    },
+    {
+      "id": "CY-09",
+      "count": 3
+    },
+    {
+      "id": "CY-13",
+      "count": 3
+    },
+    {
+      "id": "AC-08",
+      "count": 3
+    },
+    {
+      "id": "AC-15",
+      "count": 3
     },
     {
       "id": "AC-23",
-      "count": 2
+      "count": 3
     },
     {
       "id": "CY-15",
-      "count": 1
+      "count": 3
     },
     {
       "id": "CY-17",
       "count": 2
     },
     {
-      "id": "AC-12",
+      "id": "AC-10",
       "count": 2
-    },
-    {
-      "id": "AC-17",
-      "count": 1
-    },
-    {
-      "id": "AC-21",
-      "count": 1
-    },
-    {
-      "id": "CY-12",
-      "count": 2
-    },
-    {
-      "id": "CY-20",
-      "count": 2
-    },
-    {
-      "id": "AC-16",
-      "count": 1
-    },
-    {
-      "id": "CY-18",
-      "count": 1
-    },
-    {
-      "id": "AC-19",
-      "count": 2
-    },
-    {
-      "id": "AC-20",
-      "count": 1
-    },
-    {
-      "id": "CY-19",
-      "count": 1
-    },
-    {
-      "id": "CY-23",
-      "count": 1
-    },
-    {
-      "id": "AC-25",
-      "count": 1
-    },
-    {
-      "id": "CY-21",
-      "count": 1
     }
   ]
 }

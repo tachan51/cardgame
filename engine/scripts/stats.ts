@@ -4,6 +4,7 @@
 //   --levels a,b   A と B の AI の強さ（easy / normal / hard）。「hard,normal」なら強さの比較にもなる
 //   --swap         強さを入れ替えた試合も行う（強さの比較のとき、先手・デッキの偏りをなくす）
 //   --jobs N       並列に動かす数（省略時は CPU の数）
+//   --extra files  data/decks 以外のデッキ（JSON、カンマ区切り）も加えて総当たりにする
 import { readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { cpus } from 'node:os';
 import { join } from 'node:path';
@@ -22,6 +23,16 @@ const load = <T>(dir: string): T[] =>
 
 const cat = buildCatalog(load<FactionFile>('cards'));
 const decks = load<DeckDef>('decks');
+// --extra a.json,b.json で、data/decks 以外のデッキも加えて総当たりにする
+// （ワーカーには引数が渡らないので、環境変数 STATS_EXTRA でも受け取る）
+{
+  const i = process.argv.indexOf('--extra');
+  const extra = i >= 0 ? process.argv[i + 1] : process.env.STATS_EXTRA;
+  if (extra) {
+    process.env.STATS_EXTRA = extra;
+    for (const f of extra.split(',')) decks.push(JSON.parse(readFileSync(f, 'utf8')) as DeckDef);
+  }
+}
 
 interface Job {
   seed: number;

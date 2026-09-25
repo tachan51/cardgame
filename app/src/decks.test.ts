@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { decks as samples } from './data';
-import { deckToText, deleteUserDeck, findDeck, loadUserDecks, parseDeckText, saveUserDeck } from './decks';
+import { deckToText, deleteUserDeck, findDeck, isPlayable, loadUserDecks, parseDeckText, saveUserDeck } from './decks';
 
 // Node には localStorage がないので、テスト用に置き換える
 const mem = new Map<string, string>();
@@ -28,13 +28,13 @@ describe('デッキの保存（3-2）', () => {
     expect(loadUserDecks()).toEqual([]);
   });
 
-  it('条件を満たさないデッキは保存できない（3-1）', () => {
+  it('条件を満たさない作りかけのデッキも保存できるが、対戦には使えない', () => {
     const d = structuredClone(samples[0]);
     d.cards[0].count -= 1; // 39枚
-    expect(() => saveUserDeck(d)).toThrow(/40/);
-    const same = { ...structuredClone(samples[0]), leaders: ['leader-alto', 'leader-alto'] };
-    expect(() => saveUserDeck(same)).toThrow(/異なる勢力/);
-    expect(loadUserDecks()).toEqual([]);
+    const saved = saveUserDeck(d);
+    expect(loadUserDecks().length).toBe(1);
+    expect(isPlayable(saved)).toBe(false);
+    expect(isPlayable(samples[0])).toBe(true);
   });
 
   it('保存データが壊れていても空として扱う', () => {

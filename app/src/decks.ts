@@ -19,10 +19,8 @@ function store(list: DeckDef[]): void {
   localStorage.setItem(KEY, JSON.stringify(list));
 }
 
-/** 保存する。条件を満たさないデッキは保存できない（3-1）。保存したデッキを返す */
+/** 保存する（条件を満たさない作りかけのデッキも保存できる。対戦には使えない）。保存したデッキを返す */
 export function saveUserDeck(deck: DeckDef): DeckDef {
-  const problems = validateDeck(deck, cat);
-  if (problems.length) throw new Error(problems.join(' / '));
   const list = loadUserDecks();
   const saved: DeckDef = { ...deck, formatVersion: 1, id: deck.id.startsWith('user-') ? deck.id : newDeckId(), cards: sortCards(deck.cards) };
   const i = list.findIndex((d) => d.id === saved.id);
@@ -30,6 +28,11 @@ export function saveUserDeck(deck: DeckDef): DeckDef {
   else list.push(saved);
   store(list);
   return saved;
+}
+
+/** 対戦に使えるか（デッキの条件を満たしているか。ルール仕様書 3.1） */
+export function isPlayable(deck: DeckDef): boolean {
+  return validateDeck(deck, cat).length === 0;
 }
 
 export function deleteUserDeck(id: string): void {

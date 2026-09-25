@@ -324,9 +324,7 @@ function unitHtml(r: Runner, u: Unit, pv: PreviewInfo | null): string {
   const dead = pv?.destroyed.has(u.uid);
   return `<div class="unit fac-${def.faction} ${u.owner === HUMAN ? 'mine' : 'theirs'}" data-card-id="${u.cardId}" data-uid="${u.uid}">
     <div class="uname">${esc(def.name)}${u.isToken ? ' <span class="tag">トークン</span>' : ''}</div>
-    <div class="stats"><span class="atk ${atk > base ? 'up' : atk < base ? 'down' : ''}">⚔${atk}</span> <span class="hp ${hp < max ? 'hurt' : max > (def.health ?? 0) ? 'up' : ''}" title="残り体力${hp}（最大${max}）">♥${hp}</span>${u.shield ? ' <span class="shield" title="盾">🛡</span>' : ''}${
-      hp < max ? ` <span class="dmg" title="受けているダメージ（最大体力${max}、残り${hp}）">ダメージ${max - hp}</span>` : ''
-    }</div>
+    <div class="stats"><span class="atk ${atk > base ? 'up' : atk < base ? 'down' : ''}">⚔${atk}</span> <span class="hp ${hp < max ? 'hurt' : max > (def.health ?? 0) ? 'up' : ''}" title="残り体力${hp}（最大${max}）">♥${hp}</span>${u.shield ? ' <span class="shield" title="盾">🛡</span>' : ''}</div>
     ${hp < max ? `<div class="hpbar" title="残り体力${hp} / 最大${max}"><div style="width:${Math.max(0, (hp / max) * 100)}%"></div></div>` : ''}
     <div class="kws">${kws
       .map((k) =>

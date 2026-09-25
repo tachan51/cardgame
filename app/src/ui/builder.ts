@@ -262,14 +262,14 @@ function summaryHtml(d: DeckDef, size: number, problems: string[]): string {
     <div class="small">ユニット ${units}　スペル ${size - units}${[...byFac.entries()].map(([f, n]) => `　${esc(cat.factions.get(f as FactionId) ?? f)} ${n}`).join('')}</div>
     <div class="curve">${bars}</div>
     <div class="deck-list">${list || '<div class="muted small">カードを選ぶとここに並びます</div>'}</div>
-    ${valid ? '<div class="ok small">デッキの条件を満たしています</div>' : `<ul class="warn small">${problems.map((p) => `<li>${esc(p)}</li>`).join('')}</ul>`}
+    ${valid ? '<div class="ok small">デッキの条件を満たしています</div>' : `<ul class="warn small">${problems.map((p) => `<li>${esc(p)}</li>`).join('')}</ul><div class="muted small">条件を満たしていなくても保存できます（対戦には使えません）</div>`}
     <div class="row">
-      <button class="primary" data-b="save" ${valid ? '' : 'disabled'}>${b.editing ? '上書き保存' : '保存'}</button>
-      ${b.editing ? `<button data-b="save-as" ${valid ? '' : 'disabled'}>別のデッキとして保存</button>` : ''}
+      <button class="primary" data-b="save">${b.editing ? '上書き保存' : '保存'}</button>
+      ${b.editing ? `<button data-b="save-as">別のデッキとして保存</button>` : ''}
       <button data-b="open-export">テキストで書き出す</button>
       <button data-b="clear">カードを全部外す</button>
     </div>
-    ${b.editing && !b.dirty ? `<button class="primary wide" data-b="play">このデッキで対戦する</button>` : ''}
+    ${b.editing && !b.dirty && valid ? `<button class="primary wide" data-b="play">このデッキで対戦する</button>` : ''}
   </section>`;
 }
 
@@ -385,7 +385,7 @@ function onClick(e: MouseEvent, root: HTMLElement, cb: BuilderCallbacks, rerende
         b.draft = structuredClone(saved);
         b.editing = saved.id;
         b.dirty = false;
-        b.message = `「${saved.name}」を保存しました`;
+        b.message = validateDeck(saved, cat).length ? `「${saved.name}」を保存しました（条件を満たしていないので、対戦にはまだ使えません）` : `「${saved.name}」を保存しました`;
       } catch (err) {
         b.error = `保存できません: ${(err as Error).message}`;
       }
