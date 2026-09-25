@@ -168,6 +168,7 @@ textarea { width: 100%; font-family: ui-monospace, monospace; font-size: 13px; }
 .count-row .count { font-weight: bold; }
 .summary .size { font-size: 22px; font-weight: bold; color: var(--reserve); }
 .summary .size.ok { color: var(--good); }
+.summary .size.over { color: var(--bad); }
 .curve { display: flex; gap: 4px; height: 110px; margin: 10px 0; }
 .curve .bar { flex: 1; display: flex; flex-direction: column; align-items: center; height: 100%; }
 .curve .col { flex: 1; width: 100%; display: flex; align-items: flex-end; }
