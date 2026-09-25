@@ -28,7 +28,7 @@ export interface MulliganTable {
 export const MULLIGAN_TABLE = tableJson as MulliganTable;
 
 /** 戻すかどうかの余裕（ポイント）。代わりに引くカードの見込みよりこれ以上悪いときだけ戻す */
-const MARGIN = 1;
+export const MULLIGAN_MARGIN = 1;
 
 /** 表にないカードの見込み（コストが重いほど初手では役に立たない） */
 function fallbackValue(cost: number): number {
@@ -43,7 +43,14 @@ export function keepValue(cat: Catalog, cardId: string, oppFactions: FactionId[]
 }
 
 /** マリガンで戻すカード（uid） */
-export function chooseMulligan(cat: Catalog, state: GameState, player: PlayerId, policy: MulliganPolicy, table: MulliganTable = MULLIGAN_TABLE): number[] {
+export function chooseMulligan(
+  cat: Catalog,
+  state: GameState,
+  player: PlayerId,
+  policy: MulliganPolicy,
+  table: MulliganTable = MULLIGAN_TABLE,
+  margin = MULLIGAN_MARGIN,
+): number[] {
   const me = state.players[player];
   if (policy === 'none') return [];
   if (policy === 'cost') return me.hand.filter((c) => getCard(cat, c.cardId).cost >= 5).map((c) => c.uid);
@@ -51,5 +58,5 @@ export function chooseMulligan(cat: Catalog, state: GameState, player: PlayerId,
   const value = (id: string) => keepValue(cat, id, opp, table);
   // 代わりに引くカードの見込み = 自分の山札（自分のデッキの中身は知っている）の平均
   const expected = me.deck.length ? me.deck.reduce((s, c) => s + value(c.cardId), 0) / me.deck.length : 0;
-  return me.hand.filter((c) => value(c.cardId) < expected - MARGIN).map((c) => c.uid);
+  return me.hand.filter((c) => value(c.cardId) < expected - margin).map((c) => c.uid);
 }

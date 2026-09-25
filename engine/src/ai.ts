@@ -80,6 +80,8 @@ export interface AiOptions {
   worlds?: number;
   /** マリガンの方針（省略時: easy は cost、normal・hard は smart） */
   mulligan?: MulliganPolicy;
+  /** smart のマリガンの余裕（調整用） */
+  mulliganMargin?: number;
 }
 
 export interface AiDecision {
@@ -103,7 +105,7 @@ export function chooseAction(cat: Catalog, state: GameState, player: PlayerId, o
     return { action: { type: 'choose', player, option: best.uid }, score: 0, baseline: 0 };
   }
   if (state.phase === 'mulligan') {
-    const cards = chooseMulligan(cat, state, player, opts.mulligan ?? (level === 'easy' ? 'cost' : 'smart'));
+    const cards = chooseMulligan(cat, state, player, opts.mulligan ?? (level === 'easy' ? 'cost' : 'smart'), undefined, opts.mulliganMargin);
     return { action: { type: 'mulligan', player, cards }, score: 0, baseline: 0 };
   }
   if (state.activePlayer !== player) throw new Error('AI の番ではありません');

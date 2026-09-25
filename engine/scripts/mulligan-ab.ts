@@ -1,5 +1,6 @@
 // マリガンの方針どうしの比べ合い
-//   npx tsx scripts/mulligan-ab.ts --games 100 --policies smart,cost --level normal [--extra a.json]
+//   npx tsx scripts/mulligan-ab.ts --games 100 --policies smart,cost --level normal [--extra a.json] [--margin 1]
+//   --margin N  1つめの方針が smart のときの余裕（src/mulligan.ts の MULLIGAN_MARGIN）
 // 見本デッキの組み合わせ（順序つき）ごとに、同じシードで方針を入れ替えた2試合を行い、1つめの方針の勝率を出す。
 // マリガン以外（対戦中の手の選び方）は同じ AI。
 import { readFileSync, readdirSync } from 'node:fs';
@@ -36,6 +37,7 @@ interface Job {
   level: AiLevel;
   pa: MulliganPolicy;
   pb: MulliganPolicy;
+  margin?: number;
 }
 
 function run(j: Job): GameRecord & { job: Job } {
@@ -43,7 +45,7 @@ function run(j: Job): GameRecord & { job: Job } {
   const r = playGame(cat, { A: deck(j.a), B: deck(j.b) }, {
     seed: j.seed,
     levels: { A: j.level, B: j.level },
-    ai: { A: { mulligan: j.pa, timeLimitMs: 800 }, B: { mulligan: j.pb, timeLimitMs: 800 } },
+    ai: { A: { mulligan: j.pa, mulliganMargin: j.margin, timeLimitMs: 800 }, B: { mulligan: j.pb, mulliganMargin: j.margin, timeLimitMs: 800 } },
   });
   return { ...r, job: j };
 }
@@ -60,13 +62,14 @@ if (!isMainThread) {
   const [p1, p2] = arg('policies', 'smart,cost').split(',') as MulliganPolicy[];
   const level = arg('level', 'normal') as AiLevel;
   const jobsN = Number(arg('jobs', String(cpus().length)));
+  const margin = args.includes('--margin') ? Number(arg('margin', '1')) : undefined;
   const jobs: Job[] = [];
   let seed = Number(arg('seed', '900000'));
   for (const a of decks)
     for (const b of decks)
       for (let g = 0; g < games; g++) {
-        jobs.push({ seed, a: a.id, b: b.id, level, pa: p1, pb: p2 });
-        jobs.push({ seed, a: a.id, b: b.id, level, pa: p2, pb: p1 });
+        jobs.push({ seed, a: a.id, b: b.id, level, pa: p1, pb: p2, margin });
+        jobs.push({ seed, a: a.id, b: b.id, level, pa: p2, pb: p1, margin });
         seed++;
       }
   const chunks: Job[][] = Array.from({ length: jobsN }, () => []);
@@ -104,10 +107,17 @@ if (!isMainThread) {
     return `${(m * 100).toFixed(1)}% ±${(se * 196).toFixed(1)}（${xs.length}試合）`;
   };
   const name = (id: string) => decks.find((d) => d.id === id)!.name.replace(/^見本: /, '');
-  const lines = [`# マリガン ${p1} 対 ${p2}（${level}）`, '', `${p1} の勝率: ${rate(rows)}`, ''];
+  const lines = [`# マリガン ${p1}${margin !== undefined ? `（余裕 ${margin}）` : ''} 対 ${p2}（${level}）`, '', `${p1} の勝率: ${rate(rows)}`, ''];
   const avg = (i: 0 | 1) => (rows.reduce((s, x) => s + x.mull[i], 0) / rows.length).toFixed(2);
-  lines.push(`戻した枚数の平均: ${p1} ${avg(0)} 枚 / ${p2} ${avg(1)} 枚`, '', `| ${p1} 側のデッキ | 勝率 |`, '|---|---|');
-  for (const d of decks) lines.push(`| ${name(d.id)} | ${rate(rows.filter((x) => x.deck === d.id))} |`);
+  lines.push(`戻した枚数の平均: ${p1} ${avg(0)} 枚 / ${p2} ${avg(1)} 枚`, '', `| デッキ | ${p1} で使ったときの勝率 | ${p2} で使ったときの勝率 | 差 |`, '|---|---|---|---|');
+  // デッキごとの改善 = そのデッキを p1 で使ったときの勝率 − p2 で使ったときの勝率（相手は同じ）
+  for (const d of decks) {
+    const a = rows.filter((x) => x.deck === d.id);
+    const b = rows.filter((x) => x.opp === d.id);
+    const wa = a.reduce((s, x) => s + x.win, 0) / a.length;
+    const wb = 1 - b.reduce((s, x) => s + x.win, 0) / b.length;
+    lines.push(`| ${name(d.id)} | ${(wa * 100).toFixed(1)}% | ${(wb * 100).toFixed(1)}% | ${((wa - wb) * 100).toFixed(1)} |`);
+  }
   lines.push('', `| ${p1} 側のデッキ ＼ 相手 | ${decks.map((d) => name(d.id)).join(' | ')} |`, `|---|${decks.map(() => '---|').join('')}`);
   for (const d of decks)
     lines.push(
