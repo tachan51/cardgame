@@ -11,4 +11,6 @@ export type { CombatPreview } from './view';
 export { IllegalAction, Runner } from './runner';
 export { chooseAction, evaluate, determinize, AI_LEVELS, DEFAULT_WEIGHTS, STAGE1_WEIGHTS, STAGE2_WEIGHTS } from './ai';
 export type { AiDecision, AiLevel, AiOptions, AiWeights } from './ai';
+export { chooseMulligan, keepValue, MULLIGAN_TABLE } from './mulligan';
+export type { MulliganPolicy, MulliganTable } from './mulligan';
 export { cellIndex, cellName, parseCellName, laneOf, rowOf, opponent } from './board';

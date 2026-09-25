@@ -1,5 +1,6 @@
 // デッキ構築画面（3-1〜3-2）
-// リーダー2人（異なる勢力）を選び、2勢力のカードから40枚（同名3枚まで）を選ぶ。条件を満たさないデッキは保存できない
+// リーダー2人（異なる勢力）を選び、2勢力のカードから40枚（同名3枚まで）を選ぶ。
+// 作りかけ（40枚ちょうどでない）でも保存できるが、対戦には使えない
 import { MAX_COPIES, validateDeck, type CardDef, type DeckDef, type FactionId } from '../../../engine/src';
 import { cat, decks as samples } from '../data';
 import { deckSize, deckToText, deleteUserDeck, DECK_SIZE, loadUserDecks, newDeckId, parseDeckText, saveUserDeck, sortCards } from '../decks';
@@ -72,7 +73,6 @@ function cannotAdd(card: CardDef): string | null {
   if (facs.length < 2) return 'リーダーを2人選んでください';
   if (!facs.includes(card.faction)) return 'リーダーの勢力のカードではありません';
   if (countOf(card.id) >= MAX_COPIES) return `同名のカードは${MAX_COPIES}枚までです`;
-  if (deckSize(b.draft) >= DECK_SIZE) return `デッキは${DECK_SIZE}枚までです`;
   return null;
 }
 
@@ -258,7 +258,7 @@ function summaryHtml(d: DeckDef, size: number, problems: string[]): string {
   const valid = problems.length === 0;
   return `<section class="box summary">
     <h2>${esc(d.name || '（名前なし）')}</h2>
-    <div class="size ${size === DECK_SIZE ? 'ok' : ''}">${size} / ${DECK_SIZE} 枚</div>
+    <div class="size ${size === DECK_SIZE ? 'ok' : size > DECK_SIZE ? 'over' : ''}">${size} / ${DECK_SIZE} 枚</div>
     <div class="small">ユニット ${units}　スペル ${size - units}${[...byFac.entries()].map(([f, n]) => `　${esc(cat.factions.get(f as FactionId) ?? f)} ${n}`).join('')}</div>
     <div class="curve">${bars}</div>
     <div class="deck-list">${list || '<div class="muted small">カードを選ぶとここに並びます</div>'}</div>

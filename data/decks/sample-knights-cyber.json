@@ -1,32 +1,32 @@
 {
   "formatVersion": 1,
   "id": "sample-knights-cyber",
-  "name": "見本: 守って崩す（騎士団＋電脳）",
-  "description": "騎士団の盾と壁で守りながら、電脳の先制・射撃と移動で相手の壁を崩す。アルトは盾で耐えて成長し、レイは移動で成長する",
+  "name": "見本: 軽く並べて押し切る（騎士団＋電脳）",
+  "description": "2コスト以下のユニットを多めに入れ、序盤から盤面を取って押し切る。電脳の先制・射撃と移動で相手の壁を崩し、突撃騎兵・ベヒモスで仕上げる。レイは移動で、アルトは盾で耐えて成長する",
   "leaders": [
-    "leader-alto",
-    "leader-rei"
+    "leader-rei",
+    "leader-alto"
   ],
   "cards": [
     {
       "id": "KN-01",
-      "count": 2
+      "count": 3
     },
     {
       "id": "CY-04",
-      "count": 2
+      "count": 3
     },
     {
       "id": "CY-05",
-      "count": 2
+      "count": 3
     },
     {
       "id": "CY-09",
-      "count": 1
+      "count": 2
     },
     {
       "id": "CY-13",
-      "count": 1
+      "count": 2
     },
     {
       "id": "KN-03",
@@ -34,15 +34,11 @@
     },
     {
       "id": "KN-04",
-      "count": 2
-    },
-    {
-      "id": "KN-06",
-      "count": 1
+      "count": 3
     },
     {
       "id": "CY-15",
-      "count": 1
+      "count": 2
     },
     {
       "id": "CY-17",
@@ -50,75 +46,27 @@
     },
     {
       "id": "KN-08",
-      "count": 2
+      "count": 3
     },
     {
       "id": "KN-09",
       "count": 3
     },
     {
-      "id": "KN-10",
-      "count": 1
-    },
-    {
-      "id": "KN-11",
-      "count": 1
-    },
-    {
-      "id": "CY-11",
-      "count": 1
-    },
-    {
       "id": "CY-12",
-      "count": 2
-    },
-    {
-      "id": "CY-14",
-      "count": 1
-    },
-    {
-      "id": "KN-13",
-      "count": 2
+      "count": 3
     },
     {
       "id": "KN-19",
-      "count": 1
-    },
-    {
-      "id": "KN-12",
-      "count": 1
+      "count": 3
     },
     {
       "id": "KN-14",
-      "count": 1
-    },
-    {
-      "id": "KN-16",
-      "count": 2
-    },
-    {
-      "id": "KN-17",
-      "count": 1
+      "count": 3
     },
     {
       "id": "CY-19",
-      "count": 1
-    },
-    {
-      "id": "KN-20",
-      "count": 1
-    },
-    {
-      "id": "KN-21",
-      "count": 1
-    },
-    {
-      "id": "CY-23",
-      "count": 1
-    },
-    {
-      "id": "KN-24",
-      "count": 1
+      "count": 3
     }
   ]
 }
