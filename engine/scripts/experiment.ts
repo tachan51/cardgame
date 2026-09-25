@@ -28,17 +28,21 @@ const CA1: Record<string, number> = {
   'AC-01': 3, 'AC-07': 2, 'AC-13': 3, 'AC-03': 3, 'AC-02': 3, 'AC-04': 3, 'AC-05': 2, 'AC-08': 3,
   'AC-15': 3, 'AC-23': 3, 'CY-09': 2, 'CY-13': 2, 'CY-17': 3, 'AC-16': 2, 'AC-10': 3,
 };
-const KC1: Record<string, number> = {
-  'KN-01': 3, 'CY-01': 2, 'CY-04': 3, 'CY-05': 3, 'CY-09': 2, 'KN-03': 2, 'KN-04': 3, 'CY-17': 2,
-  'KN-08': 3, 'KN-09': 3, 'CY-12': 3, 'KN-19': 3, 'KN-13': 2, 'KN-14': 3, 'CY-19': 3,
+const CA2: Record<string, number> = {
+  'AC-01': 2, 'AC-13': 2, 'CY-04': 3, 'CY-05': 3, 'AC-03': 3, 'AC-04': 2, 'AC-02': 3, 'AC-09': 2, 'AC-08': 2,
+  'AC-23': 2, 'CY-17': 2, 'AC-15': 2, 'CY-09': 1, 'CY-12': 3, 'CY-20': 2, 'AC-12': 1, 'AC-19': 2, 'AC-16': 1, 'AC-10': 2,
+};
+const CA3: Record<string, number> = {
+  'CY-01': 3, 'AC-01': 2, 'AC-07': 1, 'CY-04': 3, 'CY-05': 2, 'AC-03': 3, 'AC-02': 3, 'AC-08': 2, 'AC-04': 2,
+  'AC-23': 2, 'CY-17': 2, 'AC-15': 2, 'CY-09': 1, 'CY-20': 3, 'CY-12': 3, 'AC-19': 2, 'AC-16': 2, 'AC-10': 2,
 };
 
 const VARIANTS: Variant[] = [
   { name: '現在', note: 'data/ の見本デッキ（v0.8 のカードで）' },
-  { name: '電脳＋学院: 転送スワップ→見習い魔法使い', note: 'スワップ3枚を見習い魔法使い3枚に', decks: { 'sample-cyber-academy': { 'CY-15': -3, 'AC-03': 3 } } },
   { name: '電脳＋学院: 候補1', note: '魔力の矢・見習い魔法使い・数打ちゃ当たる・魔法の剣を中心に', replaceDecks: { 'sample-cyber-academy': CA1 } },
-  { name: '騎士団＋学院: 見習い魔法使い', note: '修道女・鼓舞の号令・崩落の予言を見習い魔法使い2枚と首席の少女1枚に', decks: { 'sample-knights-academy': { 'AC-21': -1, 'KN-11': -1, 'AC-14': -1, 'AC-03': 2, 'AC-16': 1 } } },
-  { name: '騎士団＋電脳: 候補1', note: '座標ズレ・スワップを偵察ドローン2枚と白銀の盾騎士2枚に', replaceDecks: { 'sample-knights-cyber': KC1 } },
+  { name: '電脳＋学院: 候補2', note: 'ユニットを増やす（ストリートサムライ・ジャミング技師・狙撃手・炎の精霊）', replaceDecks: { 'sample-cyber-academy': CA2 } },
+  { name: '電脳＋学院: 候補3', note: '候補2を偵察ドローン＋ドローンエンジニア寄りに', replaceDecks: { 'sample-cyber-academy': CA3 } },
+  { name: '電脳＋学院: 候補3（つよい）', note: '候補3をつよい同士で', replaceDecks: { 'sample-cyber-academy': CA3 }, level: 'hard' },
 ];
 
 const DATA = join(import.meta.dirname, '..', '..', 'data');
