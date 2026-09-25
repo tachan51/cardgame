@@ -1,7 +1,7 @@
 // 対戦の準備: 自分のデッキと AI のデッキを選ぶ（2-6・3-3）。見本デッキと自分で作ったデッキから選べる
 import { getLeader, validateDeck, type AiLevel, type DeckDef } from '../../../engine/src';
 import { cat } from '../data';
-import { allDecks, findDeck } from '../decks';
+import { allDecks, findDeck, isPlayable } from '../decks';
 import { LEVEL_LABEL, type Game } from '../game';
 import { esc } from '../text';
 
@@ -15,7 +15,7 @@ export function selectHumanDeck(id: string): void {
 function ensureChoice(): void {
   const { samples, user } = allDecks();
   const ids = [...samples, ...user].map((d) => d.id);
-  if (!ids.includes(choice.human)) choice.human = user[0]?.id ?? samples[0]?.id ?? '';
+  if (!ids.includes(choice.human)) choice.human = user.find(isPlayable)?.id ?? samples[0]?.id ?? '';
   if (!ids.includes(choice.ai) || choice.ai === '') choice.ai = samples.find((d) => d.id !== choice.human)?.id ?? samples[0]?.id ?? '';
 }
 
@@ -34,13 +34,17 @@ function deckInfo(id: string): string {
 
 function options(sel: string): string {
   const { samples, user } = allDecks();
-  const opt = (d: DeckDef) => `<option value="${esc(d.id)}" ${d.id === sel ? 'selected' : ''}>${esc(d.name)}</option>`;
+  const opt = (d: DeckDef) => `<option value="${esc(d.id)}" ${d.id === sel ? 'selected' : ''}>${esc(d.name)}${isPlayable(d) ? '' : '（未完成・対戦に使えない）'}</option>`;
   return `<optgroup label="見本デッキ">${samples.map(opt).join('')}</optgroup>${user.length ? `<optgroup label="自分のデッキ">${user.map(opt).join('')}</optgroup>` : ''}`;
 }
 
 export function renderSetup(root: HTMLElement, game: Game, hasSave: boolean, openBuilder: (deckId?: string) => void): void {
   ensureChoice();
   const opts = options;
+  const playable = [choice.human, choice.ai].every((id) => {
+    const d = findDeck(id);
+    return !!d && isPlayable(d);
+  });
   root.innerHTML = `<div class="setup">
     <h1>カードゲーム 試遊版</h1>
     <p class="muted">デッキを選んで AI と対戦します。ルールはすべて自動で処理されます。自分でデッキを作ることもできます。</p>
@@ -60,7 +64,8 @@ export function renderSetup(root: HTMLElement, game: Game, hasSave: boolean, ope
         <select data-sel="level">
           ${(['easy', 'normal', 'hard'] as AiLevel[]).map((l) => `<option value="${l}" ${choice.level === l ? 'selected' : ''}>${LEVEL_LABEL[l]}</option>`).join('')}
         </select></label>
-      <button class="primary" data-go>対戦を始める</button>
+      <button class="primary" data-go ${playable ? '' : 'disabled'}>対戦を始める</button>
+      ${playable ? '' : '<span class="error small">条件を満たしていないデッキでは対戦できません（デッキ構築で直してください）</span>'}
       ${hasSave ? '<button data-resume>前回の続きから</button>' : ''}
     </div>
     <details class="rules"><summary>遊び方（かんたんな説明）</summary>
@@ -87,7 +92,7 @@ export function renderSetup(root: HTMLElement, game: Game, hasSave: boolean, ope
   root.querySelector('[data-go]')!.addEventListener('click', () => {
     const h = findDeck(choice.human);
     const a = findDeck(choice.ai);
-    if (h && a) game.start(h, a, choice.first, choice.level);
+    if (h && a && isPlayable(h) && isPlayable(a)) game.start(h, a, choice.first, choice.level);
   });
   root.querySelector('[data-resume]')?.addEventListener('click', () => game.resume());
   root.querySelector('[data-builder="new"]')?.addEventListener('click', () => openBuilder());

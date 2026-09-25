@@ -23,18 +23,17 @@ interface Variant {
   level?: 'easy' | 'normal' | 'hard';
 }
 
-/** ユーザーが提案した電脳＋学院のデッキ（スペル中心） */
-const USER_CYBER_ACADEMY: Record<string, number> = {
-  'AC-01': 3, 'AC-07': 3, 'AC-13': 3, 'AC-02': 3, 'AC-04': 3, 'AC-05': 3, 'CY-09': 3, 'CY-13': 3,
-  'AC-08': 3, 'AC-15': 3, 'AC-23': 3, 'CY-15': 3, 'CY-17': 2, 'AC-10': 2,
+/** ユーザーが提案した騎士団＋学院のデッキ */
+const USER_KNIGHTS_ACADEMY: Record<string, number> = {
+  'KN-01': 3, 'AC-02': 3, 'AC-06': 3, 'KN-04': 3, 'KN-05': 3, 'KN-06': 3, 'KN-02': 3, 'KN-08': 3,
+  'KN-09': 3, 'KN-11': 3, 'AC-12': 3, 'KN-13': 3, 'AC-10': 2, 'KN-25': 2,
 };
-
 
 const VARIANTS: Variant[] = [
   { name: '現在（ふつう）', note: 'data/ の見本デッキ' },
-  { name: '提案デッキ（ふつう）', note: '電脳＋学院を提案のデッキ（スペル中心）に置き換え', replaceDecks: { 'sample-cyber-academy': USER_CYBER_ACADEMY } },
+  { name: '騎士団＋学院を提案デッキに（ふつう）', note: '騎士団＋学院を提案のデッキに置き換え', replaceDecks: { 'sample-knights-academy': USER_KNIGHTS_ACADEMY } },
   { name: '現在（つよい）', note: 'data/ の見本デッキ', level: 'hard' },
-  { name: '提案デッキ（つよい）', note: '電脳＋学院を提案のデッキに置き換え', replaceDecks: { 'sample-cyber-academy': USER_CYBER_ACADEMY }, level: 'hard' },
+  { name: '騎士団＋学院を提案デッキに（つよい）', note: '騎士団＋学院を提案のデッキに置き換え', replaceDecks: { 'sample-knights-academy': USER_KNIGHTS_ACADEMY }, level: 'hard' },
 ];
 
 const DATA = join(import.meta.dirname, '..', '..', 'data');
@@ -149,6 +148,16 @@ if (!isMainThread) {
     lines.push(
       `| ${v.name} | ${v.note} | ${decks.map((d) => pct(sum.decks[d.id].win, sum.decks[d.id].games)).join(' | ')} | ${pct(sum.first.win, sum.first.games)} | ${sum.rounds.avg.toFixed(1)} | ${lead('leader-alto')} | ${lead('leader-rei')} | ${lead('leader-noel')} |`,
     );
+  });
+  // 実験ごとの相性（行のデッキから見た勝率）
+  VARIANTS.forEach((v, i) => {
+    if (!results[i].length) return;
+    const sum = summarize(results[i], decks);
+    const ids = decks.map((d) => d.id);
+    lines.push('', `### 相性: ${v.name}（行のデッキから見た勝率）`, '', `| | ${ids.map(name).join(' | ')} |`, `|---|${ids.map(() => '---').join('|')}|`);
+    for (const a of ids) {
+      lines.push(`| ${name(a)} | ${ids.map((b) => { const m = sum.matchups[a]?.[b]; return m ? `${((m.win / m.games) * 100).toFixed(0)}%` : '—'; }).join(' | ')} |`);
+    }
   });
   lines.push('', `（${((Date.now() - t0) / 1000).toFixed(0)}秒）`, '');
   const md = lines.join('\n');
