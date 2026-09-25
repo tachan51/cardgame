@@ -50,11 +50,12 @@ describe('カードデータ（1-4）', () => {
   it('デッキの条件違反を見つける', () => {
     const d = structuredClone(deck('sample-knights-cyber'));
     d.leaders = ['leader-alto', 'leader-alto'];
+    const total = 40 - d.cards[0].count + 4;
     d.cards[0].count = 4;
     const w = validateDeck(d, cat);
     expect(w.some((x) => x.includes('異なる勢力'))).toBe(true);
     expect(w.some((x) => x.includes('3 枚まで'))).toBe(true);
-    expect(w.some((x) => x.includes('42 枚'))).toBe(true);
+    expect(w.some((x) => x.includes(`${total} 枚`))).toBe(true);
   });
 });
 
