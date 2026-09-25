@@ -15,6 +15,8 @@ SIM_GAMES=1000 npm run sim   # ランダムな対戦の数を増やす
 npm run stats -- --games 60 --levels normal,normal --out ../docs/stats.md   # AI 同士の自動対戦の集計（4-3）
 npm run stats -- --games 4 --levels hard,normal --swap                       # AI の強さの比較
 npm run experiment -- --games 20                                               # カードやルールを仮に変えて比べる（4-4）
+npm run mulligan-table                                                         # AI のマリガンの表（src/mulligan-table.json）を作り直す
+npx tsx scripts/mulligan-ab.ts --games 100 --policies smart,cost               # マリガンの方針どうしを比べる
 ```
 
 ## 使い方
@@ -58,6 +60,8 @@ while (!s.result) {
 | `src/ai.ts` | AI（段階1〜3）。`chooseAction(cat, state, player, { level })` |
 | `src/sim.ts` | AI 同士の自動対戦（`playGame`）と集計（`summarize`・`toMarkdown`） |
 | `scripts/stats.ts` | 自動対戦をまとめて行い、集計を Markdown で出す（CPU の数だけ並列に動かす） |
+| `scripts/mulligan-table.ts` | AI のマリガンに使う表（相手の勢力ごとの、初手にあると勝ちやすいカード）を自動対戦から作る |
+| `scripts/mulligan-ab.ts` | マリガンの方針どうしを、同じシードで入れ替えて比べる |
 | `scripts/experiment.ts` | カードやルールを仮に変えた「実験」ごとに自動対戦し、デッキの勝率・試合の長さ・リーダーの成長を比べる |
 | `src/scenario.ts` | テストシナリオの実行（[scenarios/README.md](scenarios/README.md)） |
 | `scenarios/*.json` | テストシナリオ（ルールの例、カードごとの動き） |

@@ -20,6 +20,10 @@ export interface GameRecord {
   /** リーダーが成長したラウンド */
   growth: { p: PlayerId; leader: string; round: number }[];
   life: Record<PlayerId, number>;
+  /** 最初に引いた4枚（マリガンの前） */
+  opening: Record<PlayerId, string[]>;
+  /** マリガンで戻した枚数 */
+  mulligans: Record<PlayerId, number>;
   actions: number;
   thinkMs: Record<PlayerId, number>;
 }
@@ -32,6 +36,7 @@ export function playGame(
   opts: { seed: number; levels: Record<PlayerId, AiLevel>; ai?: Partial<Record<PlayerId, AiOptions>>; maxActions?: number; startLife?: number },
 ): GameRecord {
   let s = newGame(cat, decks, { seed: opts.seed, startLife: opts.startLife });
+  const opening = { A: s.players.A.hand.map((c) => c.cardId), B: s.players.B.hand.map((c) => c.cardId) };
   const think: Record<PlayerId, number> = { A: 0, B: 0 };
   let actions = 0;
   while (!s.result) {
@@ -56,6 +61,11 @@ export function playGame(
       .map((e) => ({ p: e.player as PlayerId, card: e.card as string, round: e.round })),
     growth: s.log.filter((e) => e.type === 'grow').map((e) => ({ p: e.player as PlayerId, leader: e.leader as string, round: e.round })),
     life: { A: s.players.A.life, B: s.players.B.life },
+    opening,
+    mulligans: {
+      A: (s.log.find((e) => e.type === 'mulligan' && e.player === 'A')?.count as number) ?? 0,
+      B: (s.log.find((e) => e.type === 'mulligan' && e.player === 'B')?.count as number) ?? 0,
+    },
     actions,
     thinkMs: think,
   };

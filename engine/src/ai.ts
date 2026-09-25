@@ -10,6 +10,7 @@ import type { Catalog } from './catalog';
 import { getCard, getLeader } from './catalog';
 import { applyAction } from './engine';
 import { legalActions } from './legal';
+import { chooseMulligan, type MulliganPolicy } from './mulligan';
 import { nextRandom, shuffleInPlace, type RngHolder } from './rng';
 import { Runner } from './runner';
 import type { Action, CardInstance, FactionId, GameState, PlayerId, Unit } from './types';
@@ -77,6 +78,8 @@ export interface AiOptions {
   /** hard で読む候補の数と、推測する状況の数 */
   candidates?: number;
   worlds?: number;
+  /** マリガンの方針（省略時: easy は cost、normal・hard は smart） */
+  mulligan?: MulliganPolicy;
 }
 
 export interface AiDecision {
@@ -100,8 +103,7 @@ export function chooseAction(cat: Catalog, state: GameState, player: PlayerId, o
     return { action: { type: 'choose', player, option: best.uid }, score: 0, baseline: 0 };
   }
   if (state.phase === 'mulligan') {
-    // 重いカード（5コスト以上）を戻す
-    const cards = state.players[player].hand.filter((c) => getCard(cat, c.cardId).cost >= 5).map((c) => c.uid);
+    const cards = chooseMulligan(cat, state, player, opts.mulligan ?? (level === 'easy' ? 'cost' : 'smart'));
     return { action: { type: 'mulligan', player, cards }, score: 0, baseline: 0 };
   }
   if (state.activePlayer !== player) throw new Error('AI の番ではありません');

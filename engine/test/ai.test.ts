@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { chooseAction } from '../src/ai';
 import { applyAction, newGame } from '../src/engine';
 import { legalActions } from '../src/legal';
+import { chooseMulligan, keepValue, type MulliganTable } from '../src/mulligan';
 import { randomInt } from '../src/rng';
 import { buildState } from '../src/scenario';
 import type { GameState, PlayerId } from '../src/types';
@@ -94,11 +95,31 @@ describe('ルールベースの AI', () => {
     expect(d.score).toBe(1000);
   });
 
-  it('マリガンでは重いカードを戻す', () => {
+  it('やさしい AI のマリガンでは重いカードを戻す', () => {
     const s = newGame(cat, { A: decks[0], B: decks[1] }, { seed: 3 });
-    const d = chooseAction(cat, s, 'A');
+    const d = chooseAction(cat, s, 'A', { level: 'easy' });
     expect(d.action.type).toBe('mulligan');
     const back = (d.action as { cards: number[] }).cards;
     for (const c of s.players.A.hand) expect(back.includes(c.uid)).toBe(cat.cards.get(c.cardId)!.cost >= 5);
+  });
+
+  it('ふつうの AI のマリガンは表の見込みが山札の平均より悪いカードを戻す', () => {
+    const table: MulliganTable = { version: 1, games: 0, vs: { academy: { 'KN-01': 5, 'KN-03': -5 }, cyber: { 'KN-01': 5, 'KN-03': -5 } } };
+    const s = buildState(cat, {
+      A: { hand: ['KN-01', 'KN-03', 'KN-04', 'KN-25'], deck: ['KN-04', 'KN-04', 'KN-04'] },
+      B: {},
+    });
+    s.phase = 'mulligan';
+    const back = chooseMulligan(cat, s, 'A', 'smart', table).map((uid) => s.players.A.hand.find((c) => c.uid === uid)!.cardId);
+    // KN-03 は表で悪い、KN-25（10コスト）は表にないのでコストで判断して戻す。KN-01・KN-04 は残す
+    expect(back.sort()).toEqual(['KN-03', 'KN-25']);
+    expect(chooseMulligan(cat, s, 'A', 'none', table)).toEqual([]);
+  });
+
+  it('マリガンの見込みは相手の勢力で変わる', () => {
+    const table: MulliganTable = { version: 1, games: 0, vs: { knights: { 'CY-04': 4 }, academy: { 'CY-04': -4 } } };
+    expect(keepValue(cat, 'CY-04', ['knights'], table)).toBe(4);
+    expect(keepValue(cat, 'CY-04', ['academy'], table)).toBe(-4);
+    expect(keepValue(cat, 'CY-04', ['knights', 'academy'], table)).toBe(0);
   });
 });
