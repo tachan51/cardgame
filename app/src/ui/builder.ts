@@ -200,6 +200,7 @@ function poolCards(facs: FactionId[]): CardDef[] {
   const f = b.filter;
   const text = f.text.trim();
   return [...cat.cards.values()]
+    .filter((c) => !c.token)
     .filter((c) => (facs.length ? facs.includes(c.faction) : true))
     .filter((c) => f.faction === 'all' || c.faction === f.faction)
     .filter((c) => f.type === 'all' || c.type === f.type)

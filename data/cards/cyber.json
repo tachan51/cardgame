@@ -50,32 +50,48 @@
         "cost": 4,
         "targets": [
           {
-            "id": "a",
-            "kind": "cell",
-            "cellOwner": "any"
+            "id": "unit",
+            "kind": "unit"
           },
           {
-            "id": "b",
+            "id": "cell",
             "kind": "cell",
             "cellOwner": {
-              "sameOwnerAs": "a"
+              "ownerOf": "unit"
+            },
+            "where": {
+              "empty": true
             }
           }
         ],
         "effects": [
           {
-            "op": "swapCells",
-            "a": {
-              "ref": "a"
+            "op": "move",
+            "target": {
+              "ref": "unit"
             },
-            "b": {
-              "ref": "b"
+            "to": {
+              "ref": "cell"
             }
           }
         ]
-      }
+      },
+      "passives": [
+        {
+          "kind": "trigger",
+          "when": "onEnemyMove",
+          "effects": [
+            {
+              "op": "buff",
+              "target": "eventUnit",
+              "attack": -2,
+              "duration": "thisRound"
+            }
+          ]
+        }
+      ]
     },
-    "text": "**強制転送**（5）: ユニット1体を、その持ち主の盤面の空きマスへ移動させる。成長条件: ユニットを合計4回移動させる。成長後: **強制転送**（4）: 同じプレイヤーの盤面のマスを2つ選び、その中身を入れ替える（空きマスも選べる。片方が空きマスなら、もう片方のユニットをそこへ移動させることになる）"
+    "text": "**強制転送**（5）: ユニット1体を、その持ち主の盤面の空きマスへ移動させる。成長条件: ユニットを合計4回移動させる。成長後: **強制転送**（4）: ユニット1体を、その持ち主の盤面の空きマスへ移動させる。（パッシブ）：敵ユニットが移動するたび、そのユニットをそのラウンド中−2/−0する"
   },
   "cards": [
     {
@@ -83,8 +99,8 @@
       "name": "偵察ドローン",
       "faction": "cyber",
       "type": "unit",
-      "cost": 2,
-      "attack": 1,
+      "cost": 1,
+      "attack": 0,
       "health": 1,
       "keywords": [
         "mobile"
@@ -272,17 +288,17 @@
     },
     {
       "id": "CY-09",
-      "name": "小型転送",
+      "name": "転送遅延",
       "faction": "cyber",
       "type": "spell",
-      "cost": 2,
+      "cost": 3,
+      "keywords": [
+        "delay"
+      ],
       "targets": [
         {
           "id": "unit",
-          "kind": "unit",
-          "where": {
-            "attackAtMost": 3
-          }
+          "kind": "unit"
         },
         {
           "id": "cell",
@@ -297,16 +313,21 @@
       ],
       "effects": [
         {
-          "op": "move",
-          "target": {
-            "ref": "unit"
-          },
-          "to": {
-            "ref": "cell"
-          }
+          "op": "delay",
+          "effects": [
+            {
+              "op": "move",
+              "target": {
+                "ref": "unit"
+              },
+              "to": {
+                "ref": "cell"
+              }
+            }
+          ]
         }
       ],
-      "text": "攻撃力3以下のユニット1体を、その持ち主の盤面の空きマスへ移動させる"
+      "text": "ユニット1体と、その持ち主の盤面の空きマス1つを選択する。遅延：その空きマスが埋まっていなければ対象ユニットをそこへ移動させる"
     },
     {
       "id": "CY-10",
@@ -412,7 +433,7 @@
       "name": "座標ズレ",
       "faction": "cyber",
       "type": "spell",
-      "cost": 2,
+      "cost": 3,
       "targets": [
         {
           "id": "unit",
@@ -454,70 +475,40 @@
     },
     {
       "id": "CY-15",
-      "name": "ハッキング網",
+      "name": "スワップ",
       "faction": "cyber",
       "type": "spell",
       "cost": 3,
+      "keywords": [
+        "quick"
+      ],
       "targets": [
         {
-          "id": "unit",
-          "kind": "unit",
-          "side": "ally"
-        },
-        {
-          "id": "cell",
+          "id": "a",
           "kind": "cell",
           "cellOwner": "ally",
           "where": {
-            "empty": true
+            "empty": false
           }
+        },
+        {
+          "id": "b",
+          "kind": "cell",
+          "cellOwner": "ally"
         }
       ],
       "effects": [
         {
-          "op": "move",
-          "target": {
-            "ref": "unit"
+          "op": "swapCells",
+          "a": {
+            "ref": "a"
           },
-          "to": {
-            "ref": "cell"
+          "b": {
+            "ref": "b"
           }
         }
       ],
-      "enhance": {
-        "cost": 1,
-        "mode": "replace",
-        "appliesTo": "effects",
-        "targets": [
-          {
-            "id": "unit",
-            "kind": "unit",
-            "side": "any"
-          },
-          {
-            "id": "cell",
-            "kind": "cell",
-            "cellOwner": {
-              "ownerOf": "unit"
-            },
-            "where": {
-              "empty": true
-            }
-          }
-        ],
-        "effects": [
-          {
-            "op": "move",
-            "target": {
-              "ref": "unit"
-            },
-            "to": {
-              "ref": "cell"
-            }
-          }
-        ]
-      },
-      "text": "味方ユニット1体を、自分の盤面の空きマスへ移動させる。強化（1）: 代わりに、敵ユニット1体を相手の盤面の空きマスへ移動させてもよい"
+      "text": "自分の盤面のマスを2つ選び、その中身を入れ替える（空きマスも選べる。片方が空きマスなら、もう片方のユニットをそこへ移動させることになる）"
     },
     {
       "id": "CY-16",
@@ -526,7 +517,7 @@
       "type": "unit",
       "cost": 6,
       "attack": 3,
-      "health": 5,
+      "health": 6,
       "abilities": [
         {
           "kind": "trigger",
@@ -543,7 +534,7 @@
         },
         {
           "kind": "activated",
-          "cost": 3,
+          "cost": 2,
           "targets": [
             {
               "id": "cell",
@@ -565,7 +556,7 @@
           ]
         }
       ],
-      "text": "配置時: 左右隣のマスに「偵察ドローン」（CY-01）を1体ずつ出す（空きマスでなければ出さない）。起動（3）: 自分の空きマス1つに偵察ドローンを出す"
+      "text": "配置時: 左右隣のマスに「偵察ドローン」（CY-01）を1体ずつ出す（空きマスでなければ出さない）。起動（2）: 自分の空きマス1つに偵察ドローンを出す"
     },
     {
       "id": "CY-17",
@@ -664,7 +655,7 @@
       "name": "電脳戦車「ベヒモス」",
       "faction": "cyber",
       "type": "unit",
-      "cost": 6,
+      "cost": 7,
       "attack": 8,
       "health": 5,
       "abilities": [
@@ -695,7 +686,7 @@
       "type": "unit",
       "cost": 4,
       "attack": 3,
-      "health": 5,
+      "health": 3,
       "abilities": [
         {
           "kind": "static",
@@ -707,8 +698,8 @@
                   "cardId": "CY-01"
                 }
               },
-              "attack": 1,
-              "health": 2
+              "attack": 2,
+              "health": 1
             }
           ]
         },
@@ -733,7 +724,7 @@
           ]
         }
       ],
-      "text": "味方の偵察ドローンすべては+1/+2を持つ。配置時とラウンド開始時: 偵察ドローン（CY-01）1枚を手札に生成する"
+      "text": "味方の偵察ドローンすべては+2/+1を持つ。配置時とラウンド開始時: 偵察ドローン（CY-01）1枚を手札に生成する"
     },
     {
       "id": "CY-21",
@@ -806,7 +797,7 @@
               "id": "unit",
               "kind": "unit",
               "where": {
-                "row": "front"
+                "row": "back"
               }
             }
           ],
@@ -820,7 +811,7 @@
           ]
         }
       ],
-      "text": "敵ユニットが移動するたび、そのユニットをこのラウンド中−2/−0。起動（1）: 前列のユニット1体を、同じレーンの後列へ移動させる（後列が空きマスの場合のみ）"
+      "text": "敵ユニットが移動するたび、そのユニットをこのラウンド中−2/−0。起動（1）: 後列のユニット1体を、同じレーンの前列へ移動させる（前列が空きマスの場合のみ）"
     },
     {
       "id": "CY-24",

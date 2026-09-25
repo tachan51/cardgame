@@ -45,7 +45,7 @@ function randomDecks(perPair: number): DeckDef[] {
     for (let j = i + 1; j < leaders.length; j++)
       for (let k = 0; k < perPair; k++) {
         const fs = [leaders[i].faction, leaders[j].faction];
-        const pool = [...cat.cards.values()].filter((c) => fs.includes(c.faction));
+        const pool = [...cat.cards.values()].filter((c) => fs.includes(c.faction) && !c.token);
         // 使われていないカードは優先し、重いカードは入りにくくする
         const key = (c: (typeof pool)[number]) => rnd() * (used.has(c.id) ? 1 : 2) * (c.cost >= 6 ? 0.4 : c.cost >= 4 ? 0.8 : 1);
         const pick = pool.map((c) => ({ c, k: key(c) })).sort((a, b) => b.k - a.k);

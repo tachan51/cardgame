@@ -64,6 +64,8 @@ export type Selector =
       };
     }
   | { cell: { owner: 'ally' | 'enemy'; lane: LaneRef; row: Row } }
+  /** そのプレイヤーの盤面のマス（空きマスを含む8マス）からランダムに1つ。選ぶたびに引き直す（AC-08） */
+  | { randomCell: 'ally' | 'enemy' }
   | { cellsRelative: 'leftRight' }
   | 'enemyPlayer'
   | 'allyPlayer';
@@ -87,11 +89,15 @@ export type Effect =
   | { op: 'moveToOtherRow'; target: Selector }
   | { op: 'swapCells'; a: Selector; b: Selector }
   | { op: 'returnToHand'; target: Selector }
-  | { op: 'summon'; cardId: string; at: Selector }
+  /** as を書くと、出したユニットを後の効果で { ref: as } として参照できる（AC-11） */
+  | { op: 'summon'; cardId: string; at: Selector; as?: string }
+  /** 候補のうちランダムな1体をマスごとに出す。distinctNames なら名前が重ならないように選ぶ（AC-09） */
+  | { op: 'summonRandom'; cardIds: string[]; at: Selector; distinctNames?: boolean }
   | { op: 'draw'; count: Value }
   | { op: 'drawUntil'; handSize: number }
   | { op: 'lookAtTopPickOne'; look: number }
-  | { op: 'tutorRandom'; where: Condition; count: number; distinctNames?: boolean; as?: string }
+  /** highestCost なら、条件に合うカードのうちコスト（カードに書かれた値）が最大のものから選ぶ（AC-20） */
+  | { op: 'tutorRandom'; where: Condition; count: number; distinctNames?: boolean; highestCost?: boolean; as?: string }
   | { op: 'generate'; cardId: string; count?: number }
   | { op: 'generateFromCastSpells'; count: number; distinctNames: boolean }
   | { op: 'gainReserve'; amount: Value }
@@ -105,7 +111,9 @@ export type Effect =
   | { op: 'delay'; effects: Effect[] }
   | { op: 'atRoundEnd'; effects: Effect[] }
   | { op: 'if'; condition: Condition; subject: Selector; then: Effect[]; else?: Effect[] }
-  | { op: 'forEach'; targets: Selector; effects: Effect[] };
+  | { op: 'forEach'; targets: Selector; effects: Effect[] }
+  /** effects を times 回くり返す（AC-08） */
+  | { op: 'repeat'; times: Value; effects: Effect[] };
 
 export type EffectOp = Effect['op'];
 
@@ -116,6 +124,8 @@ export interface StaticModifier {
   keywords?: Keyword[];
   enhanceCost?: number;
   spellCost?: number;
+  /** 手札などにある、そのカードIDの自分のカードにキーワードを与える（ノエル成長後: 魔力の矢に即効） */
+  cardKeywords?: { cardId: string; keywords: Keyword[] };
 }
 
 export type Ability =
@@ -147,6 +157,8 @@ export interface CardDef {
   effects?: Effect[];
   abilities?: Ability[];
   enhance?: Enhance;
+  /** 効果で出すためだけのカード（トークン）。デッキには入れられない（TK-01） */
+  token?: boolean;
   text: string;
 }
 
@@ -157,7 +169,7 @@ export interface LeaderAbility {
   effects: Effect[];
 }
 
-export type GrowthCounter = 'allyEnduredCombatDamage' | 'unitMoved' | 'leaderAbilityUsed';
+export type GrowthCounter = 'allyEnduredCombatDamage' | 'unitMoved' | 'leaderAbilityUsed' | 'spellsCast';
 
 export interface LeaderDef {
   id: string;

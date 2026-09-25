@@ -31,14 +31,14 @@ const OPS = new Set([
   'damage', 'destroy', 'exile', 'heal', 'buff', 'grantKeyword', 'move', 'moveToOtherRow', 'swapCells',
   'returnToHand', 'summon', 'draw', 'drawUntil', 'lookAtTopPickOne', 'tutorRandom', 'generate',
   'generateFromCastSpells', 'gainReserve', 'gainLife', 'refillMana', 'fight', 'resolveCombat', 'modifyCost',
-  'modifyLeaderAbilityCost', 'reveal', 'delay', 'atRoundEnd', 'if', 'forEach',
+  'modifyLeaderAbilityCost', 'reveal', 'delay', 'atRoundEnd', 'if', 'forEach', 'repeat', 'summonRandom',
 ]);
 const TRIGGERS = new Set([
   'onPlay', 'onDestroyed', 'onMove', 'onEnemyMove', 'onAnyUnitMove', 'onSpellCast',
   'onAllyEndureCombatDamage', 'roundStart', 'roundEnd', 'combatStart', 'combatEnd',
 ]);
 const TARGET_KINDS = new Set(['unit', 'cell', 'lane', 'unitOrPlayer', 'cardInHand']);
-const GROWTH = new Set(['allyEnduredCombatDamage', 'unitMoved', 'leaderAbilityUsed']);
+const GROWTH = new Set(['allyEnduredCombatDamage', 'unitMoved', 'leaderAbilityUsed', 'spellsCast']);
 
 /** 勢力ファイルからカタログを作る。問題があれば CatalogError を投げる */
 export function buildCatalog(files: FactionFile[]): Catalog {
@@ -130,6 +130,8 @@ class Checker {
       if (u.lane !== undefined) this.lane(u.lane, refs);
     } else if ('cell' in s) {
       this.lane(s.cell.lane, refs);
+    } else if ('randomCell' in s) {
+      if (s.randomCell !== 'ally' && s.randomCell !== 'enemy') this.add(`randomCell ${s.randomCell} は使えません`);
     } else if (!('cellsRelative' in s)) this.add(`セレクタの形が不正です: ${JSON.stringify(s)}`);
   }
 
@@ -162,22 +164,23 @@ class Checker {
       for (const key of ['target', 'to', 'a', 'b', 'subject', 'targets', 'at']) {
         if (any[key] !== undefined) this.selector(any[key] as Selector, refs);
       }
-      for (const key of ['amount', 'attack', 'health', 'count']) {
+      for (const key of ['amount', 'attack', 'health', 'count', 'times']) {
         if (any[key] !== undefined && !(e.op === 'tutorRandom' || e.op === 'generateFromCastSpells' || e.op === 'generate'))
           this.value(any[key] as Value, refs);
       }
       if ('keywords' in e) for (const k of e.keywords) if (!KEYWORDS.includes(k)) this.add(`キーワード ${k} は使えません`);
       if ('cardId' in e) this.cardRef(e.cardId);
+      if (e.op === 'summonRandom') e.cardIds.forEach((id) => this.cardRef(id));
       if ('where' in e) this.condition(e.where);
       if ('condition' in e) this.condition(e.condition);
       if (e.op === 'resolveCombat') this.lane(e.lanes, refs);
       // 山札から加えたカードに名前を付け、後の効果で参照できる
-      if (e.op === 'tutorRandom' && e.as) refs.add(e.as);
+      if ((e.op === 'tutorRandom' || e.op === 'summon') && e.as) refs.add(e.as);
       if (e.op === 'delay') {
         hasDelay = true;
         this.effects(e.effects, refs);
       }
-      if (e.op === 'atRoundEnd' || e.op === 'forEach') hasDelay = this.effects(e.effects, refs) || hasDelay;
+      if (e.op === 'atRoundEnd' || e.op === 'forEach' || e.op === 'repeat') hasDelay = this.effects(e.effects, refs) || hasDelay;
       if (e.op === 'if') {
         hasDelay = this.effects(e.then, refs) || hasDelay;
         if (e.else) hasDelay = this.effects(e.else, refs) || hasDelay;
@@ -212,6 +215,10 @@ class Checker {
         for (const m of a.modifiers) {
           this.selector(m.target, new Set());
           for (const k of m.keywords ?? []) if (!KEYWORDS.includes(k)) this.add(`キーワード ${k} は使えません`);
+          if (m.cardKeywords) {
+            this.cardRef(m.cardKeywords.cardId);
+            for (const k of m.cardKeywords.keywords) if (!KEYWORDS.includes(k)) this.add(`キーワード ${k} は使えません`);
+          }
         }
         return false;
       default:
@@ -251,12 +258,22 @@ function validateCard(c: CardDef, cat: Catalog): string[] {
       if (!a || a.kind !== 'trigger' || a.when !== 'onPlay') ch.add(`強化の appliesTo ${en.appliesTo} が配置時の能力を指していません`);
       refs = ch.targets(en.targets ?? (a && a.kind === 'trigger' ? a.targets : undefined));
     }
+    // 強化の add は元の効果の後に処理するので、元の効果で名前を付けたもの（as）も参照できる
+    if (en.mode === 'add') {
+      const base = en.appliesTo === 'effects' || en.appliesTo === undefined ? c.effects : (c.abilities?.[en.appliesTo] as { effects?: Effect[] } | undefined)?.effects;
+      for (const name of asNames(base ?? [])) refs.add(name);
+    }
     hasDelay = ch.effects(en.effects, refs) || hasDelay;
   }
   const kwDelay = (c.keywords ?? []).includes('delay');
   if (kwDelay && !hasDelay) ch.add('キーワードに遅延がありますが、効果に遅延の処理がありません');
   if (!kwDelay && hasDelay) ch.add('効果に遅延の処理がありますが、キーワードに遅延がありません');
   return ch.problems;
+}
+
+/** 効果の中で as で名前を付けたもの */
+function asNames(list: Effect[]): string[] {
+  return list.flatMap((e) => ((e.op === 'tutorRandom' || e.op === 'summon') && e.as ? [e.as] : []));
 }
 
 function validateLeader(l: LeaderDef, cat: Catalog): string[] {
@@ -290,7 +307,8 @@ export function validateDeck(deck: DeckDef, cat: Catalog): string[] {
       out.push(`カード ${id} がありません`);
       continue;
     }
-    if (!factions.includes(c.faction)) out.push(`${id} ${c.name} はリーダーの勢力のカードではありません`);
+    if (c.token) out.push(`${id} ${c.name} は効果で出すためのカードなので、デッキに入れられません`);
+    else if (!factions.includes(c.faction)) out.push(`${id} ${c.name} はリーダーの勢力のカードではありません`);
     if (count > MAX_COPIES) out.push(`${id} ${c.name} が ${count} 枚あります（同名は ${MAX_COPIES} 枚まで）`);
   }
   if (total !== DECK_SIZE) out.push(`デッキが ${total} 枚です（ちょうど ${DECK_SIZE} 枚）`);
