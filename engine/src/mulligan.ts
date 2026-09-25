@@ -27,8 +27,8 @@ export interface MulliganTable {
 
 export const MULLIGAN_TABLE = tableJson as MulliganTable;
 
-/** 戻すかどうかの余裕（ポイント）。代わりに引くカードの見込みよりこれ以上悪いときだけ戻す */
-export const MULLIGAN_MARGIN = 1;
+/** 戻すかどうかの余裕（ポイント）。代わりに引くカードの見込みよりこれ以上悪いときだけ戻す（0〜3 を比べて 0 が一番よかった） */
+export const MULLIGAN_MARGIN = 0;
 
 /** 表にないカードの見込み（コストが重いほど初手では役に立たない） */
 function fallbackValue(cost: number): number {
