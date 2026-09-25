@@ -1,15 +1,16 @@
-# カードデータ形式（v0.3）
+# カードデータ形式（v0.4）
 
 > ステータス: ドラフト
-> 最終更新: 2026-09-24
-> 関連: [ルール仕様書](rules.md) v1.8 / [カードリスト](cards.md) v0.6 / [タスクリスト](tasks.md)（0-5）
+> 最終更新: 2026-09-26
+> 関連: [ルール仕様書](rules.md) v1.11 / [カードリスト](cards.md) v0.8 / [タスクリスト](tasks.md)（0-5）
 >
 > カード・リーダーを JSON で表すための形式。ルールエンジン（TypeScript 版・Godot 版）はこのデータを読み込んで動く。
-> 試遊版3勢力の75枚とリーダー3人を、この形式で `data/cards/` に書き起こした（7章）。
+> 試遊版3勢力の75枚（とトークン専用のカード）とリーダー3人を、この形式で `data/cards/` に書き起こした（7章）。
 >
 > | 版 | 内容 |
 > |---|---|
 > | v0.1 | 初版 |
+> | v0.4 | カードリスト v0.8 に合わせて、処理 `repeat`・`summonRandom`、`summon` の `as`、`tutorRandom` の `highestCost`、セレクタ `randomCell`、常時効果の `cardKeywords`、カードの `token`、成長条件 `spellsCast` を追加 |
 > | v0.3 | カードリスト v0.7 に合わせて、`costReduction`（試合中の回数でコストを下げる）、`gainLife`、`tutorRandom` の `distinctNames`・`as`、セレクタの `other`（自分を除く）、数値 `unitMovesThisGame`、成長条件 `unitMoved` を追加。前進の廃止に合わせて文章を直した |
 > | v0.2 | 書き起こしに合わせて、マスの持ち主に `"any"` と `{ sameOwnerAs }` を追加。強化だけを持つユニットの書き方を追加。「使ったスペルの枚数」に自身を含めないことを確定 |
 
@@ -73,6 +74,7 @@ type Card = {
   effects?: Effect[];         // スペルを使ったときの効果
   abilities?: Ability[];      // ユニットの誘発・常時・起動能力、手札にある間の効果
   enhance?: Enhance;          // 強化
+  token?: boolean;            // 効果で出すためだけのカード。デッキには入れられない（TK-01）
   text: string;               // 画面に出す効果文（表示専用）
 };
 
@@ -106,7 +108,8 @@ type StaticModifier = {
   health?: number;
   keywords?: Keyword[];       // キーワードを持たせる
   enhanceCost?: number;       // スペルの強化コストの増減（AC-16）
-  spellCost?: number;         // スペルのコストの増減（ノエル成長後）
+  spellCost?: number;         // スペルのコストの増減（AC-16）
+  cardKeywords?: { cardId: string; keywords: Keyword[] }; // 自分のそのカード（手札など）にキーワードを与える（ノエル成長後: 魔力の矢に即効）
 };
 ```
 
@@ -147,7 +150,8 @@ type LeaderAbility = { name: string; cost: number; targets?: TargetSpec[]; effec
 type GrowthCounter =
   | "allyEnduredCombatDamage"  // 味方が戦闘ダメージを耐えた回数（アルト）
   | "unitMoved"                // 自分がユニット（敵味方問わず）を移動させた回数（レイ）。効果による移動と、自分の遊撃による移動
-  | "leaderAbilityUsed";       // このリーダーの能力を使った回数（ノエル）
+  | "leaderAbilityUsed"        // このリーダーの能力を使った回数
+  | "spellsCast";              // 自分がスペルを使った回数（ノエル）。生成したスペルも数える
 ```
 
 ---
@@ -204,6 +208,7 @@ type Selector =
       } }
   | { cell: { owner: "ally" | "enemy"; lane: LaneRef; row: "front" | "back" } }
   | { cellsRelative: "leftRight" }                    // このユニットの左右隣のマス
+  | { randomCell: "ally" | "enemy" }                  // そのプレイヤーの8マス（空きマスを含む）からランダムに1つ。評価するたびに選び直す（AC-08）
   | "enemyPlayer" | "allyPlayer";
 
 type LaneRef = number | { ref: string } | { laneOf: Selector } | "all";
@@ -266,25 +271,27 @@ type Condition =
 | `moveToOtherRow` | `target` | 同じレーンのもう一方の列へ移動させる（空きマスの場合のみ） | CY-13, CY-23 |
 | `swapCells` | `a`, `b` | 同じプレイヤーの2マスの中身を入れ替える（空きマスも可） | レイ成長後 |
 | `returnToHand` | `target` | 手札に戻す | CY-02 |
-| `summon` | `cardId`, `at` | カードのユニットを効果で出す（トークン扱い。空きマスでなければ出さない） | CY-16, AC-15 |
+| `summon` | `cardId`, `at`, `as?` | カードのユニットを効果で出す（トークン扱い。空きマスでなければ出さない）。`as` で出したユニットに名前を付ける | CY-16, AC-15, AC-11 |
+| `summonRandom` | `cardIds`, `at`, `distinctNames?` | 候補からランダムに選んだユニットを、マスごとに出す。`distinctNames` なら名前が重ならないように選ぶ | AC-09 |
 | `draw` | `count` | カードを引く | CY-10, AC-20 |
-| `drawUntil` | `handSize` | 手札が指定枚数になるまで引く | ノエル |
+| `drawUntil` | `handSize` | 手札が指定枚数になるまで引く | — |
 | `lookAtTopPickOne` | `look` | 山札の上から見て1枚を手札に、残りは元の順番で戻す | CY-06 |
-| `tutorRandom` | `where`, `count`, `distinctNames?`, `as?` | 山札から条件に合うカードをランダムに手札に加え、シャッフル。`distinctNames` なら名前の異なるカードだけ。`as` で加えたカードに名前を付ける | KN-18, AC-08, AC-25 |
+| `tutorRandom` | `where`, `count`, `distinctNames?`, `highestCost?`, `as?` | 山札から条件に合うカードをランダムに手札に加え、シャッフル。`distinctNames` なら名前の異なるカードだけ。`highestCost` ならコスト（カードに書かれた値）が最大のものの中から選ぶ。`as` で加えたカードに名前を付ける | KN-18, AC-20, AC-25 |
 | `generate` | `cardId`, `count?` | カードを手札に生成する | AC-05, CY-20 |
 | `generateFromCastSpells` | `count`, `distinctNames` | 使ったスペルからランダムに選んで手札に生成する | AC-18 |
 | `gainReserve` | `amount` | 予備マナを得る | AC-07 |
-| `gainLife` | `amount` | 自分のライフを回復する（上限なし） | AC-05, AC-23, ノエル |
-| `refillMana` | — | 通常マナを最大まで回復する | ノエル |
+| `gainLife` | `amount` | 自分のライフを回復する（上限なし） | AC-05, AC-23 |
+| `refillMana` | — | 通常マナを最大まで回復する | — |
 | `fight` | `a`, `b` | 2体が互いに攻撃力と同じダメージを与え合う（どちらかがいなければ何もしない） | KN-07 |
 | `resolveCombat` | `lanes` | 指定レーンで戦闘を行う（ルール仕様書 11.7） | KN-17, KN-22 |
 | `modifyCost` | `target`, `amount` | 手札のカードのコストを増減する | AC-25 |
-| `modifyLeaderAbilityCost` | `amount` | このリーダーの能力のコストを増減する（試合を通して累積） | ノエル |
+| `modifyLeaderAbilityCost` | `amount` | このリーダーの能力のコストを増減する（試合を通して累積） | — |
 | `reveal` | `target` | 手札のカードを公開する | AC-25 |
 | `delay` | `effects` | 中の効果を予約し、自分の次の手番の始めに発動する（ルール仕様書 14.1） | KN-15, AC-01 |
 | `atRoundEnd` | `effects` | 中の効果を、このラウンドの終了時に行う | CY-07, AC-14 |
 | `if` | `condition`, `subject`, `then`, `else?` | 条件を満たすときだけ行う | — |
 | `forEach` | `targets`, `effects` | 範囲の中の1体ずつに効果を行う（中では `eventUnit` がその1体） | — |
+| `repeat` | `times`, `effects` | 中の効果を `times` 回くり返す | AC-08 |
 
 - `target` にはセレクタ（4.3）を書く。範囲（`units`）を書けば、その全員に効果を行う。
 - 数値の引数にはすべて Value（4.4）を書ける。
@@ -430,28 +437,26 @@ type Condition =
 ```
 
 - `tutorRandom` の `as` に名前を付けると、加えたカードを同じ能力の後の効果から `{ "ref": "spells" }` で参照できる。
+- `summon` の `as` も同じ。強化の `add` は元の効果の後に処理するので、元の効果で付けた名前を強化の効果から参照できる（AC-11 氷像の召喚: 出した動く氷像を強化で+0/+3）。
 
 ### 6.9 リーダー（ノエル）
 
 ```json
 {
   "id": "leader-noel", "name": "ノエル", "title": "落ちこぼれ魔法使い", "faction": "academy",
-  "ability": {
-    "name": "英知の魔法", "cost": 20,
-    "effects": [ { "op": "drawUntil", "handSize": 10 }, { "op": "refillMana" } ]
-  },
-  "passives": [
-    { "kind": "trigger", "when": "onSpellCast", "effects": [ { "op": "modifyLeaderAbilityCost", "amount": -1 } ] }
-  ],
-  "growth": { "counter": "leaderAbilityUsed", "threshold": 1 },
+  "ability": { "name": "基本魔法", "cost": 1, "effects": [ { "op": "generate", "cardId": "AC-01" } ] },
+  "growth": { "counter": "spellsCast", "threshold": 8 },
   "grown": {
-    "passives": [ { "kind": "static", "modifiers": [ { "target": "allyPlayer", "spellCost": -1 } ] } ]
+    "ability": { "name": "基本魔法", "cost": 0, "effects": [ { "op": "generate", "cardId": "AC-01" } ] },
+    "passives": [
+      { "kind": "static", "modifiers": [ { "target": "allyPlayer", "cardKeywords": { "cardId": "AC-01", "keywords": ["quick"] } } ] }
+    ]
   },
-  "text": "英知の魔法（20）: 手札が10枚になるまでカードを引く。通常マナを最大まで回復する。（パッシブ）スペルを使用するたび、この能力のコストを−1。成長条件: 英知の魔法を使う。成長後（パッシブ）: 自分のスペルすべてのコストは−1。成長後は英知の魔法を使えない"
+  "text": "**基本魔法**（1）: 魔力の矢(AC-01)1枚を自分の手札に生成する。成長条件: スペルを8回使う。成長後: …"
 }
 ```
 
-- `grown` に `ability` がないので、成長後はリーダー能力を使えない。
+- `cardKeywords` で与えたキーワードは、カードを使う時点で判定する（即効なら追加の手番を得る）。魔力の矢は遅延も持つので、ルール仕様書 14.2 のとおり追加の手番の始めにすぐ発動する。
 
 ### 6.10 リーダー（アルト）
 
@@ -484,7 +489,7 @@ type Condition =
 
 ## 7. 75枚の対応確認
 
-試遊版3勢力の全カードとリーダーを `data/cards/knights.json`・`cyber.json`・`academy.json` に書き起こし、8章の検証をすべて通ることを確認した。特殊な表し方をするものは次のとおり。
+試遊版3勢力の全カード（とトークン専用のカード）とリーダーを `data/cards/knights.json`・`cyber.json`・`academy.json` に書き起こし、8章の検証をすべて通ることを確認した。特殊な表し方をするものは次のとおり。
 
 | カード | 表し方 |
 |---|---|
@@ -496,17 +501,22 @@ type Condition =
 | CY-14 攻性防壁 / CY-23 オラクル | `trigger` の `onEnemyMove` で `eventUnit` に効果 |
 | CY-16 ドローン管制官 | `summon` の `at` に `{ "cellsRelative": "leftRight" }`（空きマスでなければ出さない） |
 | CY-25 衛星兵器「ラグナロク」 | 強化（add）で味方すべてに盾（遅延の外）、遅延の中で全ユニットに8ダメージ |
-| AC-02 火球 | 対象の `kind: "unitOrPlayer"`（敵ユニットまたは相手プレイヤー） |
-| AC-10 魔法の剣 | `grantKeyword`（貫通・永続）と、`buff` の `attack` に `{ "count": "spellsCastThisGame" }`。強化の「攻撃力を2倍」は `buff` の `attack` に `{ "attackOf": { "ref": "ally" } }` |
-| AC-17 雷鳴の詠唱 | 味方ユニットを指定し、遅延の中で `units` の `lane: { "laneOf": { "ref": "ally" } }`（発動時にそのユニットがいるレーン。敵味方すべて） |
+| AC-02 ホーミング魔弾 | 対象の `kind: "unitOrPlayer"`（敵ユニットまたは相手プレイヤー） |
+| AC-08 数打ちゃ当たる | `repeat`（`times` に `spellsCastThisGame`）の中で、`damage` の対象に `{ "randomCell": "enemy" }`（空きマスなら外れ） |
+| AC-09 召喚ガチャ | `summonRandom`。強化（replace）で対象を2マス（`count: 2`）にし、`distinctNames` |
+| AC-10 魔法の剣 | `buff` の `attack`・`health` に `{ "count": "spellsCastThisGame" }`（永続） |
+| AC-11 氷像の召喚 / TK-01 動く氷像 | `summon`（`cardId: "TK-01"`、`as: "statue"`）と、強化（add）で `{ "ref": "statue" }` を+0/+3。TK-01 は `token: true` |
+| AC-17 雷鳴の詠唱 | 遅延の中で敵ユニットすべてに `damage`。強化（replace）で `times: 2` |
+| AC-20 学院長代理 | 配置時に `tutorRandom`（`highestCost`・`as: "spell"`）→ `reveal`。強化（add、`appliesTo: 0`）で `modifyCost`（−6） |
 | AC-22 魔導ゴーレム / CY-21 重装ガンシップ | `costReduction` の `by` に `spellsCastThisGame` / `unitMovesThisGame` |
 | AC-14 崩落の予言 | `atRoundEnd` の中の `destroy`（遅延ではない） |
-| AC-16 首席の少女 | `static` の `enhanceCost: -1`（対象は `allyPlayer`） |
+| AC-16 首席の少女 | `static` の `spellCost: -1`（対象は `allyPlayer`） |
 | AC-24 禁呪「終焉の詠唱」 | 遅延の中で `exile`。対象は `units` の `where: { healthAtMost: 3 }`（発動時に判定） |
 | AC-25 天空の大魔導師 | 配置時に `tutorRandom`（`distinctNames`・`as: "spells"`）→ `reveal` → `modifyCost`（−9）（6.8） |
-| CY-09 小型転送 | 対象の `where: { "attackAtMost": 3 }` と、その持ち主の盤面の空きマスへ `move`（遅延ではない） |
-| レイ 成長後 | `swapCells`。2つ目のマスは `cellOwner: { "sameOwnerAs": "a" }`（同じプレイヤーの2マス。空きマスも可） |
-| CY-15 ハッキング網 | 強化（replace）で `targets` も差し替え、敵ユニットも選べるようにする |
+| CY-09 転送遅延 | ユニットとその持ち主の空きマスを選び、遅延の中で `move`（発動時に空きマスでなければ動かない） |
+| レイ 成長後 | 能力は成長前と同じ `move`（コスト4）。パッシブは `trigger` の `onEnemyMove` で `eventUnit` を−2/−0 |
+| ノエル | 6.9 |
+| CY-15 スワップ | `swapCells`。1つ目は自分のユニットがいるマス（`where: { "empty": false }`）、2つ目は自分の任意のマス（空きマスも可） |
 | KN-01, KN-14 | 空の配置時の能力を置き、強化の `appliesTo: 0` で指す |
 
 ---
@@ -518,6 +528,7 @@ type Condition =
 | 検証 | 内容 |
 |---|---|
 | ID | 全カードで一意。`cardId` で参照しているカードが存在する |
+| トークン | `token: true` のカードはデッキに入れられない（デッキの検証） |
 | 種類と能力値 | ユニットは `attack` と `health` を持つ。スペルは持たない |
 | 遅延の整合 | `keywords` に `delay` があるカードは、効果のどこかに `delay` 処理を持つ（逆も同じ。ただし起動能力の中だけに遅延があるユニットは `keywords` に入れない） |
 | 対象の参照 | `{ "ref": "..." }` の名前が、同じ能力（または強化）の `targets` に存在する |
@@ -534,7 +545,7 @@ type Condition =
 type Deck = {
   formatVersion: 1;
   id: string;            // "sample-knights-cyber"
-  name: string;          // "見本: 守って崩す（騎士団＋電脳）"
+  name: string;          // "見本: 軽く並べて押し切る（騎士団＋電脳）"
   description?: string;  // デッキの狙い
   leaders: [string, string];               // リーダーID（異なる勢力）
   cards: { id: string; count: number }[];  // 合計40枚、同名3枚まで
@@ -543,9 +554,9 @@ type Deck = {
 
 | 見本デッキ | リーダー | 狙い |
 |---|---|---|
-| `sample-knights-cyber.json` | アルト＋レイ | 騎士団の盾と壁で守り、電脳の移動と攻撃力ダウンで相手の壁を崩す |
+| `sample-knights-cyber.json` | レイ＋アルト | 2コスト以下のユニットを多めに入れ、序盤から盤面を取って押し切る |
 | `sample-knights-academy.json` | アルト＋ノエル | 騎士団の壁で時間を稼ぎ、学院のスペルを重ねて遅延の大魔法と大型ユニットで決着 |
-| `sample-cyber-academy.json` | レイ＋ノエル | 遅延の魔法で狙ったマスへ、電脳の移動で敵を動かして当てる |
+| `sample-cyber-academy.json` | レイ＋ノエル | 偵察ドローンと見習い魔法使いで盤面を作り、魔力の矢や数打ちゃ当たるで削る |
 
 モックアップでのテキスト形式は [mockup.md](mockup.md) の7.3。
 

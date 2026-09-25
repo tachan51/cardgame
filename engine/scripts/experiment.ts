@@ -23,17 +23,26 @@ interface Variant {
   level?: 'easy' | 'normal' | 'hard';
 }
 
-/** ユーザーが提案した騎士団＋学院のデッキ */
-const USER_KNIGHTS_ACADEMY: Record<string, number> = {
-  'KN-01': 3, 'AC-02': 3, 'AC-06': 3, 'KN-04': 3, 'KN-05': 3, 'KN-06': 3, 'KN-02': 3, 'KN-08': 3,
-  'KN-09': 3, 'KN-11': 3, 'AC-12': 3, 'KN-13': 3, 'AC-10': 2, 'KN-25': 2,
+// v0.8 で見本デッキを組み直すときの候補
+const CA1: Record<string, number> = {
+  'AC-01': 3, 'AC-07': 2, 'AC-13': 3, 'AC-03': 3, 'AC-02': 3, 'AC-04': 3, 'AC-05': 2, 'AC-08': 3,
+  'AC-15': 3, 'AC-23': 3, 'CY-09': 2, 'CY-13': 2, 'CY-17': 3, 'AC-16': 2, 'AC-10': 3,
+};
+const CA2: Record<string, number> = {
+  'AC-01': 2, 'AC-13': 2, 'CY-04': 3, 'CY-05': 3, 'AC-03': 3, 'AC-04': 2, 'AC-02': 3, 'AC-09': 2, 'AC-08': 2,
+  'AC-23': 2, 'CY-17': 2, 'AC-15': 2, 'CY-09': 1, 'CY-12': 3, 'CY-20': 2, 'AC-12': 1, 'AC-19': 2, 'AC-16': 1, 'AC-10': 2,
+};
+const CA3: Record<string, number> = {
+  'CY-01': 3, 'AC-01': 2, 'AC-07': 1, 'CY-04': 3, 'CY-05': 2, 'AC-03': 3, 'AC-02': 3, 'AC-08': 2, 'AC-04': 2,
+  'AC-23': 2, 'CY-17': 2, 'AC-15': 2, 'CY-09': 1, 'CY-20': 3, 'CY-12': 3, 'AC-19': 2, 'AC-16': 2, 'AC-10': 2,
 };
 
 const VARIANTS: Variant[] = [
-  { name: '現在（ふつう）', note: 'data/ の見本デッキ' },
-  { name: '騎士団＋学院を提案デッキに（ふつう）', note: '騎士団＋学院を提案のデッキに置き換え', replaceDecks: { 'sample-knights-academy': USER_KNIGHTS_ACADEMY } },
-  { name: '現在（つよい）', note: 'data/ の見本デッキ', level: 'hard' },
-  { name: '騎士団＋学院を提案デッキに（つよい）', note: '騎士団＋学院を提案のデッキに置き換え', replaceDecks: { 'sample-knights-academy': USER_KNIGHTS_ACADEMY }, level: 'hard' },
+  { name: '現在', note: 'data/ の見本デッキ（v0.8 のカードで）' },
+  { name: '電脳＋学院: 候補1', note: '魔力の矢・見習い魔法使い・数打ちゃ当たる・魔法の剣を中心に', replaceDecks: { 'sample-cyber-academy': CA1 } },
+  { name: '電脳＋学院: 候補2', note: 'ユニットを増やす（ストリートサムライ・ジャミング技師・狙撃手・炎の精霊）', replaceDecks: { 'sample-cyber-academy': CA2 } },
+  { name: '電脳＋学院: 候補3', note: '候補2を偵察ドローン＋ドローンエンジニア寄りに', replaceDecks: { 'sample-cyber-academy': CA3 } },
+  { name: '電脳＋学院: 候補3（つよい）', note: '候補3をつよい同士で', replaceDecks: { 'sample-cyber-academy': CA3 }, level: 'hard' },
 ];
 
 const DATA = join(import.meta.dirname, '..', '..', 'data');

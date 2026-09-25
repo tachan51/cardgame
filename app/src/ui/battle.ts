@@ -358,7 +358,7 @@ function handHtml(s: GameState, r: Runner, hl: Highlights, all: Action[]): strin
         <div class="cost ${cost < def.cost ? 'down' : cost > def.cost ? 'up' : ''}">${cost}</div>
         <div class="cname">${esc(def.name)}</div>
         <div class="ctype small">${cardTypeLabel(c.cardId)}${def.type === 'unit' ? `　⚔${def.attack} ♥${def.health}` : ''}</div>
-        <div class="kws">${(def.keywords ?? []).map((k) => `<span class="kw">${KEYWORD_LABEL[k]}</span>`).join('')}${c.revealed ? '<span class="tag">公開中</span>' : ''}</div>
+        <div class="kws">${[...r.cardKeywords(HUMAN, c.cardId)].map((k) => `<span class="kw">${KEYWORD_LABEL[k]}</span>`).join('')}${c.revealed ? '<span class="tag">公開中</span>' : ''}</div>
         <div class="ctext">${richText(def.text)}</div>
       </div>`;
     })

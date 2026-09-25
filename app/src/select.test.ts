@@ -38,8 +38,8 @@ describe('操作の組み立て', () => {
     expect(nextStep(all, sel, s)).toMatchObject({ kind: 'ready', action: { type: 'castSpell', enhance: true } });
   });
 
-  it('ユニット → その持ち主の空きマス の順に選ぶ（小型転送）', () => {
-    const s = buildState(cat, { A: { maxMana: 2, hand: ['CY-09'], board: { '2前': 'KN-04' } }, B: { board: { '1前': 'KN-05' } } });
+  it('ユニット → その持ち主の空きマス の順に選ぶ（転送遅延）', () => {
+    const s = buildState(cat, { A: { maxMana: 3, hand: ['CY-09'], board: { '2前': 'KN-04' } }, B: { board: { '1前': 'KN-05' } } });
     const sel: Selection = { source: { kind: 'hand', uid: handUid(s, 'CY-09') }, picks: {} };
     const all = allLegal(s);
     const st = nextStep(all, sel, s);

@@ -237,7 +237,7 @@ export function determinize(cat: Catalog, state: GameState, me: PlayerId, rng: R
   w.pending = null;
   const opp = opponent(me);
   const facs = new Set<FactionId>(w.players[opp].leaders.map((l) => getLeader(cat, l.id).faction));
-  const pool = [...cat.cards.values()].filter((c) => facs.has(c.faction)).map((c) => c.id);
+  const pool = [...cat.cards.values()].filter((c) => facs.has(c.faction) && !c.token).map((c) => c.id);
   const sample = (): CardInstance => ({ uid: w.nextUid++, cardId: pool[Math.floor(nextRandom(rng) * pool.length)], costMod: 0, revealed: false, generated: false });
   const st = w.players[opp];
   st.hand = st.hand.map((c) => (c.revealed ? c : sample()));

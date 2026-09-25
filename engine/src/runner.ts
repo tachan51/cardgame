@@ -4,7 +4,7 @@ import { cellIndex, cellName, laneOf, leftRight, opponent, otherRow, rowOf } fro
 import type { Catalog } from './catalog';
 import { getCard, getLeader } from './catalog';
 import { CELLS, HAND_LIMIT, LANES, MAX_MANA_CAP } from './constants';
-import { pickRandom, shuffleInPlace } from './rng';
+import { pickRandom, randomInt, shuffleInPlace } from './rng';
 import type {
   Ability,
   CardDef,
@@ -14,6 +14,7 @@ import type {
   Effect,
   EffectContext,
   GameState,
+  GrowthCounter,
   Keyword,
   LaneRef,
   LeaderAbility,
@@ -65,7 +66,7 @@ interface QueuedTrigger {
 
 interface StaticTotals {
   units: Map<number, { attack: number; health: number; keywords: Set<Keyword> }>;
-  players: Record<PlayerId, { enhanceCost: number; spellCost: number }>;
+  players: Record<PlayerId, { enhanceCost: number; spellCost: number; cardKeywords: { cardId: string; keywords: Keyword[] }[] }>;
 }
 
 /** 処理中の効果の出どころ（遅延の予約に使う） */
@@ -147,7 +148,7 @@ export class Runner {
     if (this.staticCache) return this.staticCache;
     const totals: StaticTotals = {
       units: new Map(),
-      players: { A: { enhanceCost: 0, spellCost: 0 }, B: { enhanceCost: 0, spellCost: 0 } },
+      players: { A: { enhanceCost: 0, spellCost: 0, cardKeywords: [] }, B: { enhanceCost: 0, spellCost: 0, cardKeywords: [] } },
     };
     // 静的な効果の条件は、静的な効果を含まない値で判定する（循環を避けるため）
     this.rawStats = true;
@@ -160,6 +161,7 @@ export class Runner {
               const q = m.target === 'allyPlayer' ? ctx.controller : opponent(ctx.controller);
               totals.players[q].enhanceCost += m.enhanceCost ?? 0;
               totals.players[q].spellCost += m.spellCost ?? 0;
+              if (m.cardKeywords) totals.players[q].cardKeywords.push(m.cardKeywords);
               continue;
             }
             for (const { unit } of this.units(m.target, ctx)) {
@@ -218,6 +220,13 @@ export class Runner {
 
   hasKeyword(u: Unit, k: Keyword): boolean {
     return this.keywords(u).has(k);
+  }
+
+  /** 手札などのカードが持つキーワード（カードに書かれたもの＋リーダーのパッシブなどで与えられたもの） */
+  cardKeywords(p: PlayerId, cardId: string): Set<Keyword> {
+    const set = new Set<Keyword>(this.card(cardId).keywords ?? []);
+    for (const m of this.statics().players[p].cardKeywords) if (m.cardId === cardId) for (const k of m.keywords) set.add(k);
+    return set;
   }
 
   // ================================================================ コスト（16章）
@@ -352,7 +361,7 @@ export class Runner {
       }
       return out;
     }
-    if ('cellsRelative' in sel) {
+    if ('randomCell' in sel || 'cellsRelative' in sel) {
       return this.cells(sel, ctx).flatMap((c) => {
         const u = this.unitAt(c.p, c.i);
         return u ? [{ unit: u, p: c.p, i: c.i }] : [];
@@ -405,6 +414,12 @@ export class Runner {
     if ('cell' in sel) {
       const q = sel.cell.owner === 'ally' ? ctx.controller : opponent(ctx.controller);
       return this.lanes(sel.cell.lane, ctx).map((lane) => ({ p: q, i: cellIndex(lane, sel.cell.row) }));
+    }
+    if ('randomCell' in sel) {
+      const q = sel.randomCell === 'ally' ? ctx.controller : opponent(ctx.controller);
+      const i = randomInt(this.s, CELLS);
+      this.log('randomCell', { player: q, cell: cellName(i) });
+      return [{ p: q, i }];
     }
     return this.units(sel, ctx).map((x) => ({ p: x.p, i: x.i }));
   }
@@ -941,14 +956,32 @@ export class Runner {
           if (inst) this.addToHand(x.unit.owner, inst);
         }
         return;
-      case 'summon':
+      case 'summon': {
+        const made: TargetValue[] = [];
         for (const c of this.cells(e.at, ctx)) {
           if (this.unitAt(c.p, c.i)) continue;
           const u = this.newUnit(c.p, e.cardId, this.newUid(), true);
           this.placeUnit(c.p, c.i, u);
+          made.push({ kind: 'unit', uid: u.uid });
           this.log('summon', { uid: u.uid, card: e.cardId, player: c.p, cell: cellName(c.i) });
         }
+        // 出したユニットを後の効果で参照できるようにする
+        if (e.as) ctx.targets[e.as] = made;
         return;
+      }
+      case 'summonRandom': {
+        const cells = this.cells(e.at, ctx).filter((c) => !this.unitAt(c.p, c.i));
+        const ids = e.distinctNames
+          ? pickRandom(this.s, e.cardIds, cells.length)
+          : cells.map(() => pickRandom(this.s, e.cardIds, 1)[0]);
+        cells.forEach((c, k) => {
+          if (!ids[k]) return;
+          const u = this.newUnit(c.p, ids[k], this.newUid(), true);
+          this.placeUnit(c.p, c.i, u);
+          this.log('summon', { uid: u.uid, card: ids[k], player: c.p, cell: cellName(c.i) });
+        });
+        return;
+      }
       case 'draw': {
         const n = this.value(e.count, ctx);
         for (let k = 0; k < n; k++) this.draw(me);
@@ -976,7 +1009,11 @@ export class Runner {
       case 'tutorRandom': {
         const st = this.pl(me);
         const room = Math.max(0, HAND_LIMIT - st.hand.length);
-        const candidates = st.deck.filter((c) => this.cardMatches(c.cardId, e.where));
+        let candidates = st.deck.filter((c) => this.cardMatches(c.cardId, e.where));
+        if (e.highestCost && candidates.length) {
+          const top = Math.max(...candidates.map((c) => this.card(c.cardId).cost));
+          candidates = candidates.filter((c) => this.card(c.cardId).cost === top);
+        }
         let picked: CardInstance[];
         if (e.distinctNames) {
           // 名前の異なるカード: まず名前を選び、その名前のカードを1枚ずつ取る
@@ -1080,6 +1117,11 @@ export class Runner {
       case 'forEach':
         for (const x of this.units(e.targets, ctx)) this.runEffects(e.effects, { ...ctx, eventUid: x.unit.uid }, scope);
         return;
+      case 'repeat': {
+        const n = this.value(e.times, ctx);
+        for (let k = 0; k < n && !this.s.result; k++) this.runEffects(e.effects, ctx, scope);
+        return;
+      }
     }
   }
 
@@ -1158,7 +1200,7 @@ export class Runner {
 
   // ================================================================ リーダーの成長（13.4）
 
-  addProgress(p: PlayerId, counter: 'allyEnduredCombatDamage' | 'unitMoved' | 'leaderAbilityUsed', n: number, leader?: number): void {
+  addProgress(p: PlayerId, counter: GrowthCounter, n: number, leader?: number): void {
     this.pl(p).leaders.forEach((l, idx) => {
       if (l.grown) return;
       if (leader !== undefined && leader !== idx) return;

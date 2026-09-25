@@ -16,9 +16,18 @@ function started(seed = 1): GameState {
 }
 
 describe('カードデータ（1-4）', () => {
-  it('3勢力75枚とリーダー3人を読み込める', () => {
-    expect(cat.cards.size).toBe(75);
+  it('3勢力75枚（とトークン専用のカード）とリーダー3人を読み込める', () => {
+    const cards = [...cat.cards.values()];
+    expect(cards.filter((c) => !c.token).length).toBe(75);
+    expect(cards.filter((c) => c.token).map((c) => c.id)).toEqual(['TK-01']);
     expect(cat.leaders.size).toBe(3);
+  });
+
+  it('トークン専用のカードはデッキに入れられない', () => {
+    const d = structuredClone(deck('sample-knights-academy'));
+    d.cards[0].count -= 1;
+    d.cards.push({ id: 'TK-01', count: 1 });
+    expect(validateDeck(d, cat).some((x) => x.includes('TK-01'))).toBe(true);
   });
 
   it('見本デッキはすべてデッキの条件を満たす', () => {
@@ -204,5 +213,50 @@ describe('決定性（1-3）', () => {
       return s;
     };
     expect(JSON.stringify(run())).toBe(JSON.stringify(run()));
+  });
+});
+
+describe('ランダムな効果（カードリスト v0.8）', () => {
+  const cast = (s: GameState, card: string, targets: Record<string, unknown> = {}, enhance = false): GameState => {
+    const uid = s.players.A.hand.find((c) => c.cardId === card)!.uid;
+    return applyAction(cat, s, { type: 'castSpell', player: 'A', card: uid, targets, enhance } as Action);
+  };
+  const totalDamage = (s: GameState) => s.players.B.board.reduce((n, u) => n + (u?.damage ?? 0), 0);
+
+  it('数打ちゃ当たる: 相手の8マスが埋まっていれば、使ったスペルの枚数だけ必ず当たる', () => {
+    const full = Object.fromEntries(['1前', '1後', '2前', '2後', '3前', '3後', '4前', '4後'].map((c) => [c, { card: 'KN-04', health: 10 }]));
+    for (let seed = 1; seed <= 10; seed++) {
+      const s = buildState(cat, { seed, A: { mana: 2, spellsCast: 5, hand: ['AC-08'] }, B: { board: full } });
+      expect(totalDamage(cast(s, 'AC-08'))).toBe(5);
+    }
+  });
+
+  it('数打ちゃ当たる: 空きマスも選ばれるので、ユニットが1体だけなら外れもある', () => {
+    let hits = 0;
+    for (let seed = 1; seed <= 10; seed++) {
+      const s = buildState(cat, { seed, A: { mana: 2, spellsCast: 16, hand: ['AC-08'] }, B: { board: { '2前': { card: 'KN-04', health: 30 } } } });
+      const d = totalDamage(cast(s, 'AC-08'));
+      expect(d).toBeLessThan(16);
+      hits += d;
+    }
+    // 1マスに当たる確率は 1/8。160回のうちおよそ20回
+    expect(hits).toBeGreaterThan(5);
+    expect(hits).toBeLessThan(40);
+  });
+
+  it('召喚ガチャ（強化）: 名前の異なる2体を、4種類の候補から出す', () => {
+    const seen = new Set<string>();
+    for (let seed = 1; seed <= 20; seed++) {
+      const s = buildState(cat, { seed, A: { mana: 5, hand: ['AC-09'] } });
+      const after = cast(s, 'AC-09', { cells: [{ kind: 'cell', p: 'A', i: 0 }, { kind: 'cell', p: 'A', i: 5 }] }, true);
+      const ids = [after.players.A.board[0]!.cardId, after.players.A.board[5]!.cardId];
+      expect(ids[0]).not.toBe(ids[1]);
+      for (const id of ids) {
+        expect(['KN-03', 'KN-04', 'CY-04', 'CY-05']).toContain(id);
+        seen.add(id);
+      }
+      expect(after.players.A.board[0]!.isToken).toBe(true);
+    }
+    expect(seen.size).toBe(4);
   });
 });

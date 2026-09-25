@@ -256,7 +256,7 @@ function playUnit(r: Runner, a: Extract<Action, { type: 'playUnit' }>): void {
   const targets = a.targets ?? {};
   (def.abilities ?? []).forEach((ab, idx) => {
     if (ab.kind !== 'trigger' || ab.when !== 'onPlay' || r.s.result) return;
-    const ctx = r.unitCtx(u, p, targets);
+    const ctx = r.unitCtx(u, p, { ...targets });
     const scope = { sourceKind: 'unit' as const, cardId: def.id, enhanced, delays: [] };
     const en = enhanced && def.enhance && def.enhance.appliesTo === idx ? def.enhance : null;
     if (!en || en.mode === 'add') r.runEffects(ab.effects, ctx, scope);
@@ -277,10 +277,12 @@ function castSpell(r: Runner, a: Extract<Action, { type: 'castSpell' }>): boolea
   const err = r.checkTargets(specs, a.targets, p, true, inst.uid);
   if (err) throw new IllegalAction(err);
 
+  // 即効を持つかは使う時点で決める（手札で与えられたキーワードを含む）
+  const quickNow = r.cardKeywords(p, def.id).has('quick');
   const card = r.takeFromHand(p, inst.uid);
   r.pay(p, plan);
   r.log('castSpell', { player: p, card: def.id, uid: card.uid, enhanced, targets: a.targets ?? {}, paid: plan });
-  const ctx: EffectContext = { controller: p, source: { kind: 'card', cardId: def.id, uid: card.uid }, targets: a.targets ?? {} };
+  const ctx: EffectContext = { controller: p, source: { kind: 'card', cardId: def.id, uid: card.uid }, targets: { ...a.targets } };
   const scope = { sourceKind: 'spell' as const, cardId: def.id, enhanced, delays: [] as DelayedEntry[] };
   const en = enhanced ? def.enhance! : null;
   if (!en || en.mode === 'add') r.runEffects(def.effects ?? [], ctx, scope);
@@ -291,8 +293,11 @@ function castSpell(r: Runner, a: Extract<Action, { type: 'castSpell' }>): boolea
   // 使ったスペルの枚数は効果を処理し終えた時点で増える（11.7）
   r.pl(p).spellsCast += 1;
   r.pl(p).castSpellIds.push(def.id);
+  // ノエルの成長条件: スペルを使った回数
+  r.addProgress(p, 'spellsCast', 1);
   r.spellCastEvent(p);
-  return (def.keywords ?? []).includes('quick');
+  // 即効はカードに書かれたものと、リーダーのパッシブなどで与えられたもの（ノエル成長後の魔力の矢）
+  return quickNow;
 }
 
 function mobileMove(r: Runner, p: PlayerId, uid: number, to: number): void {

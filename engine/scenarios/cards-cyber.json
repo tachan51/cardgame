@@ -2,12 +2,12 @@
   "description": "電脳都市（CY-01〜CY-25）とリーダー・レイのカード効果のシナリオ",
   "scenarios": [
     {
-      "name": "偵察ドローン: 2マナで配置し、遊撃で任意の空きマスへ移動できる（1ラウンド1回）",
+      "name": "偵察ドローン: 1マナ 0/1。遊撃で任意の空きマスへ移動できる（1ラウンド1回）",
       "refs": ["CY-01", "14", "7.6"],
-      "setup": {"A": {"mana": 2, "hand": ["CY-01"]}},
+      "setup": {"A": {"mana": 1, "hand": ["CY-01"]}},
       "steps": [
         {"type": "playUnit", "player": "A", "card": "CY-01", "cell": "2前"},
-        {"expect": {"A": {"mana": 0, "board": {"2前": {"card": "CY-01", "attack": 1, "health": 1, "keywords": ["mobile"]}}}}},
+        {"expect": {"A": {"mana": 0, "board": {"2前": {"card": "CY-01", "attack": 0, "health": 1, "keywords": ["mobile"]}}}}},
         {"type": "pass", "player": "B"},
         {"type": "mobileMove", "player": "A", "unit": "2前", "to": "4後"},
         {"expect": {"A": {"board": {"2前": null, "4後": {"card": "CY-01"}}}}},
@@ -180,42 +180,37 @@
       "expect": {"A": {"board": {"2後": null, "3後": {"card": "CY-08", "damage": 0}}}, "B": {"life": 17}}
     },
     {
-      "name": "小型転送: 使ったその場で、敵ユニットをその持ち主の盤面の空きマスへ移動（遅延ではない。レイの成長に数える）",
-      "refs": ["CY-09", "12", "leader-rei"],
-      "setup": {"A": {"mana": 2, "hand": ["CY-09"]}, "B": {"board": {"1前": "KN-03"}}},
+      "name": "転送遅延: 3マナ。ユニットと移動先を選び、次の自分の手番の始めに移動する（それまでは動かない。レイの成長は移動したときに数える）",
+      "refs": ["CY-09", "14.1", "12", "leader-rei"],
+      "setup": {"A": {"mana": 3, "hand": ["CY-09"]}, "B": {"board": {"1前": "KN-03"}}},
       "steps": [
-        {"type": "castSpell", "player": "A", "card": "CY-09", "targets": {"unit": {"unit": "B:1前"}, "cell": {"cell": "B:4後"}}}
+        {"type": "castSpell", "player": "A", "card": "CY-09", "targets": {"unit": {"unit": "B:1前"}, "cell": {"cell": "B:4後"}}},
+        {"expect": {"activePlayer": "B", "A": {"mana": 0, "delayed": ["CY-09"], "leaders": [{}, {"progress": 0}]}, "B": {"board": {"1前": {"card": "KN-03"}, "4後": null}}}},
+        {"type": "pass", "player": "B"}
       ],
-      "expect": {"activePlayer": "B", "A": {"mana": 0, "delayed": [], "trash": ["CY-09"], "leaders": [{}, {"progress": 1}]}, "B": {"board": {"1前": null, "4後": {"card": "KN-03"}}}}
+      "expect": {"activePlayer": "B", "A": {"delayed": [], "trash": ["CY-09"], "leaders": [{}, {"progress": 1}]}, "B": {"board": {"1前": null, "4後": {"card": "KN-03"}}}}
     },
     {
-      "name": "小型転送: 対象にできるのは今の攻撃力が3以下のユニットだけ（強化で4になったものは不可、弱体化で3以下になれば可）",
-      "refs": ["CY-09", "11.4", "10.4"],
-      "setup": {"A": {"mana": 6, "hand": ["CY-09", "CY-09"], "board": {"3前": "CY-05"}}, "B": {"board": {"1前": "CY-18", "2前": {"card": "KN-03", "tempAttack": 2}, "3前": "KN-09"}}},
+      "name": "転送遅延: 発動までに移動先が埋まっていれば移動しない",
+      "refs": ["CY-09", "14.1"],
+      "setup": {"A": {"mana": 3, "hand": ["CY-09"]}, "B": {"mana": 2, "hand": ["KN-04"], "board": {"1前": "KN-03"}}},
       "steps": [
-        {"type": "castSpell", "player": "A", "card": "CY-09", "targets": {"unit": {"unit": "B:1前"}, "cell": {"cell": "B:4後"}}, "illegal": true},
-        {"type": "castSpell", "player": "A", "card": "CY-09", "targets": {"unit": {"unit": "B:2前"}, "cell": {"cell": "B:4後"}}, "illegal": true},
-        {"type": "castSpell", "player": "A", "card": "CY-09", "targets": {"unit": {"unit": "B:3前"}, "cell": {"cell": "B:3後"}}},
-        {"expect": {"A": {"mana": 4, "trash": ["CY-09"]}, "B": {"board": {"3前": null, "3後": {"card": "KN-09", "attack": 3}}}}},
-        {"type": "pass", "player": "B"},
-        {"type": "activate", "player": "A", "unit": "3前", "targets": {"enemy": {"unit": "B:1前"}}},
-        {"expect": {"A": {"mana": 2}, "B": {"board": {"1前": {"card": "CY-18", "attack": 2}}}}},
-        {"type": "pass", "player": "B"},
-        {"type": "castSpell", "player": "A", "card": "CY-09", "targets": {"unit": {"unit": "B:1前"}, "cell": {"cell": "B:4後"}}}
+        {"type": "castSpell", "player": "A", "card": "CY-09", "targets": {"unit": {"unit": "B:1前"}, "cell": {"cell": "B:4後"}}},
+        {"type": "playUnit", "player": "B", "card": "KN-04", "cell": "4後"}
       ],
-      "expect": {"A": {"mana": 0, "hand": [], "trash": ["CY-09", "CY-09"], "leaders": [{}, {"progress": 2}]}, "B": {"board": {"1前": null, "4後": {"card": "CY-18", "attack": 2}, "2前": {"card": "KN-03", "attack": 4}}}}
+      "expect": {"activePlayer": "B", "A": {"delayed": [], "trash": ["CY-09"], "leaders": [{}, {"progress": 0}]}, "B": {"board": {"1前": {"card": "KN-03"}, "4後": {"card": "KN-04"}}}}
     },
     {
-      "name": "小型転送: 味方ユニットも移動できる（レイの成長に数える）。移動先はその持ち主の盤面の空きマスだけ",
-      "refs": ["CY-09", "12", "leader-rei"],
-      "setup": {"A": {"mana": 2, "hand": ["CY-09"], "board": {"1前": "CY-05", "2後": "KN-04"}}, "B": {"board": {"2前": "KN-03"}}},
+      "name": "転送遅延: 味方も選べる。移動先はそのユニットの持ち主の盤面の空きマスだけ",
+      "refs": ["CY-09", "12"],
+      "setup": {"A": {"mana": 3, "hand": ["CY-09"], "board": {"1前": "CY-05", "2後": "KN-04"}}, "B": {"board": {"2前": "KN-03"}}},
       "steps": [
         {"type": "castSpell", "player": "A", "card": "CY-09", "targets": {"unit": {"unit": "A:1前"}, "cell": {"cell": "B:1後"}}, "illegal": true},
-        {"type": "castSpell", "player": "A", "card": "CY-09", "targets": {"unit": {"unit": "B:2前"}, "cell": {"cell": "A:3後"}}, "illegal": true},
         {"type": "castSpell", "player": "A", "card": "CY-09", "targets": {"unit": {"unit": "A:1前"}, "cell": {"cell": "A:2後"}}, "illegal": true},
-        {"type": "castSpell", "player": "A", "card": "CY-09", "targets": {"unit": {"unit": "A:1前"}, "cell": {"cell": "A:4後"}}}
+        {"type": "castSpell", "player": "A", "card": "CY-09", "targets": {"unit": {"unit": "A:1前"}, "cell": {"cell": "A:4後"}}},
+        {"type": "pass", "player": "B"}
       ],
-      "expect": {"activePlayer": "B", "A": {"mana": 0, "trash": ["CY-09"], "board": {"1前": null, "4後": {"card": "CY-05"}, "2後": {"card": "KN-04"}}, "leaders": [{}, {"progress": 1}]}, "B": {"board": {"2前": {"card": "KN-03"}}}}
+      "expect": {"activePlayer": "B", "A": {"trash": ["CY-09"], "board": {"1前": null, "4後": {"card": "CY-05"}, "2後": {"card": "KN-04"}}, "leaders": [{}, {"progress": 1}]}}
     },
     {
       "name": "路地裏の運び屋: 0/1。配置時にカードを1枚引く。攻撃力0なので前列でも攻撃しない",
@@ -272,7 +267,7 @@
     {
       "name": "座標ズレ: 敵の前列ユニットを同じレーンの後列へ（レイの成長に数える）",
       "refs": ["CY-13", "12", "leader-rei"],
-      "setup": {"A": {"mana": 2, "hand": ["CY-13"]}, "B": {"board": {"3前": "KN-03"}}},
+      "setup": {"A": {"mana": 3, "hand": ["CY-13"]}, "B": {"board": {"3前": "KN-03"}}},
       "steps": [
         {"type": "castSpell", "player": "A", "card": "CY-13", "targets": {"unit": {"unit": "B:3前"}}}
       ],
@@ -281,7 +276,7 @@
     {
       "name": "座標ズレ: 味方の後列ユニットを前列へ（味方の移動もレイの成長に数える）",
       "refs": ["CY-13", "12", "leader-rei"],
-      "setup": {"A": {"mana": 2, "hand": ["CY-13"], "board": {"1後": "KN-04"}}},
+      "setup": {"A": {"mana": 3, "hand": ["CY-13"], "board": {"1後": "KN-04"}}},
       "steps": [
         {"type": "castSpell", "player": "A", "card": "CY-13", "targets": {"unit": {"unit": "A:1後"}}}
       ],
@@ -290,7 +285,7 @@
     {
       "name": "座標ズレ: もう一方の列が埋まっていれば、使えるが移動は起こらない",
       "refs": ["CY-13", "12", "11.4"],
-      "setup": {"A": {"mana": 2, "hand": ["CY-13"]}, "B": {"board": {"3前": "KN-03", "3後": "KN-04"}}},
+      "setup": {"A": {"mana": 3, "hand": ["CY-13"]}, "B": {"board": {"3前": "KN-03", "3後": "KN-04"}}},
       "steps": [
         {"type": "castSpell", "player": "A", "card": "CY-13", "targets": {"unit": {"unit": "B:3前"}}}
       ],
@@ -299,7 +294,7 @@
     {
       "name": "攻性防壁: 敵ユニットが移動するたび（遊撃・どちらのプレイヤーの効果による移動でも）1ダメージ。味方の移動では起きない",
       "refs": ["CY-14", "12", "11.2"],
-      "setup": {"activePlayer": "B", "A": {"mana": 2, "hand": ["CY-13"], "board": {"1後": "CY-14", "4前": "CY-01"}}, "B": {"mana": 2, "hand": ["CY-13"], "board": {"2前": "CY-18", "4後": "KN-04"}}},
+      "setup": {"activePlayer": "B", "A": {"mana": 3, "hand": ["CY-13"], "board": {"1後": "CY-14", "4前": "CY-01"}}, "B": {"mana": 3, "hand": ["CY-13"], "board": {"2前": "CY-18", "4後": "KN-04"}}},
       "steps": [
         {"type": "mobileMove", "player": "B", "unit": "2前", "to": "3前"},
         {"expect": {"B": {"board": {"3前": {"card": "CY-18", "damage": 1}}}}},
@@ -312,24 +307,24 @@
       "expect": {"A": {"board": {"1後": {"card": "CY-14", "damage": 0}}}, "B": {"board": {"3前": null, "3後": {"card": "CY-18", "damage": 2, "health": 1}}}}
     },
     {
-      "name": "ハッキング網: 3マナで味方ユニットを自分の空きマスへ（レイの成長に数える）。強化なしでは敵を選べない",
-      "refs": ["CY-15", "12"],
-      "setup": {"A": {"mana": 3, "hand": ["CY-15"], "board": {"1前": "KN-04"}}, "B": {"board": {"2前": "KN-03"}}},
+      "name": "スワップ: 3マナ・即効。自分の盤面の2マスの中身を入れ替える（ダメージは残る。2体の移動としてレイの成長に2回数える）",
+      "refs": ["CY-15", "12", "14.2", "leader-rei"],
+      "setup": {"A": {"mana": 3, "hand": ["CY-15"], "board": {"1前": {"card": "KN-03", "damage": 1}, "3後": "KN-04"}}},
       "steps": [
-        {"type": "castSpell", "player": "A", "card": "CY-15", "targets": {"unit": {"unit": "B:2前"}, "cell": {"cell": "B:3後"}}, "illegal": true},
-        {"type": "castSpell", "player": "A", "card": "CY-15", "targets": {"unit": {"unit": "A:1前"}, "cell": {"cell": "A:4後"}}}
+        {"type": "castSpell", "player": "A", "card": "CY-15", "targets": {"a": {"cell": "A:1前"}, "b": {"cell": "A:3後"}}}
       ],
-      "expect": {"A": {"mana": 0, "board": {"1前": null, "4後": {"card": "KN-04"}}, "leaders": [{}, {"progress": 1}]}, "B": {"board": {"2前": {"card": "KN-03"}}}}
+      "expect": {"activePlayer": "A", "A": {"mana": 0, "trash": ["CY-15"], "board": {"1前": {"card": "KN-04", "damage": 0}, "3後": {"card": "KN-03", "damage": 1}}, "leaders": [{}, {"progress": 2}]}}
     },
     {
-      "name": "ハッキング網（強化1）: 合計4マナで、敵ユニットを相手の盤面の空きマスへ（自分の盤面へは動かせない）",
-      "refs": ["CY-15", "12", "15.1", "leader-rei"],
-      "setup": {"A": {"mana": 4, "hand": ["CY-15"]}, "B": {"board": {"2前": "KN-03"}}},
+      "name": "スワップ: 空きマスも選べる（ユニットをそこへ移動）。相手の盤面のマスは選べない",
+      "refs": ["CY-15", "12"],
+      "setup": {"A": {"mana": 3, "hand": ["CY-15"], "board": {"2前": "KN-04"}}, "B": {"board": {"1前": "KN-03"}}},
       "steps": [
-        {"type": "castSpell", "player": "A", "card": "CY-15", "enhance": true, "targets": {"unit": {"unit": "B:2前"}, "cell": {"cell": "A:3後"}}, "illegal": true},
-        {"type": "castSpell", "player": "A", "card": "CY-15", "enhance": true, "targets": {"unit": {"unit": "B:2前"}, "cell": {"cell": "B:3後"}}}
+        {"type": "castSpell", "player": "A", "card": "CY-15", "targets": {"a": {"cell": "B:1前"}, "b": {"cell": "B:2後"}}, "illegal": true},
+        {"type": "castSpell", "player": "A", "card": "CY-15", "targets": {"a": {"cell": "A:2前"}, "b": {"cell": "B:2後"}}, "illegal": true},
+        {"type": "castSpell", "player": "A", "card": "CY-15", "targets": {"a": {"cell": "A:2前"}, "b": {"cell": "A:4後"}}}
       ],
-      "expect": {"A": {"mana": 0, "leaders": [{}, {"progress": 1}]}, "B": {"board": {"2前": null, "3後": {"card": "KN-03"}}}}
+      "expect": {"activePlayer": "A", "A": {"mana": 0, "board": {"2前": null, "4後": {"card": "KN-04"}}, "leaders": [{}, {"progress": 1}]}, "B": {"board": {"1前": {"card": "KN-03"}}}}
     },
     {
       "name": "ドローン管制官: 左右隣の空きマスにだけ偵察ドローン（トークン）を出し、破壊されたトークンはトラッシュに行かない",
@@ -337,10 +332,10 @@
       "setup": {"A": {"mana": 6, "hand": ["CY-16"], "board": {"1前": "KN-03"}}, "B": {"board": {"3前": "KN-03"}}},
       "steps": [
         {"type": "playUnit", "player": "A", "card": "CY-16", "cell": "2前"},
-        {"expect": {"A": {"mana": 0, "board": {"2前": {"card": "CY-16", "attack": 3, "health": 5}, "1前": {"card": "KN-03"}, "3前": {"card": "CY-01", "token": true, "attack": 1, "health": 1}, "2後": null}}}},
+        {"expect": {"A": {"mana": 0, "board": {"2前": {"card": "CY-16", "attack": 3, "health": 6}, "1前": {"card": "KN-03"}, "3前": {"card": "CY-01", "token": true, "attack": 0, "health": 1}, "2後": null}}}},
         {"do": "combat"}
       ],
-      "expect": {"A": {"board": {"3前": null}, "trash": []}, "B": {"life": 15, "board": {"3前": {"card": "KN-03", "damage": 1}}}}
+      "expect": {"A": {"board": {"3前": null}, "trash": []}, "B": {"life": 15, "board": {"3前": {"card": "KN-03", "damage": 0}}}}
     },
     {
       "name": "ドローン管制官: 4後に配置すると隣は3後だけ（レーン1と4は隣ではない）",
@@ -352,7 +347,7 @@
       "expect": {"A": {"board": {"3後": {"card": "CY-01", "token": true}, "1後": null, "4前": null}}}
     },
     {
-      "name": "ドローン管制官: 起動（3）で自分の空きマスに偵察ドローンを出す（1ラウンド1回）",
+      "name": "ドローン管制官: 起動（2）で自分の空きマスに偵察ドローンを出す（1ラウンド1回）",
       "refs": ["CY-16", "15.2", "11.7"],
       "setup": {"A": {"mana": 6, "board": {"4後": "CY-16"}}},
       "steps": [
@@ -361,7 +356,7 @@
         {"type": "pass", "player": "B"},
         {"type": "activate", "player": "A", "unit": "4後", "targets": {"cell": {"cell": "A:2後"}}, "illegal": true}
       ],
-      "expect": {"A": {"mana": 3, "board": {"1後": {"card": "CY-01", "token": true}, "2後": null}}}
+      "expect": {"A": {"mana": 4, "board": {"1後": {"card": "CY-01", "token": true}, "2後": null}}}
     },
     {
       "name": "軌道レーザー照準: 遅延で指定マスのユニットに3ダメージ。自分のマスは指定できない",
@@ -435,25 +430,25 @@
       "expect": {"A": {"board": {"2後": {"card": "CY-19", "attack": 8, "noKeywords": ["ranged", "mobile", "firstStrike", "pierce"]}}}}
     },
     {
-      "name": "ドローンエンジニア: 4マナ3/5。味方の偵察ドローンだけ+1/+2（射撃は持たない）。配置時とラウンド開始時に偵察ドローンを生成",
+      "name": "ドローンエンジニア: 4マナ3/3。味方の偵察ドローンだけ+2/+1（射撃は持たない）。配置時とラウンド開始時に偵察ドローンを生成",
       "refs": ["CY-20", "11.5", "11.7", "6.1"],
       "setup": {"A": {"mana": 4, "hand": ["CY-20"], "board": {"1前": "CY-01"}}, "B": {"board": {"1前": "KN-03", "2後": "CY-01"}}},
       "steps": [
         {"type": "playUnit", "player": "A", "card": "CY-20", "cell": "3後"},
-        {"expect": {"A": {"mana": 0, "hand": ["CY-01"], "board": {"3後": {"card": "CY-20", "attack": 3, "health": 5}, "1前": {"card": "CY-01", "attack": 2, "health": 3, "maxHealth": 3, "noKeywords": ["ranged"]}}}, "B": {"board": {"2後": {"card": "CY-01", "attack": 1, "health": 1}}}}},
+        {"expect": {"A": {"mana": 0, "hand": ["CY-01"], "board": {"3後": {"card": "CY-20", "attack": 3, "health": 3}, "1前": {"card": "CY-01", "attack": 2, "health": 2, "maxHealth": 2, "noKeywords": ["ranged"]}}}, "B": {"board": {"2後": {"card": "CY-01", "attack": 0, "health": 1}}}}},
         {"do": "combat"},
-        {"expect": {"A": {"life": 20, "board": {"1前": {"card": "CY-01", "damage": 2, "health": 1}}}, "B": {"life": 20, "board": {"1前": null, "2後": {"card": "CY-01", "damage": 0}}, "trash": ["KN-03"]}}},
+        {"expect": {"A": {"life": 20, "board": {"1前": null}}, "B": {"life": 20, "board": {"1前": null, "2後": {"card": "CY-01", "damage": 0}}, "trash": ["KN-03"]}}},
         {"do": "endRound"},
         {"expect": {"activePlayer": "B", "A": {"hand": ["CY-01", "CY-01", "KN-03"]}}},
         {"type": "pass", "player": "B"},
         {"type": "playUnit", "player": "A", "card": "CY-01", "cell": "2前"}
       ],
-      "expect": {"A": {"mana": 3, "board": {"2前": {"card": "CY-01", "attack": 2, "health": 3}, "1前": {"card": "CY-01", "damage": 2, "health": 1}}}}
+      "expect": {"A": {"mana": 4, "board": {"2前": {"card": "CY-01", "attack": 2, "health": 2}, "1前": null}}}
     },
     {
       "name": "重装ガンシップ: 敵味方のユニットの移動（遊撃・効果）1回ごとにコスト−1",
       "refs": ["CY-21", "12", "11.7"],
-      "setup": {"A": {"mana": 7, "hand": ["CY-21"], "board": {"1前": "CY-01"}}, "B": {"mana": 2, "hand": ["CY-13"], "board": {"2後": "KN-04", "3前": "KN-19"}}},
+      "setup": {"A": {"mana": 7, "hand": ["CY-21"], "board": {"1前": "CY-01"}}, "B": {"mana": 3, "hand": ["CY-13"], "board": {"2後": "KN-04", "3前": "KN-19"}}},
       "steps": [
         {"expect": {"A": {"handCosts": {"CY-21": 10}}}},
         {"type": "playUnit", "player": "A", "card": "CY-21", "cell": "3後", "illegal": true},
@@ -471,7 +466,7 @@
     {
       "name": "重装ガンシップ: 手札に来る前（山札にある間・前のラウンド）の移動も数える",
       "refs": ["CY-21", "12", "6.1"],
-      "setup": {"A": {"mana": 2, "hand": ["CY-13"], "deck": ["CY-21", "KN-03", "KN-03"], "board": {"1前": "CY-01"}}, "B": {"board": {"2前": "CY-01"}}},
+      "setup": {"A": {"mana": 3, "hand": ["CY-13"], "deck": ["CY-21", "KN-03", "KN-03"], "board": {"1前": "CY-01"}}, "B": {"board": {"2前": "CY-01"}}},
       "steps": [
         {"type": "mobileMove", "player": "A", "unit": "1前", "to": "1後"},
         {"type": "mobileMove", "player": "B", "unit": "2前", "to": "3前"},
@@ -484,13 +479,13 @@
       "expect": {"A": {"handCosts": {"CY-21": 6}}}
     },
     {
-      "name": "重装ガンシップ: 入れ替え（成長後の強制転送）は2体の移動としてコスト−2",
-      "refs": ["CY-21", "12", "leader-rei"],
-      "setup": {"round": 4, "A": {"maxMana": 4, "mana": 0, "reserve": 4, "hand": ["CY-21"], "leaders": ["leader-alto", {"id": "leader-rei", "grown": true}], "board": {"1前": "KN-03", "2前": "KN-04"}}},
+      "name": "重装ガンシップ: 入れ替え（スワップ）は2体の移動としてコスト−2",
+      "refs": ["CY-21", "CY-15", "12"],
+      "setup": {"A": {"mana": 3, "hand": ["CY-21", "CY-15"], "board": {"1前": "KN-03", "2前": "KN-04"}}},
       "steps": [
-        {"type": "leaderAbility", "player": "A", "leader": 1, "targets": {"a": {"cell": "A:1前"}, "b": {"cell": "A:2前"}}}
+        {"type": "castSpell", "player": "A", "card": "CY-15", "targets": {"a": {"cell": "A:1前"}, "b": {"cell": "A:2前"}}}
       ],
-      "expect": {"A": {"reserve": 0, "handCosts": {"CY-21": 8}, "board": {"1前": {"card": "KN-04"}, "2前": {"card": "KN-03"}}}}
+      "expect": {"A": {"mana": 0, "handCosts": {"CY-21": 8}, "board": {"1前": {"card": "KN-04"}, "2前": {"card": "KN-03"}}}}
     },
     {
       "name": "全域ジャミング: 敵ユニットすべてを攻撃力−2（このラウンド中）。味方は変わらない",
@@ -508,12 +503,12 @@
     {
       "name": "マザーAIオラクル: 敵ユニットが移動するたび（遊撃・効果による移動）このラウンド中−2/−0。味方の移動では起きない",
       "refs": ["CY-23", "12", "10.4"],
-      "setup": {"activePlayer": "B", "A": {"mana": 2, "hand": ["CY-13"], "board": {"1後": "CY-23", "4前": "CY-01"}}, "B": {"board": {"2前": "KN-19", "3後": "KN-03"}}},
+      "setup": {"activePlayer": "B", "A": {"mana": 3, "hand": ["CY-13"], "board": {"1後": "CY-23", "4前": "CY-01"}}, "B": {"board": {"2前": "KN-19", "3後": "KN-03"}}},
       "steps": [
         {"type": "mobileMove", "player": "B", "unit": "2前", "to": "1前"},
         {"expect": {"B": {"board": {"1前": {"card": "KN-19", "attack": 2}}}}},
         {"type": "mobileMove", "player": "A", "unit": "4前", "to": "4後"},
-        {"expect": {"A": {"board": {"4後": {"card": "CY-01", "attack": 1}}}}},
+        {"expect": {"A": {"board": {"4後": {"card": "CY-01", "attack": 0}}}}},
         {"type": "pass", "player": "B"},
         {"type": "castSpell", "player": "A", "card": "CY-13", "targets": {"unit": {"unit": "B:3後"}}},
         {"expect": {"B": {"board": {"3後": null, "3前": {"card": "KN-03", "attack": 0}}}}},
@@ -522,14 +517,14 @@
       "expect": {"B": {"board": {"1前": {"attack": 4}, "3前": {"attack": 2}}}}
     },
     {
-      "name": "マザーAIオラクル: 起動（1）で前列の敵を後列へ（誘発で−2/−0、レイの成長に数える）。後列は選べない",
+      "name": "マザーAIオラクル: 起動（1）で後列の敵を前列へ（誘発で−2/−0、レイの成長に数える）。前列は選べない",
       "refs": ["CY-23", "12", "15.2", "leader-rei"],
       "setup": {"A": {"mana": 1, "board": {"1後": "CY-23"}}, "B": {"board": {"2前": "KN-04", "3後": "KN-03"}}},
       "steps": [
-        {"type": "activate", "player": "A", "unit": "1後", "targets": {"unit": {"unit": "B:3後"}}, "illegal": true},
-        {"type": "activate", "player": "A", "unit": "1後", "targets": {"unit": {"unit": "B:2前"}}}
+        {"type": "activate", "player": "A", "unit": "1後", "targets": {"unit": {"unit": "B:2前"}}, "illegal": true},
+        {"type": "activate", "player": "A", "unit": "1後", "targets": {"unit": {"unit": "B:3後"}}}
       ],
-      "expect": {"A": {"mana": 0, "leaders": [{}, {"progress": 1}]}, "B": {"board": {"2前": null, "2後": {"card": "KN-04", "attack": 0}}}}
+      "expect": {"A": {"mana": 0, "leaders": [{}, {"progress": 1}]}, "B": {"board": {"3後": null, "3前": {"card": "KN-03", "attack": 0}}}}
     },
     {
       "name": "機動要塞バベル: 起動で相手のマスに遅延4ダメージ。後列から射撃する",
@@ -604,7 +599,7 @@
     {
       "name": "レイ 成長: 自分の遊撃と自分のスペルによる移動（味方・敵とも）を数え、相手の遊撃は数えない",
       "refs": ["leader-rei", "13.4", "CY-13", "7.6"],
-      "setup": {"activePlayer": "B", "A": {"mana": 4, "hand": ["CY-13", "CY-13"], "leaders": ["leader-alto", {"id": "leader-rei", "progress": 1}], "board": {"2前": "KN-04", "4前": "CY-01"}}, "B": {"board": {"1前": "KN-19", "3前": "KN-03"}}},
+      "setup": {"activePlayer": "B", "A": {"mana": 6, "hand": ["CY-13", "CY-13"], "leaders": ["leader-alto", {"id": "leader-rei", "progress": 1}], "board": {"2前": "KN-04", "4前": "CY-01"}}, "B": {"board": {"1前": "KN-19", "3前": "KN-03"}}},
       "steps": [
         {"type": "mobileMove", "player": "B", "unit": "1前", "to": "1後"},
         {"expect": {"A": {"leaders": [{}, {"progress": 1, "grown": false}]}, "B": {"leaders": [{"progress": 1}]}}},
@@ -619,23 +614,28 @@
       "expect": {"A": {"leaders": [{}, {"grown": true, "cost": 4}]}, "B": {"board": {"3前": null, "3後": {"card": "KN-03"}}}}
     },
     {
-      "name": "レイ 成長後の強制転送（4）: 同じプレイヤーの2マスの中身を入れ替える（ダメージは残る）",
-      "refs": ["leader-rei", "12"],
-      "setup": {"round": 4, "A": {"maxMana": 4, "mana": 0, "reserve": 4, "leaders": ["leader-alto", {"id": "leader-rei", "grown": true}]}, "B": {"board": {"1前": {"card": "KN-03", "damage": 1}, "3後": "KN-04"}}},
+      "name": "レイ 成長後の強制転送（4）: 成長前と同じくユニット1体をその持ち主の空きマスへ移動（パッシブで−2/−0）",
+      "refs": ["leader-rei", "12", "13.4"],
+      "setup": {"round": 4, "A": {"maxMana": 4, "mana": 0, "reserve": 4, "leaders": ["leader-alto", {"id": "leader-rei", "grown": true}]}, "B": {"board": {"1前": {"card": "KN-03", "damage": 1}}}},
       "steps": [
-        {"type": "leaderAbility", "player": "A", "leader": 1, "targets": {"a": {"cell": "A:1前"}, "b": {"cell": "B:3後"}}, "illegal": true},
-        {"type": "leaderAbility", "player": "A", "leader": 1, "targets": {"a": {"cell": "B:1前"}, "b": {"cell": "B:3後"}}}
+        {"expect": {"A": {"leaders": [{}, {"cost": 4}]}}},
+        {"type": "leaderAbility", "player": "A", "leader": 1, "targets": {"unit": {"unit": "B:1前"}, "cell": {"cell": "A:3後"}}, "illegal": true},
+        {"type": "leaderAbility", "player": "A", "leader": 1, "targets": {"unit": {"unit": "B:1前"}, "cell": {"cell": "B:3後"}}}
       ],
-      "expect": {"A": {"reserve": 0, "leaders": [{}, {"used": true}]}, "B": {"board": {"1前": {"card": "KN-04", "damage": 0}, "3後": {"card": "KN-03", "damage": 1}}}}
+      "expect": {"A": {"reserve": 0, "leaders": [{}, {"used": true}]}, "B": {"board": {"1前": null, "3後": {"card": "KN-03", "damage": 1, "attack": 0}}}}
     },
     {
-      "name": "レイ 成長後の強制転送: 空きマスも選べ、ユニットをその空きマスへ移動させる",
-      "refs": ["leader-rei", "12"],
-      "setup": {"round": 4, "A": {"maxMana": 4, "mana": 4, "leaders": ["leader-alto", {"id": "leader-rei", "grown": true}]}, "B": {"board": {"2前": "KN-03"}}},
+      "name": "レイ 成長後のパッシブ: 敵ユニットが移動するたび（相手の遊撃による移動も）このラウンド中−2/−0。味方の移動では起きない",
+      "refs": ["leader-rei", "12", "10.4"],
+      "setup": {"activePlayer": "B", "A": {"leaders": ["leader-alto", {"id": "leader-rei", "grown": true}], "board": {"4前": {"card": "KN-19"}}}, "B": {"board": {"2前": "KN-19"}}},
       "steps": [
-        {"type": "leaderAbility", "player": "A", "leader": 1, "targets": {"a": {"cell": "B:2前"}, "b": {"cell": "B:4後"}}}
+        {"type": "mobileMove", "player": "B", "unit": "2前", "to": "1前"},
+        {"expect": {"B": {"board": {"1前": {"card": "KN-19", "attack": 2}}}}},
+        {"type": "mobileMove", "player": "A", "unit": "4前", "to": "4後"},
+        {"expect": {"A": {"board": {"4後": {"card": "KN-19", "attack": 4}}}}},
+        {"do": "endRound"}
       ],
-      "expect": {"A": {"mana": 0}, "B": {"board": {"2前": null, "4後": {"card": "KN-03"}}}}
+      "expect": {"B": {"board": {"1前": {"card": "KN-19", "attack": 4}}}}
     }
   ]
 }
