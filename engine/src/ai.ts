@@ -9,6 +9,7 @@ import { opponent } from './board';
 import type { Catalog } from './catalog';
 import { getCard, getLeader } from './catalog';
 import { applyAction } from './engine';
+import { handAdjust } from './hand-table';
 import { legalActions } from './legal';
 import { chooseMulligan, type MulliganPolicy } from './mulligan';
 import { nextRandom, shuffleInPlace, type RngHolder } from './rng';
@@ -47,6 +48,8 @@ export interface AiWeights {
   handExtra?: number;
   /** 即効の手（追加の手番を得る手）は、その後の自分の手を1手読んで評価する（ふつう・つよいで有効） */
   quickFollow?: boolean;
+  /** 自分の手札の価値を、カードごと・相手の勢力ごとの表（hand-table.json）で補正する（案 D） */
+  handTable?: boolean;
 }
 
 /** 段階1の評価 */
@@ -202,8 +205,10 @@ export function evaluate(cat: Catalog, s: GameState, me: PlayerId, w: AiWeights 
     const st = s.players[p];
     let v = st.life * w.life - Math.max(0, 8 - st.life) * w.lowLife;
     for (const u of st.board) if (u) v += unitValue(r, u, w);
+    const oppFactions = w.handTable && p === me ? s.players[opp].leaders.map((l) => getLeader(cat, l.id).faction) : null;
     st.hand.forEach((c, i) => {
-      const hv = w.hand + (w.handCost ? w.handCost * Math.min(6, cardCostGuess(cat, c)) : 0);
+      let hv = w.hand + (w.handCost ? w.handCost * Math.min(6, cardCostGuess(cat, c)) : 0);
+      if (oppFactions && c.cardId !== '?') hv = Math.max(0, hv + handAdjust(c.cardId, oppFactions));
       v += i >= 4 && w.handExtra !== undefined ? hv * w.handExtra : hv;
     });
     // 使ったスペルの枚数の価値（自分だけ。chooseAction で自分のデッキの中身に合わせて spellCount を決めてある）

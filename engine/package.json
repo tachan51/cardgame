@@ -9,7 +9,8 @@
     "sim": "vitest run test/random.test.ts",
     "stats": "tsx scripts/stats.ts",
     "experiment": "tsx scripts/experiment.ts",
-    "mulligan-table": "tsx scripts/mulligan-table.ts"
+    "mulligan-table": "tsx scripts/mulligan-table.ts",
+    "hand-table": "tsx scripts/hand-table.ts"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
