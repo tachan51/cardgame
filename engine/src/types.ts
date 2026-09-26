@@ -214,6 +214,8 @@ export interface CardInstance {
   revealed: boolean;
   /** 効果で生成したカードか（記録用） */
   generated: boolean;
+  /** 手札にあるこのカードの中身を、相手も知っているか（生成した・手札に戻したなど。AI が覚えておく） */
+  known?: boolean;
 }
 
 /** 盤面のユニット */

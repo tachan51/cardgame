@@ -59,6 +59,17 @@ export interface AiWeights {
   planTop?: number;
   /** 次のラウンドのマナ（最大マナ＋1と予備マナ）で使えない手札の価値の倍率（案 B の評価版。調整用、省略時 1） */
   unplayableHand?: number;
+  /** ラウンドの途中で使い残している通常マナ1の価値（省略時は reserve と同じ。予備マナと分ける） */
+  mana?: number;
+  /** 手を打った後、双方がパスを続けたとして passRounds ラウンド先まで進めた評価を passBlend の割合で混ぜる（調整用） */
+  passRounds?: number;
+  passBlend?: number;
+  /** 読む候補（planAhead の上位・つよいの候補）に、同じカードの置き場所違いのような似た手を入れない（調整用） */
+  diverse?: boolean;
+  /** 相手の手札のうち、生成した・手札に戻したなどで中身が分かっているカードを覚えておく（調整用） */
+  remember?: boolean;
+  /** つよいで相手の手札を推測するとき、相手がすでに使ったカードの残りの枚数を重く見る（重みの倍率。調整用） */
+  inferHand?: number;
 }
 
 /** 段階1の評価 */
@@ -142,7 +153,7 @@ export function chooseAction(cat: Catalog, state: GameState, player: PlayerId, o
   if (state.activePlayer !== player) throw new Error('AI の番ではありません');
   const rng: RngHolder = { rngState: (opts.seed ?? state.rngState ^ (state.log.length * 2654435761)) | 0 };
 
-  const view = sanitize(cat, publicView(state, player));
+  const view = sanitize(cat, publicView(state, player, { remember: !!w.remember }));
   const scored = scoreAll(cat, view, player, w);
   const baseline = scored.find((x) => x.action.type === 'pass')!.score;
 
@@ -174,11 +185,9 @@ function scoreAll(cat: Catalog, view: GameState, me: PlayerId, w: AiWeights): Sc
  */
 function planAhead(cat: Catalog, view: GameState, me: PlayerId, w: AiWeights, scored: Scored[]): void {
   const opp = opponent(me);
-  const w1: AiWeights = { ...w, planFollow: 0, quickFollow: false };
-  const top = scored
-    .filter((x) => x.action.type !== 'pass' && Number.isFinite(x.score) && x.score < 1000)
-    .sort((a, b) => b.score - a.score)
-    .slice(0, w.planTop ?? 6);
+  const w1: AiWeights = { ...w, planFollow: 0, quickFollow: false, passRounds: 0 };
+  const sorted = scored.filter((x) => x.action.type !== 'pass' && Number.isFinite(x.score) && x.score < 1000).sort((a, b) => b.score - a.score);
+  const top = w.diverse ? pickDiverse(sorted, w.planTop ?? 6) : sorted.slice(0, w.planTop ?? 6);
   for (const x of top) {
     let s: GameState;
     try {
@@ -232,9 +241,53 @@ function scoreAfter(cat: Catalog, view: GameState, a: Action, me: PlayerId, w: A
 function settleScore(cat: Catalog, before: GameState, next: GameState, me: PlayerId, w: AiWeights): number {
   if (next.result) return evaluate(cat, next, me, w, true);
   if (next.pending) return evaluate(cat, before, me, w, false) + 0.5;
-  if (next.round > before.round) return evaluate(cat, next, me, w, true);
-  const pv = previewCombat(cat, next);
-  return evaluate(cat, pv.state, me, w, false);
+  const v0 = next.round > before.round ? evaluate(cat, next, me, w, true) : evaluate(cat, previewCombat(cat, next).state, me, w, false);
+  if (!w.passRounds || !w.passBlend) return v0;
+  return (1 - w.passBlend) * v0 + w.passBlend * passProjection(cat, next, me, w, before.round + w.passRounds);
+}
+
+/** 双方がパスを続けたとして、round ラウンドになるまで（戦闘・ドロー・マナの回復を含めて）進めた評価 */
+function passProjection(cat: Catalog, state: GameState, me: PlayerId, w: AiWeights, round: number): number {
+  let s = state;
+  for (let n = 0; n < 40 && !s.result && !s.pending && s.phase === 'action' && s.round <= round; n++) {
+    try {
+      s = applyAction(cat, s, { type: 'pass', player: s.activePlayer });
+    } catch {
+      break;
+    }
+  }
+  return evaluate(cat, s, me, w, true);
+}
+
+/** 似た手を1つにまとめるための鍵（同じカードを別のマス・別の対象に使う手は同じ鍵） */
+function similarKey(a: Action): string {
+  switch (a.type) {
+    case 'playUnit':
+    case 'castSpell':
+      return `${a.type}:${a.card}:${a.enhance ? 1 : 0}`;
+    case 'mobileMove':
+      return `mobile:${a.unit}`;
+    case 'activate':
+      return `activate:${a.unit}:${a.ability}`;
+    case 'leaderAbility':
+      return `leader:${a.leader}`;
+    default:
+      return a.type;
+  }
+}
+
+/** 評価の高い順に並んだ候補から、似た手を除いて n 個選ぶ */
+function pickDiverse<T extends { action: Action }>(sorted: T[], n: number): T[] {
+  const seen = new Set<string>();
+  const out: T[] = [];
+  for (const x of sorted) {
+    const k = similarKey(x.action);
+    if (seen.has(k)) continue;
+    seen.add(k);
+    out.push(x);
+    if (out.length >= n) break;
+  }
+  return out;
 }
 
 // ---------------------------------------------------------------- 評価
@@ -264,7 +317,7 @@ export function evaluate(cat: Catalog, s: GameState, me: PlayerId, w: AiWeights 
     // 使ったスペルの枚数の価値（自分だけ。chooseAction で自分のデッキの中身に合わせて spellCount を決めてある）
     if (w.spellCount && p === me) v += w.spellCount * Math.min(12, st.spellsCast);
     const futureReserve = roundOver ? st.reserve : st.reserve + st.mana;
-    v += futureReserve * w.reserve;
+    v += st.reserve * w.reserve + (roundOver ? 0 : st.mana * (w.mana ?? w.reserve));
     st.leaders.forEach((l, idx) => {
       const def = getLeader(cat, l.id);
       v += l.grown ? w.growth : (Math.min(l.progress, def.growth.threshold) / def.growth.threshold) * w.growth * 0.5;
@@ -330,16 +383,35 @@ function sanitize(cat: Catalog, v: GameState): GameState {
  * 相手の手札と山札は、相手のリーダーの勢力のカードからランダムに選ぶ（公開されたカードはそのまま）。
  * 自分の山札は、中身（自分のデッキ）は分かるが順番は分からないのでシャッフルする
  */
-export function determinize(cat: Catalog, state: GameState, me: PlayerId, rng: RngHolder): GameState {
+export function determinize(cat: Catalog, state: GameState, me: PlayerId, rng: RngHolder, wt: AiWeights = DEFAULT_WEIGHTS): GameState {
   const w = structuredClone(state);
   w.log = [];
   w.pending = null;
   const opp = opponent(me);
   const facs = new Set<FactionId>(w.players[opp].leaders.map((l) => getLeader(cat, l.id).faction));
   const pool = [...cat.cards.values()].filter((c) => facs.has(c.faction) && !c.token).map((c) => c.id);
-  const sample = (): CardInstance => ({ uid: w.nextUid++, cardId: pool[Math.floor(nextRandom(rng) * pool.length)], costMod: 0, revealed: false, generated: false });
+  // 相手がすでに使った（盤面・トラッシュ・除外・公開された手札にある）カードは、デッキに同じカードが残っている見込みが高い
+  const weight = new Map(pool.map((id) => [id, 1]));
+  if (wt.inferHand) {
+    const st0 = w.players[opp];
+    const seen = new Map<string, number>();
+    const add = (id: string, generated: boolean) => {
+      if (!generated && weight.has(id)) seen.set(id, (seen.get(id) ?? 0) + 1);
+    };
+    for (const u of st0.board) if (u && !u.isToken) add(u.cardId, u.generated);
+    for (const c of [...st0.trash, ...st0.exile]) add(c.cardId, c.generated);
+    for (const c of st0.hand) if (c.revealed || (wt.remember && c.known)) add(c.cardId, c.generated);
+    for (const [id, n] of seen) weight.set(id, n >= 3 ? 0.1 : 1 + wt.inferHand * (3 - n));
+  }
+  const total = [...weight.values()].reduce((a, b) => a + b, 0);
+  const pick = (): string => {
+    let x = nextRandom(rng) * total;
+    for (const [id, v] of weight) if ((x -= v) < 0) return id;
+    return pool[pool.length - 1];
+  };
+  const sample = (): CardInstance => ({ uid: w.nextUid++, cardId: pick(), costMod: 0, revealed: false, generated: false });
   const st = w.players[opp];
-  st.hand = st.hand.map((c) => (c.revealed ? c : sample()));
+  st.hand = st.hand.map((c) => (c.revealed || (wt.remember && c.known) ? c : sample()));
   st.deck = st.deck.map(() => sample());
   shuffleInPlace(rng, w.players[me].deck);
   w.rngState = Math.floor(nextRandom(rng) * 2 ** 31);
@@ -363,7 +435,7 @@ function search(
   const opp = opponent(me);
   // 段階2の評価で良い順に候補を絞る（パスは必ず入れる）
   const ranked = scored.filter((x) => Number.isFinite(x.score)).sort((a, b) => b.score - a.score);
-  const cands = ranked.slice(0, K);
+  const cands = w.diverse ? pickDiverse(ranked, K) : ranked.slice(0, K);
   const pass = scored.find((x) => x.action.type === 'pass')!;
   if (!cands.includes(pass)) cands.push(pass);
   if (cands.length === 1) return { action: pass.action, score: pass.score, baseline };
@@ -371,7 +443,7 @@ function search(
   const lethal = cands.find((x) => x.score >= 1000);
   if (lethal) return { action: lethal.action, score: lethal.score, baseline };
 
-  const worlds = Array.from({ length: D }, () => determinize(cat, state, me, rng));
+  const worlds = Array.from({ length: D }, () => determinize(cat, state, me, rng, w));
   const results: { c: Scored; total: number; n: number }[] = cands.map((c) => ({ c, total: 0, n: 0 }));
   // 状況を1つずつ増やしながら全候補を読む（時間切れになったら、そこまでの平均で決める）
   outer: for (const world of worlds) {
@@ -408,7 +480,7 @@ function replyValue(cat: Catalog, world: GameState, a: Action, me: PlayerId, _op
   for (let n = 0; n < 30 * rounds && !s.result && s.round < end && !s.pending; n++) {
     if (now() > deadline) break;
     const p = s.activePlayer;
-    const { action } = chooseAction(cat, s, p, { level: 'normal', weights: { ...w, planFollow: 0 } });
+    const { action } = chooseAction(cat, s, p, { level: 'normal', weights: { ...w, planFollow: 0, passRounds: 0 } });
     s = applyAction(cat, s, action);
   }
   if (s.result || s.round >= end) return evaluate(cat, s, me, w, true);
