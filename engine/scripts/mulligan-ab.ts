@@ -1,6 +1,7 @@
 // マリガンの方針どうしの比べ合い
 //   npx tsx scripts/mulligan-ab.ts --games 100 --policies smart,cost --level normal [--extra a.json] [--margin 1]
 //   --margin N  1つめの方針が smart のときの余裕（src/mulligan.ts の MULLIGAN_MARGIN）
+//   環境変数 AB_OPTS（JSON）: 1つめの側だけ AI の設定を差し替える（例: {"rolloutRounds":2} と --level hard）
 //   環境変数 AB_WEIGHTS（JSON）: 1つめの側だけ評価の重みを差し替える（--policies smart,smart と合わせて、AI の改良を比べる）
 // 見本デッキの組み合わせ（順序つき）ごとに、同じシードで方針を入れ替えた2試合を行い、1つめの方針の勝率を出す。
 // マリガン以外（対戦中の手の選び方）は同じ AI。
@@ -8,7 +9,7 @@ import { readFileSync, readdirSync } from 'node:fs';
 import { cpus } from 'node:os';
 import { join } from 'node:path';
 import { Worker, isMainThread, parentPort, workerData } from 'node:worker_threads';
-import { STAGE2_WEIGHTS, type AiLevel, type AiWeights } from '../src/ai';
+import { STAGE2_WEIGHTS, type AiLevel, type AiOptions, type AiWeights } from '../src/ai';
 import { buildCatalog } from '../src/catalog';
 import type { MulliganPolicy } from '../src/mulligan';
 import { playGame, type GameRecord } from '../src/sim';
@@ -43,6 +44,8 @@ interface Job {
   first: 'A' | 'B';
 }
 
+// 環境変数 AB_OPTS（JSON）: 1つめの側だけ AI の設定（rolloutRounds など）を差し替える
+const abOpts = process.env.AB_OPTS ? (JSON.parse(process.env.AB_OPTS) as Partial<AiOptions>) : {};
 const abWeights = process.env.AB_WEIGHTS ? { ...STAGE2_WEIGHTS, ...(JSON.parse(process.env.AB_WEIGHTS) as Partial<AiWeights>) } : undefined;
 
 function run(j: Job): GameRecord & { job: Job } {
@@ -51,8 +54,8 @@ function run(j: Job): GameRecord & { job: Job } {
     seed: j.seed,
     levels: { A: j.level, B: j.level },
     ai: {
-      A: { mulligan: j.pa, mulliganMargin: j.margin, timeLimitMs: 800, ...(abWeights && j.first === 'A' ? { weights: abWeights } : {}) },
-      B: { mulligan: j.pb, mulliganMargin: j.margin, timeLimitMs: 800, ...(abWeights && j.first === 'B' ? { weights: abWeights } : {}) },
+      A: { mulligan: j.pa, mulliganMargin: j.margin, timeLimitMs: 800, ...(abWeights && j.first === 'A' ? { weights: abWeights } : {}), ...(j.first === 'A' ? abOpts : {}) },
+      B: { mulligan: j.pb, mulliganMargin: j.margin, timeLimitMs: 800, ...(abWeights && j.first === 'B' ? { weights: abWeights } : {}), ...(j.first === 'B' ? abOpts : {}) },
     },
   });
   return { ...r, job: j };

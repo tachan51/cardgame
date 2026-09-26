@@ -50,6 +50,12 @@ export interface AiWeights {
   quickFollow?: boolean;
   /** 自分の手札の価値を、カードごと・相手の勢力ごとの表（hand-table.json）で補正する（案 D） */
   handTable?: boolean;
+  /**
+   * 組み合わせを読む（案 C）。1手読みの上位 planTop 個の手について「その手 → 相手がパス → 自分の次の手」まで読み、
+   * 良くなる分の planFollow 倍を評価に足す（調整用、省略時 0）
+   */
+  planFollow?: number;
+  planTop?: number;
 }
 
 /** 段階1の評価 */
@@ -93,6 +99,8 @@ export interface AiOptions {
   /** hard で読む候補の数と、推測する状況の数 */
   candidates?: number;
   worlds?: number;
+  /** hard のロールアウトで読むラウンド数（1 = このラウンドの終わりまで。案 B） */
+  rolloutRounds?: number;
   /** マリガンの方針（省略時: easy は cost、normal・hard は smart） */
   mulligan?: MulliganPolicy;
   /** smart のマリガンの余裕（調整用） */
@@ -147,9 +155,41 @@ interface Scored {
 }
 
 function scoreAll(cat: Catalog, view: GameState, me: PlayerId, w: AiWeights): Scored[] {
-  return legalActions(cat, view)
+  const scored = legalActions(cat, view)
     .filter((a) => a.player === me)
     .map((action) => ({ action, score: scoreAfter(cat, view, action, me, w) }));
+  if (w.planFollow) planAhead(cat, view, me, w, scored);
+  return scored;
+}
+
+/**
+ * 組み合わせを読む（案 C）: 良さそうな手の後、相手がパスしたとして、自分の次の手まで読む。
+ * 次の手と合わせると良くなる手（遅延で動かしておいて、次の手番で当てるなど）の評価を上げる
+ */
+function planAhead(cat: Catalog, view: GameState, me: PlayerId, w: AiWeights, scored: Scored[]): void {
+  const opp = opponent(me);
+  const w1: AiWeights = { ...w, planFollow: 0, quickFollow: false };
+  const top = scored
+    .filter((x) => x.action.type !== 'pass' && Number.isFinite(x.score) && x.score < 1000)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, w.planTop ?? 6);
+  for (const x of top) {
+    let s: GameState;
+    try {
+      s = applyAction(cat, view, x.action);
+      if (s.result || s.pending || s.phase !== 'action' || s.round !== view.round || s.activePlayer !== opp) continue;
+      s = applyAction(cat, s, { type: 'pass', player: opp });
+    } catch {
+      continue;
+    }
+    if (s.result || s.pending || s.phase !== 'action' || s.round !== view.round || s.activePlayer !== me) continue;
+    let best = -Infinity;
+    for (const b of legalActions(cat, s)) {
+      if (b.player !== me || b.type === 'pass') continue;
+      best = Math.max(best, scoreAfter(cat, s, b, me, w1));
+    }
+    if (best > x.score) x.score += (best - x.score) * w.planFollow!;
+  }
 }
 
 function pickBest(scored: Scored[], baseline: number): AiDecision {
@@ -327,7 +367,7 @@ function search(
   outer: for (const world of worlds) {
     for (const r of results) {
       if (now() - start > limit && results.every((x) => x.n > 0)) break outer;
-      r.total += replyValue(cat, world, r.c.action, me, opp, w, start + limit * 1.5);
+      r.total += replyValue(cat, world, r.c.action, me, opp, w, start + limit * 1.5, opts.rolloutRounds ?? 1);
       r.n += 1;
     }
   }
@@ -346,20 +386,21 @@ function search(
  * 自分が a を打った後、このラウンドが終わるまで双方が段階2の方針で打ち進めた結果の評価（ロールアウト）。
  * 相手の応手と、それに対する自分の次の手まで反映される
  */
-function replyValue(cat: Catalog, world: GameState, a: Action, me: PlayerId, _opp: PlayerId, w: AiWeights, deadline: number): number {
+function replyValue(cat: Catalog, world: GameState, a: Action, me: PlayerId, _opp: PlayerId, w: AiWeights, deadline: number, rounds = 1): number {
   let s: GameState;
   try {
     s = applyAction(cat, world, a);
   } catch {
     return -Infinity;
   }
-  const round = world.round;
-  for (let n = 0; n < 30 && !s.result && s.round === round && !s.pending; n++) {
+  // rounds ラウンド先の終わりまで（次のラウンドの始めのドローと、マナの回復も含めて）打ち進める
+  const end = world.round + rounds;
+  for (let n = 0; n < 30 * rounds && !s.result && s.round < end && !s.pending; n++) {
     if (now() > deadline) break;
     const p = s.activePlayer;
-    const { action } = chooseAction(cat, s, p, { level: 'normal', weights: w });
+    const { action } = chooseAction(cat, s, p, { level: 'normal', weights: { ...w, planFollow: 0 } });
     s = applyAction(cat, s, action);
   }
-  if (s.result || s.round > round) return evaluate(cat, s, me, w, true);
+  if (s.result || s.round >= end) return evaluate(cat, s, me, w, true);
   return evaluate(cat, previewCombat(cat, s).state, me, w, false);
 }
