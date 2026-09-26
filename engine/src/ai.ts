@@ -82,9 +82,14 @@ export interface AiWeights {
    * 攻撃力を軽く見る（守って時間を稼ぐ）。相手のほうが終盤に強ければ逆（先に攻める）
    */
   role?: number;
-  /** 決めに行く探索: 相手のライフが burstLife 以下のとき、相手がパスし続けるとして自分の手を burstDepth 手先まで読む（調整用） */
+  /**
+   * 決めに行く探索: 相手がパスし続けるとして自分の手を burstDepth 手先まで読む（調整用）。
+   * 発動するのは、自分が今使えるマナ（通常マナ＋予備マナ）が burstMana 以上のとき、または相手のライフが burstLife 以下のとき
+   * （どちらも省略時は常に発動）
+   */
   burstDepth?: number;
   burstLife?: number;
+  burstMana?: number;
   /** 決めに行く探索で、各段で残す手順の数（省略時 4） */
   burstWidth?: number;
 }
@@ -173,7 +178,7 @@ export function chooseAction(cat: Catalog, state: GameState, player: PlayerId, o
 
   const view = sanitize(cat, publicView(state, player, { remember: !!w.remember }));
   const scored = scoreAll(cat, view, player, w);
-  if (w.burstDepth && view.players[opponent(player)].life <= (w.burstLife ?? 10)) burstSearch(cat, view, player, w, scored);
+  if (w.burstDepth && burstTriggered(view, player, w)) burstSearch(cat, view, player, w, scored);
   const baseline = scored.find((x) => x.action.type === 'pass')!.score;
 
   if (level === 'easy') {
@@ -282,6 +287,14 @@ function burstSearch(cat: Catalog, view: GameState, me: PlayerId, w: AiWeights, 
     frontier = next.sort((a, b) => b.v - a.v).slice(0, width);
   }
   for (const [i, v] of best) if (v > scored[i].score) scored[i].score = v;
+}
+
+/** 決めに行く探索を行うか（自分がまとめて動ける余力があるか、相手のライフが少ないか） */
+function burstTriggered(view: GameState, me: PlayerId, w: AiWeights): boolean {
+  if (w.burstMana === undefined && w.burstLife === undefined) return true;
+  const st = view.players[me];
+  if (w.burstMana !== undefined && st.mana + st.reserve >= w.burstMana) return true;
+  return w.burstLife !== undefined && view.players[opponent(me)].life <= w.burstLife;
 }
 
 /** 自分が a を打ち、相手がパスした後の状態（自分の手番が続かないなら null） */
