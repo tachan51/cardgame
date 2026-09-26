@@ -2,13 +2,15 @@
 //
 // 強さは3段階。どれも相手の手札と山札の中身は見ない（publicView と、自分のデッキの中身だけを使う）。
 //   easy   … 段階1。合法手を1つずつ試し、このラウンドの戦闘の結果まで見た評価で選ぶ。評価に揺らぎを入れて手加減する
-//   normal … 段階2。段階1の評価に、手札のカードの重さ・予備マナ・使えるリーダー能力の価値を加える
+//   normal … 段階2。段階1の評価に、手札のカードの重さ・予備マナ・使えるリーダー能力の価値を加える。即効の手はその後の自分の手まで、
+//            良さそうな手は「相手がパスした後の自分の次の手」まで読む
 //   hard   … 段階3。段階2で良さそうな手を絞り、相手の手札を推測した「ありうる状況」を何通りか作って、
 //            そのラウンドの終わりまで双方が段階2の方針で打ち進めた結果の平均で選ぶ（決定化したロールアウト）。思考時間に上限がある
 import { opponent } from './board';
 import type { Catalog } from './catalog';
 import { getCard, getLeader } from './catalog';
 import { applyAction } from './engine';
+import { handAdjust } from './hand-table';
 import { legalActions } from './legal';
 import { chooseMulligan, type MulliganPolicy } from './mulligan';
 import { nextRandom, shuffleInPlace, type RngHolder } from './rng';
@@ -38,6 +40,25 @@ export interface AiWeights {
   growth: number;
   /** 次のラウンドに使えるリーダー能力1つの価値 */
   leaderReady: number;
+  /**
+   * 使ったスペル1枚の価値（「使ったスペルの枚数」で強くなるカードを持っているときだけ。調整用、省略時 0）。
+   * 持っている枚数（山札・手札。6枚で最大）に比例させる
+   */
+  spellCount?: number;
+  /** 手札が多いときの、5枚目以降の手札1枚の価値の倍率（調整用、省略時 1。持ちすぎを嫌う） */
+  handExtra?: number;
+  /** 即効の手（追加の手番を得る手）は、その後の自分の手を1手読んで評価する（ふつう・つよいで有効） */
+  quickFollow?: boolean;
+  /** 自分の手札の価値を、カードごと・相手の勢力ごとの表（hand-table.json）で補正する（案 D） */
+  handTable?: boolean;
+  /**
+   * 組み合わせを読む（案 C）。1手読みの上位 planTop 個の手について「その手 → 相手がパス → 自分の次の手」まで読み、
+   * 良くなる分の planFollow 倍を評価に足す（調整用、省略時 0）
+   */
+  planFollow?: number;
+  planTop?: number;
+  /** 次のラウンドのマナ（最大マナ＋1と予備マナ）で使えない手札の価値の倍率（案 B の評価版。調整用、省略時 1） */
+  unplayableHand?: number;
 }
 
 /** 段階1の評価 */
@@ -61,8 +82,14 @@ export const STAGE2_WEIGHTS: AiWeights = {
   ...STAGE1_WEIGHTS,
   hand: 0.7,
   handCost: 0.12,
-  reserve: 0.3,
+  // 0.3 → 0.6（ai.md 10章。同じデッキで比べて勝率 52.2%）
+  reserve: 0.6,
   leaderReady: 0.8,
+  // 即効の後の自分の手まで読む（ai.md 9章。同じデッキで比べて勝率 51.7%）
+  quickFollow: true,
+  // 組み合わせを読む（案 C。ai.md 12章。同じデッキで比べて勝率 54.0%）
+  planFollow: 1,
+  planTop: 6,
 };
 
 export const DEFAULT_WEIGHTS = STAGE2_WEIGHTS;
@@ -78,6 +105,8 @@ export interface AiOptions {
   /** hard で読む候補の数と、推測する状況の数 */
   candidates?: number;
   worlds?: number;
+  /** hard のロールアウトで読むラウンド数（1 = このラウンドの終わりまで。案 B） */
+  rolloutRounds?: number;
   /** マリガンの方針（省略時: easy は cost、normal・hard は smart） */
   mulligan?: MulliganPolicy;
   /** smart のマリガンの余裕（調整用） */
@@ -97,7 +126,9 @@ const now = () => (typeof performance !== 'undefined' ? performance.now() : Date
 /** player の手を選ぶ。player が判断する番でなければエラー */
 export function chooseAction(cat: Catalog, state: GameState, player: PlayerId, opts: AiOptions = {}): AiDecision {
   const level = opts.level ?? 'normal';
-  const w = opts.weights ?? (level === 'easy' ? STAGE1_WEIGHTS : STAGE2_WEIGHTS);
+  let w = opts.weights ?? (level === 'easy' ? STAGE1_WEIGHTS : STAGE2_WEIGHTS);
+  // 「使ったスペルの枚数」で強くなるカードをどれだけ持っているか（自分のデッキの中身は知っている）
+  if (w.spellCount) w = { ...w, spellCount: w.spellCount * spellScaling(cat, state.players[player]) };
   if (state.pending) {
     if (state.pending.player !== player) throw new Error('AI の番ではありません');
     // 山札の上から見て選ぶ: 一番コストの高いカードを取る
@@ -130,9 +161,41 @@ interface Scored {
 }
 
 function scoreAll(cat: Catalog, view: GameState, me: PlayerId, w: AiWeights): Scored[] {
-  return legalActions(cat, view)
+  const scored = legalActions(cat, view)
     .filter((a) => a.player === me)
     .map((action) => ({ action, score: scoreAfter(cat, view, action, me, w) }));
+  if (w.planFollow) planAhead(cat, view, me, w, scored);
+  return scored;
+}
+
+/**
+ * 組み合わせを読む（案 C）: 良さそうな手の後、相手がパスしたとして、自分の次の手まで読む。
+ * 次の手と合わせると良くなる手（遅延で動かしておいて、次の手番で当てるなど）の評価を上げる
+ */
+function planAhead(cat: Catalog, view: GameState, me: PlayerId, w: AiWeights, scored: Scored[]): void {
+  const opp = opponent(me);
+  const w1: AiWeights = { ...w, planFollow: 0, quickFollow: false };
+  const top = scored
+    .filter((x) => x.action.type !== 'pass' && Number.isFinite(x.score) && x.score < 1000)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, w.planTop ?? 6);
+  for (const x of top) {
+    let s: GameState;
+    try {
+      s = applyAction(cat, view, x.action);
+      if (s.result || s.pending || s.phase !== 'action' || s.round !== view.round || s.activePlayer !== opp) continue;
+      s = applyAction(cat, s, { type: 'pass', player: opp });
+    } catch {
+      continue;
+    }
+    if (s.result || s.pending || s.phase !== 'action' || s.round !== view.round || s.activePlayer !== me) continue;
+    let best = -Infinity;
+    for (const b of legalActions(cat, s)) {
+      if (b.player !== me || b.type === 'pass') continue;
+      best = Math.max(best, scoreAfter(cat, s, b, me, w1));
+    }
+    if (best > x.score) x.score += (best - x.score) * w.planFollow!;
+  }
 }
 
 function pickBest(scored: Scored[], baseline: number): AiDecision {
@@ -152,7 +215,18 @@ function scoreAfter(cat: Catalog, view: GameState, a: Action, me: PlayerId, w: A
   } catch {
     return -Infinity;
   }
-  return settleScore(cat, view, next, me, w);
+  const here = settleScore(cat, view, next, me, w);
+  // 即効で追加の手番を得たら、その手番に打つ手まで読む（打たずにパスする場合も含む）
+  if (w.quickFollow && a.type !== 'pass' && !next.result && !next.pending && next.phase === 'action' && next.round === view.round && next.activePlayer === me) {
+    const w1 = { ...w, quickFollow: false };
+    let best = here;
+    for (const b of legalActions(cat, next)) {
+      if (b.player !== me || b.type === 'pass') continue;
+      best = Math.max(best, scoreAfter(cat, next, b, me, w1));
+    }
+    return best;
+  }
+  return here;
 }
 
 function settleScore(cat: Catalog, before: GameState, next: GameState, me: PlayerId, w: AiWeights): number {
@@ -177,7 +251,18 @@ export function evaluate(cat: Catalog, s: GameState, me: PlayerId, w: AiWeights 
     const st = s.players[p];
     let v = st.life * w.life - Math.max(0, 8 - st.life) * w.lowLife;
     for (const u of st.board) if (u) v += unitValue(r, u, w);
-    for (const c of st.hand) v += w.hand + (w.handCost ? w.handCost * Math.min(6, cardCostGuess(cat, c)) : 0);
+    const oppFactions = w.handTable && p === me ? s.players[opp].leaders.map((l) => getLeader(cat, l.id).faction) : null;
+    st.hand.forEach((c, i) => {
+      let hv = w.hand + (w.handCost ? w.handCost * Math.min(6, cardCostGuess(cat, c)) : 0);
+      if (oppFactions && c.cardId !== '?') hv = Math.max(0, hv + handAdjust(c.cardId, oppFactions));
+      if (w.unplayableHand !== undefined && p === me && c.cardId !== '?') {
+        const budget = Math.min(10, st.maxMana + (roundOver ? 0 : 1)) + (roundOver ? st.reserve : st.reserve + st.mana);
+        if (r.cardCost(p, c) > budget) hv *= w.unplayableHand;
+      }
+      v += i >= 4 && w.handExtra !== undefined ? hv * w.handExtra : hv;
+    });
+    // 使ったスペルの枚数の価値（自分だけ。chooseAction で自分のデッキの中身に合わせて spellCount を決めてある）
+    if (w.spellCount && p === me) v += w.spellCount * Math.min(12, st.spellsCast);
     const futureReserve = roundOver ? st.reserve : st.reserve + st.mana;
     v += futureReserve * w.reserve;
     st.leaders.forEach((l, idx) => {
@@ -193,6 +278,20 @@ export function evaluate(cat: Catalog, s: GameState, me: PlayerId, w: AiWeights 
     return v;
   };
   return side(me) - side(opp);
+}
+
+/** 「使ったスペルの枚数」で強くなるカードを、山札・手札にどれだけ持っているか（0〜1） */
+function spellScaling(cat: Catalog, st: GameState['players'][PlayerId]): number {
+  let n = 0;
+  for (const c of [...st.deck, ...st.hand]) if (c.cardId !== '?' && scalesWithSpells(cat, c.cardId)) n++;
+  return Math.min(1, n / 6);
+}
+
+const scalingCache = new Map<string, boolean>();
+function scalesWithSpells(cat: Catalog, id: string): boolean {
+  let v = scalingCache.get(id);
+  if (v === undefined) scalingCache.set(id, (v = JSON.stringify(getCard(cat, id)).includes('spellsCastThisGame')));
+  return v;
 }
 
 function cardCostGuess(cat: Catalog, c: CardInstance): number {
@@ -278,7 +377,7 @@ function search(
   outer: for (const world of worlds) {
     for (const r of results) {
       if (now() - start > limit && results.every((x) => x.n > 0)) break outer;
-      r.total += replyValue(cat, world, r.c.action, me, opp, w, start + limit * 1.5);
+      r.total += replyValue(cat, world, r.c.action, me, opp, w, start + limit * 1.5, opts.rolloutRounds ?? 1);
       r.n += 1;
     }
   }
@@ -297,20 +396,21 @@ function search(
  * 自分が a を打った後、このラウンドが終わるまで双方が段階2の方針で打ち進めた結果の評価（ロールアウト）。
  * 相手の応手と、それに対する自分の次の手まで反映される
  */
-function replyValue(cat: Catalog, world: GameState, a: Action, me: PlayerId, _opp: PlayerId, w: AiWeights, deadline: number): number {
+function replyValue(cat: Catalog, world: GameState, a: Action, me: PlayerId, _opp: PlayerId, w: AiWeights, deadline: number, rounds = 1): number {
   let s: GameState;
   try {
     s = applyAction(cat, world, a);
   } catch {
     return -Infinity;
   }
-  const round = world.round;
-  for (let n = 0; n < 30 && !s.result && s.round === round && !s.pending; n++) {
+  // rounds ラウンド先の終わりまで（次のラウンドの始めのドローと、マナの回復も含めて）打ち進める
+  const end = world.round + rounds;
+  for (let n = 0; n < 30 * rounds && !s.result && s.round < end && !s.pending; n++) {
     if (now() > deadline) break;
     const p = s.activePlayer;
-    const { action } = chooseAction(cat, s, p, { level: 'normal', weights: w });
+    const { action } = chooseAction(cat, s, p, { level: 'normal', weights: { ...w, planFollow: 0 } });
     s = applyAction(cat, s, action);
   }
-  if (s.result || s.round > round) return evaluate(cat, s, me, w, true);
+  if (s.result || s.round >= end) return evaluate(cat, s, me, w, true);
   return evaluate(cat, previewCombat(cat, s).state, me, w, false);
 }
