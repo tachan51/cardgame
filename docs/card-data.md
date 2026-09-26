@@ -545,7 +545,7 @@ type Condition =
 type Deck = {
   formatVersion: 1;
   id: string;            // "sample-knights-cyber"
-  name: string;          // "見本: 軽く並べて押し切る（騎士団＋電脳）"
+  name: string;          // "見本: 号令で押し切る（騎士団＋電脳）"
   description?: string;  // デッキの狙い
   leaders: [string, string];               // リーダーID（異なる勢力）
   cards: { id: string; count: number }[];  // 合計40枚、同名3枚まで
@@ -554,7 +554,7 @@ type Deck = {
 
 | 見本デッキ | リーダー | 狙い |
 |---|---|---|
-| `sample-knights-cyber.json` | レイ＋アルト | 2コスト以下のユニットを多めに入れ、序盤から盤面を取って押し切る |
+| `sample-knights-cyber.json` | レイ＋アルト | 軽いユニットで盤面を取り、鼓舞の号令でまとめて強化して押し切る |
 | `sample-knights-academy.json` | アルト＋ノエル | 騎士団の壁で時間を稼ぎ、学院のスペルを重ねて遅延の大魔法と大型ユニットで決着 |
 | `sample-cyber-academy.json` | レイ＋ノエル | 偵察ドローンと見習い魔法使いで盤面を作り、魔力の矢や数打ちゃ当たるで削る |
 
