@@ -57,6 +57,8 @@ export interface AiWeights {
    */
   planFollow?: number;
   planTop?: number;
+  /** 次のラウンドのマナ（最大マナ＋1と予備マナ）で使えない手札の価値の倍率（案 B の評価版。調整用、省略時 1） */
+  unplayableHand?: number;
 }
 
 /** 段階1の評価 */
@@ -253,6 +255,10 @@ export function evaluate(cat: Catalog, s: GameState, me: PlayerId, w: AiWeights 
     st.hand.forEach((c, i) => {
       let hv = w.hand + (w.handCost ? w.handCost * Math.min(6, cardCostGuess(cat, c)) : 0);
       if (oppFactions && c.cardId !== '?') hv = Math.max(0, hv + handAdjust(c.cardId, oppFactions));
+      if (w.unplayableHand !== undefined && p === me && c.cardId !== '?') {
+        const budget = Math.min(10, st.maxMana + (roundOver ? 0 : 1)) + (roundOver ? st.reserve : st.reserve + st.mana);
+        if (r.cardCost(p, c) > budget) hv *= w.unplayableHand;
+      }
       v += i >= 4 && w.handExtra !== undefined ? hv * w.handExtra : hv;
     });
     // 使ったスペルの枚数の価値（自分だけ。chooseAction で自分のデッキの中身に合わせて spellCount を決めてある）
