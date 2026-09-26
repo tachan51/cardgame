@@ -59,6 +59,11 @@ export interface AiWeights {
   planTop?: number;
   /** パスの評価に足すボーナス（調整用、省略時 0）。ほかの手は、パスよりこれ以上良いときだけ選ぶ */
   passBonus?: number;
+  /**
+   * 相手に先に行動させて対応できる価値としてパスに足すボーナスの最大値（調整用、省略時 0）。
+   * 相手の取れる行動が多いほど大きく（3つ以上で最大）、相手がすでにパスしていて自分のパスで戦闘になるときは 0
+   */
+  passReact?: number;
   /** 次のラウンドのマナ（最大マナ＋1と予備マナ）で使えない手札の価値の倍率（案 B の評価版。調整用、省略時 1） */
   unplayableHand?: number;
 }
@@ -162,12 +167,37 @@ interface Scored {
   score: number;
 }
 
+/**
+ * 相手の取れる行動の多さ（0〜1）。自分がパスした後、相手が何かしてきたらそれに対応できる価値の目安。
+ * 相手がすでにパスしていて、自分のパスで戦闘になるなら 0
+ */
+function reactValue(cat: Catalog, s: GameState, me: PlayerId): number {
+  if (s.passStreak >= 1) return 0;
+  const st = s.players[opponent(me)];
+  const budget = st.mana + st.reserve;
+  const r = new Runner(cat, s);
+  // 手札は中身が分からないので、1枚2マナとして払える枚数だけ数える
+  let k = Math.min(st.hand.length, Math.floor(budget / 2));
+  for (const u of st.board) {
+    if (!u) continue;
+    if (!u.mobileUsed && r.hasKeyword(u, 'mobile')) k++;
+    getCard(cat, u.cardId).abilities?.forEach((a, i) => {
+      if (a.kind === 'activated' && a.cost <= budget && !u.activatedUsed.includes(i)) k++;
+    });
+  }
+  st.leaders.forEach((l, idx) => {
+    if (!l.usedThisRound && r.leaderAbility(opponent(me), idx) && r.leaderCost(opponent(me), idx) <= budget) k++;
+  });
+  return Math.min(1, k / 3);
+}
+
 function scoreAll(cat: Catalog, view: GameState, me: PlayerId, w: AiWeights): Scored[] {
   const scored = legalActions(cat, view)
     .filter((a) => a.player === me)
     .map((action) => ({ action, score: scoreAfter(cat, view, action, me, w) }));
   if (w.planFollow) planAhead(cat, view, me, w, scored);
-  if (w.passBonus) for (const x of scored) if (x.action.type === 'pass') x.score += w.passBonus;
+  const passExtra = (w.passBonus ?? 0) + (w.passReact ? w.passReact * reactValue(cat, view, me) : 0);
+  if (passExtra) for (const x of scored) if (x.action.type === 'pass') x.score += passExtra;
   return scored;
 }
 
@@ -388,7 +418,7 @@ function search(
   for (const r of results) {
     if (!r.n) continue;
     // パスのボーナスはロールアウトの結果にも足す
-    const bonus = (x: typeof r) => (x.c.action.type === 'pass' ? (w.passBonus ?? 0) : 0);
+    const bonus = (x: typeof r) => (x.c.action.type === 'pass' ? (w.passBonus ?? 0) + (w.passReact ? w.passReact * reactValue(cat, state, me) : 0) : 0);
     const avg = r.total / r.n + bonus(r);
     const bestAvg = best.n ? best.total / best.n + bonus(best) : -Infinity;
     // 同じくらいなら段階2の評価が高い方
