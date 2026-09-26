@@ -72,6 +72,11 @@ export interface AiWeights {
   inferHand?: number;
   /** つよいで相手の手札を推測するとき、中身の分からない手札はすべて相手の今の通常マナで払えるコストのカードとする（調整用） */
   oppHandAffordable?: boolean;
+  /**
+   * 選択肢の多さ1つの価値（調整用）。次のラウンドのマナで払える手札（名前の異なるもの）・
+   * 払える起動能力を持つユニット・遊撃を持つユニットの数（最大8）を選択肢として数える
+   */
+  options?: number;
 }
 
 /** 段階1の評価 */
@@ -320,6 +325,22 @@ export function evaluate(cat: Catalog, s: GameState, me: PlayerId, w: AiWeights 
     if (w.spellCount && p === me) v += w.spellCount * Math.min(12, st.spellsCast);
     const futureReserve = roundOver ? st.reserve : st.reserve + st.mana;
     v += st.reserve * w.reserve + (roundOver ? 0 : st.mana * (w.mana ?? w.reserve));
+    if (w.options) {
+      const budget = futureReserve + Math.min(10, st.maxMana + (roundOver ? 0 : 1));
+      const names = new Set<string>();
+      for (const c of st.hand) {
+        if (c.cardId === '?') {
+          if (3 <= budget) names.add(`?${c.uid}`);
+        } else if (r.cardCost(p, c) <= budget) names.add(c.cardId);
+      }
+      let n = names.size;
+      for (const u of st.board) {
+        if (!u) continue;
+        if (r.hasKeyword(u, 'mobile')) n++;
+        if (getCard(cat, u.cardId).abilities?.some((a) => a.kind === 'activated' && a.cost <= budget)) n++;
+      }
+      v += w.options * Math.min(8, n);
+    }
     st.leaders.forEach((l, idx) => {
       const def = getLeader(cat, l.id);
       v += l.grown ? w.growth : (Math.min(l.progress, def.growth.threshold) / def.growth.threshold) * w.growth * 0.5;
