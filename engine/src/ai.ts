@@ -92,6 +92,11 @@ export interface AiWeights {
   burstMana?: number;
   /** 決めに行く探索で、各段で残す手順の数（省略時 4） */
   burstWidth?: number;
+  /**
+   * 遅延を予約した手の評価のしかた（調整用）。1: 相手がパスして遅延効果が発動した後の盤面から、戦闘の結果まで見る。
+   * 2: 相手がパスして遅延効果が発動した後の盤面をそのまま見る（戦闘は見ない）。省略時は、予約した状態から戦闘の結果まで見る
+   */
+  delayFlow?: 1 | 2;
 }
 
 /** 段階1の評価 */
@@ -380,9 +385,30 @@ function scoreAfter(cat: Catalog, view: GameState, a: Action, me: PlayerId, w: A
 function settleScore(cat: Catalog, before: GameState, next: GameState, me: PlayerId, w: AiWeights): number {
   if (next.result) return evaluate(cat, next, me, w, true);
   if (next.pending) return evaluate(cat, before, me, w, false) + 0.5;
+  if (w.delayFlow) {
+    const v = delayFlowScore(cat, before, next, me, w);
+    if (v !== null) return v;
+  }
   const v0 = next.round > before.round ? evaluate(cat, next, me, w, true) : evaluate(cat, previewCombat(cat, next).state, me, w, false);
   if (!w.passRounds || !w.passBlend) return v0;
   return (1 - w.passBlend) * v0 + w.passBlend * passProjection(cat, next, me, w, before.round + w.passRounds);
+}
+
+/** 遅延を予約した手なら、相手がパスして遅延効果が発動した後の盤面で評価する（予約していなければ null） */
+function delayFlowScore(cat: Catalog, before: GameState, next: GameState, me: PlayerId, w: AiWeights): number | null {
+  const opp = opponent(me);
+  const had = new Set(before.delayed.map((d) => d.id));
+  if (!next.delayed.some((d) => d.owner === me && !had.has(d.id))) return null;
+  if (next.round !== before.round || next.phase !== 'action' || next.activePlayer !== opp) return null;
+  let s: GameState;
+  try {
+    s = applyAction(cat, next, { type: 'pass', player: opp });
+  } catch {
+    return null;
+  }
+  if (s.result || s.round > before.round) return evaluate(cat, s, me, w, true);
+  if (s.pending) return null;
+  return w.delayFlow === 2 ? evaluate(cat, s, me, w, false) : evaluate(cat, previewCombat(cat, s).state, me, w, false);
 }
 
 /** 双方がパスを続けたとして、round ラウンドになるまで（戦闘・ドロー・マナの回復を含めて）進めた評価 */
