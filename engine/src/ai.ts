@@ -77,6 +77,16 @@ export interface AiWeights {
    * 払える起動能力を持つユニット・遊撃を持つユニットの数（最大8）を選択肢として数える
    */
   options?: number;
+  /**
+   * 攻め・守りの役割で重みを切り替える強さ（調整用）。自分のデッキのほうが終盤に強ければ、ライフ・体力・手札・予備マナを重く、
+   * 攻撃力を軽く見る（守って時間を稼ぐ）。相手のほうが終盤に強ければ逆（先に攻める）
+   */
+  role?: number;
+  /** 決めに行く探索: 相手のライフが burstLife 以下のとき、相手がパスし続けるとして自分の手を burstDepth 手先まで読む（調整用） */
+  burstDepth?: number;
+  burstLife?: number;
+  /** 決めに行く探索で、各段で残す手順の数（省略時 4） */
+  burstWidth?: number;
 }
 
 /** 段階1の評価 */
@@ -147,6 +157,7 @@ export function chooseAction(cat: Catalog, state: GameState, player: PlayerId, o
   let w = opts.weights ?? (level === 'easy' ? STAGE1_WEIGHTS : STAGE2_WEIGHTS);
   // 「使ったスペルの枚数」で強くなるカードをどれだけ持っているか（自分のデッキの中身は知っている）
   if (w.spellCount) w = { ...w, spellCount: w.spellCount * spellScaling(cat, state.players[player]) };
+  if (w.role) w = roleWeights(cat, state, player, w);
   if (state.pending) {
     if (state.pending.player !== player) throw new Error('AI の番ではありません');
     // 山札の上から見て選ぶ: 一番コストの高いカードを取る
@@ -162,6 +173,7 @@ export function chooseAction(cat: Catalog, state: GameState, player: PlayerId, o
 
   const view = sanitize(cat, publicView(state, player, { remember: !!w.remember }));
   const scored = scoreAll(cat, view, player, w);
+  if (w.burstDepth && view.players[opponent(player)].life <= (w.burstLife ?? 10)) burstSearch(cat, view, player, w, scored);
   const baseline = scored.find((x) => x.action.type === 'pass')!.score;
 
   if (level === 'easy') {
@@ -176,6 +188,113 @@ export function chooseAction(cat: Catalog, state: GameState, player: PlayerId, o
 interface Scored {
   action: Action;
   score: number;
+}
+
+// ---------------------------------------------------------------- 攻め・守りの役割（ai.md 14章）
+
+/** カード1枚の「終盤の強さ」（コスト。試合中にコストが下がるカード・使ったスペルの枚数で強くなるカードは上乗せ） */
+function lateness(cat: Catalog, id: string): number {
+  const c = getCard(cat, id);
+  let v = c.cost;
+  if (c.abilities?.some((a) => a.kind === 'costReduction')) v += 3;
+  else if (scalesWithSpells(cat, id)) v += 2;
+  return v;
+}
+
+const poolLateness = new Map<string, number>();
+/** 勢力のカード全体の平均（相手のデッキの中身が分からないときの見込み） */
+function factionLateness(cat: Catalog, f: FactionId): number {
+  let v = poolLateness.get(f);
+  if (v === undefined) {
+    const ids = [...cat.cards.values()].filter((c) => c.faction === f && !c.token).map((c) => c.id);
+    poolLateness.set(f, (v = ids.reduce((a, id) => a + lateness(cat, id), 0) / ids.length));
+  }
+  return v;
+}
+
+/**
+ * 自分と相手のデッキのどちらが終盤に強いかで、重みを守り寄り・攻め寄りにする。
+ * 自分のデッキの中身は分かる。相手は公開されたカード（盤面・トラッシュ・除外・公開された手札）と、勢力のカード全体の平均から見積もる
+ */
+function roleWeights(cat: Catalog, state: GameState, me: PlayerId, w: AiWeights): AiWeights {
+  const mine = state.players[me];
+  const own = [...mine.deck, ...mine.hand, ...mine.trash, ...mine.exile].filter((c) => !c.generated).map((c) => c.cardId);
+  for (const u of mine.board) if (u && !u.isToken && !u.generated) own.push(u.cardId);
+  const myLate = own.reduce((a, id) => a + lateness(cat, id), 0) / Math.max(1, own.length);
+  const opp = state.players[opponent(me)];
+  const seen: string[] = [];
+  for (const u of opp.board) if (u && !u.isToken && !u.generated) seen.push(u.cardId);
+  for (const c of [...opp.trash, ...opp.exile, ...opp.hand.filter((x) => x.revealed)]) if (!c.generated) seen.push(c.cardId);
+  const facs = opp.leaders.map((l) => getLeader(cat, l.id).faction);
+  const prior = facs.reduce((a, f) => a + factionLateness(cat, f), 0) / facs.length;
+  const K = 10;
+  const oppLate = (seen.reduce((a, id) => a + lateness(cat, id), 0) + K * prior) / (seen.length + K);
+  // 終盤の強さの差 1.5 で最大
+  const r = Math.max(-1, Math.min(1, (myLate - oppLate) / 1.5)) * w.role!;
+  const k = (x: number) => Math.max(0.2, 1 + x);
+  return {
+    ...w,
+    role: 0,
+    life: w.life * k(r),
+    lowLife: w.lowLife * k(r),
+    health: w.health * k(0.5 * r),
+    attack: w.attack * k(-0.5 * r),
+    hand: w.hand * k(0.5 * r),
+    reserve: w.reserve * k(0.5 * r),
+  };
+}
+
+// ---------------------------------------------------------------- 決めに行く探索（ai.md 14章）
+
+/**
+ * 相手がパスし続けるとして、自分の手を burstDepth 手先まで読む（各段で評価の高い burstWidth 本の手順を残す）。
+ * 良い手順が見つかれば、その1手目の評価を手順の評価まで上げる
+ */
+function burstSearch(cat: Catalog, view: GameState, me: PlayerId, w: AiWeights, scored: Scored[]): void {
+  const opp = opponent(me);
+  const w1: AiWeights = { ...w, planFollow: 0, quickFollow: false, passRounds: 0, burstDepth: 0 };
+  const width = w.burstWidth ?? 4;
+  const best = new Map<number, number>();
+  type Node = { s: GameState; root: number; v: number };
+  // 1手目は、今の評価の上位から
+  let frontier: Node[] = scored
+    .map((x, i) => ({ x, i }))
+    .filter(({ x }) => x.action.type !== 'pass' && Number.isFinite(x.score))
+    .sort((a, b) => b.x.score - a.x.score)
+    .slice(0, width * 2)
+    .flatMap(({ x, i }) => {
+      const s = afterOppPass(cat, view, x.action, me, opp);
+      return s ? [{ s, root: i, v: x.score }] : [];
+    });
+  for (let d = 1; d < (w.burstDepth ?? 1) && frontier.length; d++) {
+    const next: Node[] = [];
+    for (const n of frontier) {
+      for (const b of legalActions(cat, n.s)) {
+        if (b.player !== me || b.type === 'pass') continue;
+        const v = scoreAfter(cat, n.s, b, me, w1);
+        if (!Number.isFinite(v)) continue;
+        if (v > (best.get(n.root) ?? -Infinity)) best.set(n.root, v);
+        if (v >= 1000) continue;
+        const s = afterOppPass(cat, n.s, b, me, opp);
+        if (s) next.push({ s, root: n.root, v });
+      }
+    }
+    frontier = next.sort((a, b) => b.v - a.v).slice(0, width);
+  }
+  for (const [i, v] of best) if (v > scored[i].score) scored[i].score = v;
+}
+
+/** 自分が a を打ち、相手がパスした後の状態（自分の手番が続かないなら null） */
+function afterOppPass(cat: Catalog, s0: GameState, a: Action, me: PlayerId, opp: PlayerId): GameState | null {
+  try {
+    let s = applyAction(cat, s0, a);
+    if (s.result || s.pending || s.phase !== 'action' || s.round !== s0.round) return null;
+    if (s.activePlayer === opp) s = applyAction(cat, s, { type: 'pass', player: opp });
+    if (s.result || s.pending || s.phase !== 'action' || s.round !== s0.round || s.activePlayer !== me) return null;
+    return s;
+  } catch {
+    return null;
+  }
 }
 
 function scoreAll(cat: Catalog, view: GameState, me: PlayerId, w: AiWeights): Scored[] {
@@ -513,7 +632,7 @@ function replyValue(cat: Catalog, world: GameState, a: Action, me: PlayerId, _op
   for (let n = 0; n < 30 * rounds && !s.result && s.round < end && !s.pending; n++) {
     if (now() > deadline) break;
     const p = s.activePlayer;
-    const { action } = chooseAction(cat, s, p, { level: 'normal', weights: { ...w, planFollow: 0, passRounds: 0 } });
+    const { action } = chooseAction(cat, s, p, { level: 'normal', weights: { ...w, planFollow: 0, passRounds: 0, burstDepth: 0 } });
     s = applyAction(cat, s, action);
   }
   if (s.result || s.round >= end) return evaluate(cat, s, me, w, true);
