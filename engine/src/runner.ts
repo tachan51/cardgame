@@ -715,6 +715,7 @@ export class Runner {
     const st = this.pl(p);
     inst.costMod = 0;
     inst.revealed = false;
+    inst.known = false;
     if (st.hand.length >= HAND_LIMIT) {
       st.trash.push(inst);
       this.log('handFull', { player: p, card: inst.cardId });
@@ -737,7 +738,8 @@ export class Runner {
   generate(p: PlayerId, cardId: string): void {
     const st = this.pl(p);
     if (st.hand.length >= HAND_LIMIT) return;
-    st.hand.push({ uid: this.newUid(), cardId, costMod: 0, revealed: false, generated: true });
+    // 生成したカードは、何を生成したかが相手にも分かる
+    st.hand.push({ uid: this.newUid(), cardId, costMod: 0, revealed: false, generated: true, known: true });
     this.log('generate', { player: p, card: cardId });
   }
 
@@ -953,7 +955,8 @@ export class Runner {
         for (const x of this.units(e.target, ctx)) {
           const inst = this.removeFromBoard(x);
           this.log('returnToHand', { uid: x.unit.uid, card: x.unit.cardId, player: x.p });
-          if (inst) this.addToHand(x.unit.owner, inst);
+          // 盤面から手札に戻したカードは、相手にも中身が分かる
+          if (inst && this.addToHand(x.unit.owner, inst)) inst.known = true;
         }
         return;
       case 'summon': {
