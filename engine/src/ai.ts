@@ -70,7 +70,8 @@ export const STAGE2_WEIGHTS: AiWeights = {
   ...STAGE1_WEIGHTS,
   hand: 0.7,
   handCost: 0.12,
-  reserve: 0.3,
+  // 0.3 → 0.6（ai.md 10章。同じデッキで比べて勝率 52.2%）
+  reserve: 0.6,
   leaderReady: 0.8,
   // 即効の後の自分の手まで読む（ai.md 9章。同じデッキで比べて勝率 51.7%）
   quickFollow: true,
