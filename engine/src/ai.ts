@@ -43,6 +43,8 @@ export interface AiWeights {
    * 持っている枚数（山札・手札。6枚で最大）に比例させる
    */
   spellCount?: number;
+  /** 手札が多いときの、5枚目以降の手札1枚の価値の倍率（調整用、省略時 1。持ちすぎを嫌う） */
+  handExtra?: number;
 }
 
 /** 段階1の評価 */
@@ -102,7 +104,9 @@ const now = () => (typeof performance !== 'undefined' ? performance.now() : Date
 /** player の手を選ぶ。player が判断する番でなければエラー */
 export function chooseAction(cat: Catalog, state: GameState, player: PlayerId, opts: AiOptions = {}): AiDecision {
   const level = opts.level ?? 'normal';
-  const w = opts.weights ?? (level === 'easy' ? STAGE1_WEIGHTS : STAGE2_WEIGHTS);
+  let w = opts.weights ?? (level === 'easy' ? STAGE1_WEIGHTS : STAGE2_WEIGHTS);
+  // 「使ったスペルの枚数」で強くなるカードをどれだけ持っているか（自分のデッキの中身は知っている）
+  if (w.spellCount) w = { ...w, spellCount: w.spellCount * spellScaling(cat, state.players[player]) };
   if (state.pending) {
     if (state.pending.player !== player) throw new Error('AI の番ではありません');
     // 山札の上から見て選ぶ: 一番コストの高いカードを取る
@@ -182,8 +186,12 @@ export function evaluate(cat: Catalog, s: GameState, me: PlayerId, w: AiWeights 
     const st = s.players[p];
     let v = st.life * w.life - Math.max(0, 8 - st.life) * w.lowLife;
     for (const u of st.board) if (u) v += unitValue(r, u, w);
-    for (const c of st.hand) v += w.hand + (w.handCost ? w.handCost * Math.min(6, cardCostGuess(cat, c)) : 0);
-    if (w.spellCount) v += w.spellCount * spellScaling(cat, st) * Math.min(12, st.spellsCast);
+    st.hand.forEach((c, i) => {
+      const hv = w.hand + (w.handCost ? w.handCost * Math.min(6, cardCostGuess(cat, c)) : 0);
+      v += i >= 4 && w.handExtra !== undefined ? hv * w.handExtra : hv;
+    });
+    // 使ったスペルの枚数の価値（自分だけ。chooseAction で自分のデッキの中身に合わせて spellCount を決めてある）
+    if (w.spellCount && p === me) v += w.spellCount * Math.min(12, st.spellsCast);
     const futureReserve = roundOver ? st.reserve : st.reserve + st.mana;
     v += futureReserve * w.reserve;
     st.leaders.forEach((l, idx) => {
