@@ -38,6 +38,11 @@ export interface AiWeights {
   growth: number;
   /** 次のラウンドに使えるリーダー能力1つの価値 */
   leaderReady: number;
+  /**
+   * 使ったスペル1枚の価値（「使ったスペルの枚数」で強くなるカードを持っているときだけ。調整用、省略時 0）。
+   * 持っている枚数（山札・手札。6枚で最大）に比例させる
+   */
+  spellCount?: number;
 }
 
 /** 段階1の評価 */
@@ -178,6 +183,7 @@ export function evaluate(cat: Catalog, s: GameState, me: PlayerId, w: AiWeights 
     let v = st.life * w.life - Math.max(0, 8 - st.life) * w.lowLife;
     for (const u of st.board) if (u) v += unitValue(r, u, w);
     for (const c of st.hand) v += w.hand + (w.handCost ? w.handCost * Math.min(6, cardCostGuess(cat, c)) : 0);
+    if (w.spellCount) v += w.spellCount * spellScaling(cat, st) * Math.min(12, st.spellsCast);
     const futureReserve = roundOver ? st.reserve : st.reserve + st.mana;
     v += futureReserve * w.reserve;
     st.leaders.forEach((l, idx) => {
@@ -193,6 +199,20 @@ export function evaluate(cat: Catalog, s: GameState, me: PlayerId, w: AiWeights 
     return v;
   };
   return side(me) - side(opp);
+}
+
+/** 「使ったスペルの枚数」で強くなるカードを、山札・手札にどれだけ持っているか（0〜1） */
+function spellScaling(cat: Catalog, st: GameState['players'][PlayerId]): number {
+  let n = 0;
+  for (const c of [...st.deck, ...st.hand]) if (c.cardId !== '?' && scalesWithSpells(cat, c.cardId)) n++;
+  return Math.min(1, n / 6);
+}
+
+const scalingCache = new Map<string, boolean>();
+function scalesWithSpells(cat: Catalog, id: string): boolean {
+  let v = scalingCache.get(id);
+  if (v === undefined) scalingCache.set(id, (v = JSON.stringify(getCard(cat, id)).includes('spellsCastThisGame')));
+  return v;
 }
 
 function cardCostGuess(cat: Catalog, c: CardInstance): number {

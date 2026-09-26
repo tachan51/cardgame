@@ -9,7 +9,7 @@ import { readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { cpus } from 'node:os';
 import { join } from 'node:path';
 import { Worker, isMainThread, parentPort, workerData } from 'node:worker_threads';
-import type { AiLevel } from '../src/ai';
+import { STAGE2_WEIGHTS, type AiLevel, type AiWeights } from '../src/ai';
 import { buildCatalog } from '../src/catalog';
 import { playGame, summarize, toMarkdown, type GameRecord } from '../src/sim';
 import type { DeckDef, FactionFile } from '../src/types';
@@ -41,9 +41,13 @@ interface Job {
   levels: { A: AiLevel; B: AiLevel };
 }
 
+// 環境変数 STATS_WEIGHTS（JSON）で、ふつう・つよいの評価の重みを一部差し替える（調整の実験用）
+const weights = process.env.STATS_WEIGHTS ? { ...STAGE2_WEIGHTS, ...(JSON.parse(process.env.STATS_WEIGHTS) as Partial<AiWeights>) } : undefined;
+
 function run(job: Job): GameRecord {
   const deck = (id: string) => decks.find((d) => d.id === id)!;
-  return playGame(cat, { A: deck(job.a), B: deck(job.b) }, { seed: job.seed, levels: job.levels, ai: { A: { timeLimitMs: 800 }, B: { timeLimitMs: 800 } } });
+  const ai = (l: AiLevel) => ({ timeLimitMs: 800, ...(weights && l !== 'easy' ? { weights } : {}) });
+  return playGame(cat, { A: deck(job.a), B: deck(job.b) }, { seed: job.seed, levels: job.levels, ai: { A: ai(job.levels.A), B: ai(job.levels.B) } });
 }
 
 if (!isMainThread) {
