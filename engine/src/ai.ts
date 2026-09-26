@@ -57,6 +57,8 @@ export interface AiWeights {
    */
   planFollow?: number;
   planTop?: number;
+  /** パスの評価に足すボーナス（調整用、省略時 0）。ほかの手は、パスよりこれ以上良いときだけ選ぶ */
+  passBonus?: number;
   /** 次のラウンドのマナ（最大マナ＋1と予備マナ）で使えない手札の価値の倍率（案 B の評価版。調整用、省略時 1） */
   unplayableHand?: number;
 }
@@ -165,6 +167,7 @@ function scoreAll(cat: Catalog, view: GameState, me: PlayerId, w: AiWeights): Sc
     .filter((a) => a.player === me)
     .map((action) => ({ action, score: scoreAfter(cat, view, action, me, w) }));
   if (w.planFollow) planAhead(cat, view, me, w, scored);
+  if (w.passBonus) for (const x of scored) if (x.action.type === 'pass') x.score += w.passBonus;
   return scored;
 }
 
@@ -384,8 +387,10 @@ function search(
   let best = results[results.length - 1];
   for (const r of results) {
     if (!r.n) continue;
-    const avg = r.total / r.n;
-    const bestAvg = best.n ? best.total / best.n : -Infinity;
+    // パスのボーナスはロールアウトの結果にも足す
+    const bonus = (x: typeof r) => (x.c.action.type === 'pass' ? (w.passBonus ?? 0) : 0);
+    const avg = r.total / r.n + bonus(r);
+    const bestAvg = best.n ? best.total / best.n + bonus(best) : -Infinity;
     // 同じくらいなら段階2の評価が高い方
     if (avg > bestAvg + 0.05 || (Math.abs(avg - bestAvg) <= 0.05 && r.c.score > best.c.score)) best = r;
   }
