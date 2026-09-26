@@ -45,6 +45,8 @@ export interface AiWeights {
   spellCount?: number;
   /** 手札が多いときの、5枚目以降の手札1枚の価値の倍率（調整用、省略時 1。持ちすぎを嫌う） */
   handExtra?: number;
+  /** 即効の手（追加の手番を得る手）は、その後の自分の手を1手読んで評価する（調整用、省略時 false） */
+  quickFollow?: boolean;
 }
 
 /** 段階1の評価 */
@@ -161,7 +163,18 @@ function scoreAfter(cat: Catalog, view: GameState, a: Action, me: PlayerId, w: A
   } catch {
     return -Infinity;
   }
-  return settleScore(cat, view, next, me, w);
+  const here = settleScore(cat, view, next, me, w);
+  // 即効で追加の手番を得たら、その手番に打つ手まで読む（打たずにパスする場合も含む）
+  if (w.quickFollow && a.type !== 'pass' && !next.result && !next.pending && next.phase === 'action' && next.round === view.round && next.activePlayer === me) {
+    const w1 = { ...w, quickFollow: false };
+    let best = here;
+    for (const b of legalActions(cat, next)) {
+      if (b.player !== me || b.type === 'pass') continue;
+      best = Math.max(best, scoreAfter(cat, next, b, me, w1));
+    }
+    return best;
+  }
+  return here;
 }
 
 function settleScore(cat: Catalog, before: GameState, next: GameState, me: PlayerId, w: AiWeights): number {
