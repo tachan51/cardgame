@@ -70,6 +70,8 @@ export interface AiWeights {
   remember?: boolean;
   /** つよいで相手の手札を推測するとき、相手がすでに使ったカードの残りの枚数を重く見る（重みの倍率。調整用） */
   inferHand?: number;
+  /** つよいで相手の手札を推測するとき、中身の分からない手札はすべて相手の今の通常マナで払えるコストのカードとする（調整用） */
+  oppHandAffordable?: boolean;
 }
 
 /** 段階1の評価 */
@@ -411,7 +413,17 @@ export function determinize(cat: Catalog, state: GameState, me: PlayerId, rng: R
   };
   const sample = (): CardInstance => ({ uid: w.nextUid++, cardId: pick(), costMod: 0, revealed: false, generated: false });
   const st = w.players[opp];
-  st.hand = st.hand.map((c) => (c.revealed || (wt.remember && c.known) ? c : sample()));
+  // 手札の推測: 今の通常マナで払えるカードだけから選ぶ（なければ一番安いカード）
+  let handPool: string[] | null = null;
+  if (wt.oppHandAffordable) {
+    const cost = (id: string) => getCard(cat, id).cost;
+    const ok = pool.filter((id) => cost(id) <= st.mana);
+    const min = Math.min(...pool.map(cost));
+    handPool = ok.length ? ok : pool.filter((id) => cost(id) === min);
+  }
+  const sampleHand = (): CardInstance =>
+    handPool ? { uid: w.nextUid++, cardId: handPool[Math.floor(nextRandom(rng) * handPool.length)], costMod: 0, revealed: false, generated: false } : sample();
+  st.hand = st.hand.map((c) => (c.revealed || (wt.remember && c.known) ? c : sampleHand()));
   st.deck = st.deck.map(() => sample());
   shuffleInPlace(rng, w.players[me].deck);
   w.rngState = Math.floor(nextRandom(rng) * 2 ** 31);
