@@ -14,7 +14,7 @@ import { handAdjust } from './hand-table';
 import { legalActions } from './legal';
 import { chooseMulligan, type MulliganPolicy } from './mulligan';
 import { nextRandom, shuffleInPlace, type RngHolder } from './rng';
-import { Runner } from './runner';
+import { canonical, Runner } from './runner';
 import type { Action, CardInstance, FactionId, GameState, PlayerId, Unit } from './types';
 import { previewCombat, publicView } from './view';
 
@@ -57,6 +57,12 @@ export interface AiWeights {
    */
   planFollow?: number;
   planTop?: number;
+  /**
+   * 読む候補（組み合わせを読む上位の手・つよいの候補）に入れる、同じ種類の手の数の上限（省略時は制限なし）。
+   * ユニットを出す手・召喚するスペルは置くマスが違っても、遊撃は移動先が違っても同じ種類。
+   * 起動能力・リーダー能力・スペルは対象が違えば別の種類
+   */
+  sameKind?: number;
   /** 次のラウンドのマナ（最大マナ＋1と予備マナ）で使えない手札の価値の倍率（案 B の評価版。調整用、省略時 1） */
   unplayableHand?: number;
 }
@@ -90,6 +96,8 @@ export const STAGE2_WEIGHTS: AiWeights = {
   // 組み合わせを読む（案 C。ai.md 12章。同じデッキで比べて勝率 54.0%）
   planFollow: 1,
   planTop: 6,
+  // 読む候補に同じ種類の手は1つまで（ユニットの置き場所違いなどで候補が埋まらないように）
+  sameKind: 1,
 };
 
 export const DEFAULT_WEIGHTS = STAGE2_WEIGHTS;
@@ -172,13 +180,53 @@ function scoreAll(cat: Catalog, view: GameState, me: PlayerId, w: AiWeights): Sc
  * 組み合わせを読む（案 C）: 良さそうな手の後、相手がパスしたとして、自分の次の手まで読む。
  * 次の手と合わせると良くなる手（遅延で動かしておいて、次の手番で当てるなど）の評価を上げる
  */
+/**
+ * 手の種類。ユニットを出す手・召喚するスペル（効果で盤面に出す）は置くマスを、遊撃は移動先を区別しない。
+ * 起動能力・リーダー能力・そのほかのスペルは対象まで区別する。手札のカードは番号ではなくカードの種類で見る
+ */
+export function kindKey(cat: Catalog, s: GameState, a: Action): string {
+  switch (a.type) {
+    case 'playUnit':
+    case 'castSpell': {
+      const id = s.players[a.player].hand.find((c) => c.uid === a.card)?.cardId ?? String(a.card);
+      const def = getCard(cat, id);
+      const summons = def.type === 'spell' && JSON.stringify([def.effects, def.enhance?.effects]).includes('"op":"summon');
+      // 置くマス（ユニットの配置先・召喚するスペルのマスの対象）は区別しない。そのほかの対象は区別する
+      const targets = Object.entries(a.targets ?? {})
+        .filter(([, vals]) => !(summons && vals.every((v) => v.kind === 'cell')))
+        .map(([k, vals]) => `${k}=${canonical(vals)}`)
+        .sort()
+        .join(';');
+      return `${a.type}:${id}:${a.enhance ? 1 : 0}:${targets}`;
+    }
+    case 'mobileMove':
+      return `mobile:${a.unit}`;
+    default:
+      return JSON.stringify(a);
+  }
+}
+
+/** 評価の高い順に並んだ候補から n 個選ぶ。perKind があれば、同じ種類の手は perKind 個まで */
+function limitKinds<T extends { action: Action }>(cat: Catalog, s: GameState, sorted: T[], n: number, perKind?: number): T[] {
+  if (!perKind) return sorted.slice(0, n);
+  const count = new Map<string, number>();
+  const out: T[] = [];
+  for (const x of sorted) {
+    const k = kindKey(cat, s, x.action);
+    const c = count.get(k) ?? 0;
+    if (c >= perKind) continue;
+    count.set(k, c + 1);
+    out.push(x);
+    if (out.length >= n) break;
+  }
+  return out;
+}
+
 function planAhead(cat: Catalog, view: GameState, me: PlayerId, w: AiWeights, scored: Scored[]): void {
   const opp = opponent(me);
   const w1: AiWeights = { ...w, planFollow: 0, quickFollow: false };
-  const top = scored
-    .filter((x) => x.action.type !== 'pass' && Number.isFinite(x.score) && x.score < 1000)
-    .sort((a, b) => b.score - a.score)
-    .slice(0, w.planTop ?? 6);
+  const sorted = scored.filter((x) => x.action.type !== 'pass' && Number.isFinite(x.score) && x.score < 1000).sort((a, b) => b.score - a.score);
+  const top = limitKinds(cat, view, sorted, w.planTop ?? 6, w.sameKind);
   for (const x of top) {
     let s: GameState;
     try {
@@ -363,7 +411,7 @@ function search(
   const opp = opponent(me);
   // 段階2の評価で良い順に候補を絞る（パスは必ず入れる）
   const ranked = scored.filter((x) => Number.isFinite(x.score)).sort((a, b) => b.score - a.score);
-  const cands = ranked.slice(0, K);
+  const cands = limitKinds(cat, state, ranked, K, w.sameKind);
   const pass = scored.find((x) => x.action.type === 'pass')!;
   if (!cands.includes(pass)) cands.push(pass);
   if (cands.length === 1) return { action: pass.action, score: pass.score, baseline };
