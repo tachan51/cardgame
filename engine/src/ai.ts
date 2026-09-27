@@ -95,6 +95,16 @@ export const STAGE2_WEIGHTS: AiWeights = {
 export const DEFAULT_WEIGHTS = STAGE2_WEIGHTS;
 
 export interface AiOptions {
+  /** つよいの探索のしかた（rollout: 候補ごとのロールアウト、mcts: モンテカルロ木探索。省略時 rollout） */
+  search?: 'rollout' | 'mcts';
+  /** MCTS の探索の強さ（UCB の定数。省略時 0.7） */
+  mctsC?: number;
+  /** MCTS で評価値を勝率に直すときの尺度（勝率 = 1 / (1 + e^(-評価値 / mctsScale))。省略時 10） */
+  mctsScale?: number;
+  /** MCTS で各局面から読む手の数（評価の上位。省略時 6） */
+  mctsTop?: number;
+  /** MCTS で読む深さ（手の数。省略時 8。ラウンドが終わったらそこまで） */
+  mctsDepth?: number;
   level?: AiLevel;
   /** 評価の重みを差し替える（調整用） */
   weights?: AiWeights;
@@ -152,6 +162,7 @@ export function chooseAction(cat: Catalog, state: GameState, player: PlayerId, o
     return pickBest(scored, baseline);
   }
   if (level === 'normal') return pickBest(scored, baseline);
+  if (opts.search === 'mcts') return mcts(cat, state, player, w, scored, baseline, rng, opts);
   return search(cat, state, player, w, scored, baseline, rng, opts);
 }
 
@@ -413,4 +424,135 @@ function replyValue(cat: Catalog, world: GameState, a: Action, me: PlayerId, _op
   }
   if (s.result || s.round >= end) return evaluate(cat, s, me, w, true);
   return evaluate(cat, previewCombat(cat, s).state, me, w, false);
+}
+
+// ---------------------------------------------------------------- MCTS（モンテカルロ木探索。ai.md 14章）
+
+interface MctsEdge {
+  action: Action;
+  node: MctsNode;
+  n: number;
+  /** 手を打った側から見た勝率の合計 */
+  w: number;
+}
+
+interface MctsNode {
+  /** この局面で手を打つプレイヤー */
+  player: PlayerId | null;
+  /** 読む手（評価の上位）。まだ作っていなければ null */
+  actions: Action[] | null;
+  edges: MctsEdge[];
+  n: number;
+}
+
+const newNode = (): MctsNode => ({ player: null, actions: null, edges: [], n: 0 });
+
+/**
+ * モンテカルロ木探索。毎回、相手の手札を推測した状況を1つ作り、木を下る（UCB で選ぶ）。
+ * 葉では、このまま戦闘になった結果（ラウンドが終わっていればその状態）を評価し、評価値をシグモイド関数で勝率に直して戻す。
+ * 各局面で読む手は、その局面の手番のプレイヤーから見た1手読みの評価の上位に絞る
+ */
+function mcts(
+  cat: Catalog,
+  state: GameState,
+  me: PlayerId,
+  w: AiWeights,
+  scored: Scored[],
+  baseline: number,
+  rng: RngHolder,
+  opts: AiOptions,
+): AiDecision {
+  const start = now();
+  const limit = opts.timeLimitMs ?? 1500;
+  const C = opts.mctsC ?? 0.7;
+  const scale = opts.mctsScale ?? 10;
+  const top = opts.mctsTop ?? 6;
+  const depthMax = opts.mctsDepth ?? 8;
+  const lethal = scored.find((x) => x.score >= 1000);
+  if (lethal) return { action: lethal.action, score: lethal.score, baseline };
+  // 読みの中の手は、組み合わせの読みなどを外した軽い評価で選ぶ
+  const wLite: AiWeights = { ...w, planFollow: 0, quickFollow: false };
+  const winProb = (s: GameState, p: PlayerId, roundOver: boolean): number => {
+    if (s.result) return s.result.winner === p ? 1 : s.result.winner === null ? 0.5 : 0;
+    const v = evaluate(cat, roundOver ? s : previewCombat(cat, s).state, p, w, roundOver);
+    return 1 / (1 + Math.exp(-v / scale));
+  };
+  const root = newNode();
+  root.player = me;
+  // 根の手は、すでに計算した評価の上位（パスは必ず入れる）
+  const ranked = scored.filter((x) => Number.isFinite(x.score)).sort((a, b) => b.score - a.score);
+  root.actions = ranked.slice(0, top).map((x) => x.action);
+  if (!root.actions.some((a) => a.type === 'pass')) root.actions.push({ type: 'pass', player: me });
+  if (root.actions.length === 1) return { action: root.actions[0], score: baseline, baseline };
+
+  let iterations = 0;
+  while (iterations < 20 || now() - start < limit) {
+    iterations++;
+    let s = determinize(cat, state, me, rng);
+    const round = s.round;
+    let node = root;
+    const path: { node: MctsNode; edge: MctsEdge }[] = [];
+    let value: number | null = null; // me から見た勝率
+    for (let depth = 0; ; depth++) {
+      if (s.result || s.pending || s.phase !== 'action' || s.round !== round || depth >= depthMax) {
+        value = winProb(s, me, s.round !== round);
+        break;
+      }
+      const p = s.activePlayer;
+      if (!node.actions) {
+        node.player = p;
+        const cands = scoreAll(cat, s, p, wLite)
+          .filter((x) => Number.isFinite(x.score))
+          .sort((a, b) => b.score - a.score);
+        node.actions = cands.slice(0, top).map((x) => x.action);
+        if (!node.actions.some((a) => a.type === 'pass')) node.actions.push({ type: 'pass', player: p });
+      }
+      // まだ試していない手があればそれを、なければ UCB が一番大きい手を選ぶ
+      let edge: MctsEdge | undefined;
+      const untried = node.actions.find((a) => !node.edges.some((e) => e.action === a));
+      if (untried) {
+        edge = { action: untried, node: newNode(), n: 0, w: 0 };
+        node.edges.push(edge);
+      } else {
+        let best = -Infinity;
+        for (const e of node.edges) {
+          const u = e.w / Math.max(1, e.n) + C * Math.sqrt(Math.log(node.n + 1) / Math.max(1, e.n));
+          if (u > best) {
+            best = u;
+            edge = e;
+          }
+        }
+      }
+      if (!edge) {
+        value = winProb(s, me, false);
+        break;
+      }
+      let next: GameState;
+      try {
+        next = applyAction(cat, s, edge.action);
+      } catch {
+        // この状況では打てない手（推測した手札が違う）: 今の局面の評価で戻す
+        value = winProb(s, me, false);
+        break;
+      }
+      path.push({ node, edge });
+      s = next;
+      const expanded = edge.n === 0;
+      node = edge.node;
+      if (expanded) {
+        value = winProb(s, me, s.round !== round);
+        break;
+      }
+    }
+    // 戻す（手を打った側から見た勝率を足す）
+    for (const { node: nd, edge } of path) {
+      nd.n++;
+      edge.n++;
+      edge.w += nd.player === me ? value! : 1 - value!;
+    }
+  }
+  // 一番多く読んだ手を選ぶ
+  let best = root.edges[0];
+  for (const e of root.edges) if (e.n > best.n || (e.n === best.n && e.w > best.w)) best = e;
+  return { action: best.action, score: best.n ? best.w / best.n : 0, baseline };
 }
