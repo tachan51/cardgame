@@ -63,6 +63,15 @@ export interface AiWeights {
    * 起動能力・リーダー能力・スペルは対象が違えば別の種類
    */
   sameKind?: number;
+  /** 自分の後列の空きマス1つあたりの減点（相手の分は加点。調整用、省略時 0） */
+  emptyBack?: number;
+  /**
+   * ほかのユニット・プレイヤー・手札に影響する能力（配置時以外）を持つユニットの unitBase（省略時 unitBase）。
+   * 常時効果・起動能力・配置時以外の誘発で、対象が自分自身だけでないもの（ジャミング技師・水の精霊など）
+   */
+  unitBaseActive?: number;
+  /** それ以外のユニットの unitBase（省略時 unitBase） */
+  unitBasePlain?: number;
   /** 相手の手札のうち、生成した・盤面から手札に戻したカードは中身を覚えておく（つよいの推測でもそのまま使う。省略時: つよいだけ覚える） */
   remember?: boolean;
   /** 次のラウンドのマナ（最大マナ＋1と予備マナ）で使えない手札の価値の倍率（案 B の評価版。調整用、省略時 1） */
@@ -303,6 +312,7 @@ export function evaluate(cat: Catalog, s: GameState, me: PlayerId, w: AiWeights 
     const st = s.players[p];
     let v = st.life * w.life - Math.max(0, 8 - st.life) * w.lowLife;
     for (const u of st.board) if (u) v += unitValue(r, u, w);
+    if (w.emptyBack) for (let i = 1; i < st.board.length; i += 2) if (!st.board[i]) v -= w.emptyBack;
     const oppFactions = w.handTable && p === me ? s.players[opp].leaders.map((l) => getLeader(cat, l.id).faction) : null;
     st.hand.forEach((c, i) => {
       let hv = w.hand + (w.handCost ? w.handCost * Math.min(6, cardCostGuess(cat, c)) : 0);
@@ -352,10 +362,37 @@ function cardCostGuess(cat: Catalog, c: CardInstance): number {
 
 function unitValue(r: Runner, u: Unit, w: AiWeights): number {
   const kws = r.keywords(u);
-  let v = w.unitBase + r.attack(u) * w.attack + Math.max(0, r.health(u)) * w.health;
+  const base = w.unitBaseActive === undefined && w.unitBasePlain === undefined
+    ? w.unitBase
+    : affectsOthers(r.cat, u.cardId) ? (w.unitBaseActive ?? w.unitBase) : (w.unitBasePlain ?? w.unitBase);
+  let v = base + r.attack(u) * w.attack + Math.max(0, r.health(u)) * w.health;
   if (u.shield) v += w.shield;
   for (const k of ['ranged', 'pierce', 'firstStrike', 'mobile'] as const) if (kws.has(k)) v += w.keyword;
   return v;
+}
+
+const affectsCache = new Map<string, boolean>();
+/** ユニットが、ほかのユニット・プレイヤー・手札に影響する能力（配置時以外）を持つか */
+export function affectsOthers(cat: Catalog, cardId: string): boolean {
+  let hit = affectsCache.get(cardId);
+  if (hit !== undefined) return hit;
+  const def = getCard(cat, cardId);
+  // 効果の対象が自分自身だけか（遅延などの中の効果も見る。対象のない効果は自分以外に働く）
+  const selfOnly = (effects: unknown[]): boolean =>
+    effects.every((e) => {
+      const x = e as { target?: unknown; effects?: unknown[] };
+      if (x.effects) return selfOnly(x.effects);
+      return x.target === 'self';
+    });
+  hit = (def.abilities ?? []).some((ab) => {
+    const a = ab as { kind: string; when?: string; effects?: unknown[]; modifiers?: { target?: unknown }[] };
+    if (a.kind === 'static') return (a.modifiers ?? []).some((m) => m.target !== 'self');
+    if (a.kind === 'activated') return !selfOnly(a.effects ?? []);
+    if (a.kind === 'trigger') return a.when !== 'onPlay' && !selfOnly(a.effects ?? []);
+    return false;
+  });
+  affectsCache.set(cardId, hit);
+  return hit;
 }
 
 /** 公開情報の状態を、エンジンで先を試せる形にする（隠れたカードを仮のカードに置き換える） */
