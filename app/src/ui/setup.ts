@@ -5,7 +5,7 @@ import { allDecks, findDeck, isPlayable } from '../decks';
 import { LEVEL_LABEL, type Game } from '../game';
 import { esc } from '../text';
 
-const choice = { human: '', ai: '', first: 'random' as 'A' | 'B' | 'random', level: 'normal' as AiLevel };
+const choice = { human: '', ai: '', first: 'random' as 'A' | 'B' | 'random', level: 'normal' as AiLevel, levelA: 'normal' as AiLevel };
 
 /** 準備画面で最初に選んでおくデッキ（デッキ構築から戻ったときなど） */
 export function selectHumanDeck(id: string): void {
@@ -68,6 +68,16 @@ export function renderSetup(root: HTMLElement, game: Game, hasSave: boolean, ope
       ${playable ? '' : '<span class="error small">条件を満たしていないデッキでは対戦できません（デッキ構築で直してください）</span>'}
       ${hasSave ? '<button data-resume>前回の続きから</button>' : ''}
     </div>
+    <div class="row spectate-row">
+      <b>AI 同士の対戦を観戦する</b>
+      <span class="muted small">「あなたのデッキ」を A、「AI のデッキ」を B として、AI 同士で対戦させます</span>
+      <label>A の強さ
+        <select data-sel="levelA">
+          ${(['easy', 'normal', 'hard'] as AiLevel[]).map((l) => `<option value="${l}" ${choice.levelA === l ? 'selected' : ''}>${LEVEL_LABEL[l]}</option>`).join('')}
+        </select></label>
+      <span class="small">B の強さは「AI の強さ」</span>
+      <button data-watch ${playable ? '' : 'disabled'}>観戦を始める</button>
+    </div>
     <details class="rules"><summary>遊び方（かんたんな説明）</summary>
       <ul>
         <li>毎ラウンド、交互に1つずつ行動します（カードを使う・ユニットを遊撃で動かす・リーダー能力を使う・パスなど）。双方が続けてパスすると戦闘です。</li>
@@ -82,9 +92,10 @@ export function renderSetup(root: HTMLElement, game: Game, hasSave: boolean, ope
   </div>`;
   root.querySelectorAll<HTMLSelectElement>('[data-sel]').forEach((sel) =>
     sel.addEventListener('change', () => {
-      const k = sel.dataset.sel as 'human' | 'ai' | 'first' | 'level';
+      const k = sel.dataset.sel as 'human' | 'ai' | 'first' | 'level' | 'levelA';
       if (k === 'first') choice.first = sel.value as 'A' | 'B' | 'random';
       else if (k === 'level') choice.level = sel.value as AiLevel;
+      else if (k === 'levelA') choice.levelA = sel.value as AiLevel;
       else choice[k] = sel.value;
       renderSetup(root, game, hasSave, openBuilder);
     }),
@@ -93,6 +104,11 @@ export function renderSetup(root: HTMLElement, game: Game, hasSave: boolean, ope
     const h = findDeck(choice.human);
     const a = findDeck(choice.ai);
     if (h && a && isPlayable(h) && isPlayable(a)) game.start(h, a, choice.first, choice.level);
+  });
+  root.querySelector('[data-watch]')?.addEventListener('click', () => {
+    const h = findDeck(choice.human);
+    const a = findDeck(choice.ai);
+    if (h && a && isPlayable(h) && isPlayable(a)) game.start(h, a, choice.first, choice.level, { spectate: true, levelA: choice.levelA });
   });
   root.querySelector('[data-resume]')?.addEventListener('click', () => game.resume());
   root.querySelector('[data-builder="new"]')?.addEventListener('click', () => openBuilder());

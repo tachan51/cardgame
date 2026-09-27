@@ -13,9 +13,9 @@ import {
 } from '../../../engine/src';
 import { canonical } from '../../../engine/src/runner';
 import { cat } from '../data';
-import { LEVEL_LABEL, type Game } from '../game';
+import { LEVEL_LABEL, SPEEDS, type Game } from '../game';
 import { allLegal, nextStep, type Selection, type Source, type Step } from '../select';
-import { AI, cardName, cardTypeLabel, esc, HUMAN, KEYWORD_LABEL, leaderLabel, logText, richText, targetText, who } from '../text';
+import { AI, cardName, cardTypeLabel, esc, HUMAN, KEYWORD_LABEL, leaderLabel, logText, richText, setPlayerNames, targetText, who } from '../text';
 
 interface UiState {
   sel: Selection | null;
@@ -39,6 +39,8 @@ export function resetBattleUi(): void {
 export function renderBattle(root: HTMLElement, game: Game, onQuit: () => void, onRematch: () => void): void {
   const m = game.match!;
   const s = m.state;
+  const spectate = !!m.spectate;
+  setPlayerNames(spectate);
   const r = new Runner(cat, s);
   const humanTurn = game.humanToAct() && !game.aiThinking;
   const all = humanTurn && s.phase === 'action' && !s.pending ? allLegal(s) : [];
@@ -51,22 +53,24 @@ export function renderBattle(root: HTMLElement, game: Game, onQuit: () => void, 
   root.innerHTML = `
   <div class="battle">
     <header class="topbar">
-      <div class="title">第${s.round}ラウンド <span class="muted">先手: ${who(s.firstPlayer)}　AI: ${LEVEL_LABEL[m.level ?? 'normal']}</span></div>
+      <div class="title">第${s.round}ラウンド <span class="muted">先手: ${who(s.firstPlayer)}　${
+        spectate ? `観戦 A: ${LEVEL_LABEL[game.levelOf('A')]} ／ B: ${LEVEL_LABEL[game.levelOf('B')]}` : `AI: ${LEVEL_LABEL[m.level ?? 'normal']}`
+      }</span></div>
       <div class="status ${humanTurn ? 'mine' : ''}">${statusText(game, s)}</div>
       <div class="actions">
-        <button data-btn="pass" class="primary" ${humanTurn && s.phase === 'action' && !s.pending ? '' : 'disabled'}>パス${s.passStreak === 1 && s.activePlayer === HUMAN ? '（戦闘へ）' : ''}</button>
+        ${spectate ? spectateControls(game) : `<button data-btn="pass" class="primary" ${humanTurn && s.phase === 'action' && !s.pending ? '' : 'disabled'}>パス${s.passStreak === 1 && s.activePlayer === HUMAN ? '（戦闘へ）' : ''}</button>`}
         <button data-btn="quit">試合をやめる</button>
       </div>
     </header>
     <div class="layout">
       <aside class="side">
-        ${playerPanel(s, r, AI, hl, preview, marks, all)}
-        ${playerPanel(s, r, HUMAN, hl, preview, marks, all)}
+        ${playerPanel(s, r, AI, hl, preview, marks, all, spectate ? m.decks.ai.name : null)}
+        ${playerPanel(s, r, HUMAN, hl, preview, marks, all, spectate ? m.decks.human.name : null)}
       </aside>
       <main class="center">
         ${boardHtml(s, r, hl, preview, marks)}
         ${promptHtml(s, step, game)}
-        <div class="hand-row">${handHtml(s, r, hl, all)}</div>
+        ${spectate ? '' : `<div class="hand-row">${handHtml(s, r, hl, all)}</div>`}
       </main>
       <aside class="side right">
         <div class="detail" id="detail"><div class="muted">カードにマウスを乗せると詳しく表示します</div></div>
@@ -76,10 +80,10 @@ export function renderBattle(root: HTMLElement, game: Game, onQuit: () => void, 
         <div class="log" id="log">${logHtml(s, m.logMark)}</div>
       </aside>
     </div>
-    ${s.phase === 'mulligan' ? mulliganHtml(s) : ''}
+    ${s.phase === 'mulligan' && !spectate ? mulliganHtml(s) : ''}
     ${s.pending?.player === HUMAN ? chooseHtml(s) : ''}
     ${ui.menuUnit !== null && humanTurn ? unitMenuHtml(r, ui.menuUnit, all) : ''}
-    ${s.result ? resultHtml(s) : ''}
+    ${s.result ? resultHtml(s, spectate) : ''}
   </div>`;
 
   const log = root.querySelector<HTMLElement>('#log');
@@ -87,6 +91,15 @@ export function renderBattle(root: HTMLElement, game: Game, onQuit: () => void, 
 
   root.onclick = (e) => onClick(e, root, game, all, onQuit, onRematch);
   root.onmouseover = (e) => onHover(e, root, s, r);
+  root.querySelector<HTMLSelectElement>('[data-speed]')?.addEventListener('change', (e) => game.setSpeed(Number((e.target as HTMLSelectElement).value)));
+}
+
+/** 観戦の操作（一時停止・1手ずつ進める・速さ） */
+function spectateControls(game: Game): string {
+  const speeds = SPEEDS.map((x) => `<option value="${x.ms}" ${x.ms === game.speedMs ? 'selected' : ''}>${x.label}</option>`).join('');
+  return `<button data-btn="pause" class="primary">${game.paused ? '▶ 再開' : '⏸ 一時停止'}</button>
+    <button data-btn="step" ${game.paused ? '' : 'disabled'}>1手進める</button>
+    <label class="small">速さ <select data-speed>${speeds}</select></label>`;
 }
 
 function nextStepOk(all: Action[], sel: Selection, s: GameState): boolean {
@@ -95,6 +108,11 @@ function nextStepOk(all: Action[], sel: Selection, s: GameState): boolean {
 
 function statusText(game: Game, s: GameState): string {
   if (s.result) return '試合終了';
+  if (game.match?.spectate) {
+    if (s.phase === 'mulligan') return 'マリガン中…';
+    const p = s.pending ? s.pending.player : s.activePlayer;
+    return `${who(p)}の手番${game.aiThinking ? '（考えています…）' : ''}${game.paused ? '　⏸ 一時停止中' : ''}`;
+  }
   if (s.phase === 'mulligan') return game.humanToAct() ? 'マリガン: 引き直すカードを選んでください' : 'AI がマリガン中…';
   if (s.pending) return s.pending.player === HUMAN ? 'カードを1枚選んでください' : 'AI が選んでいます…';
   if (game.aiThinking || s.activePlayer === AI) return 'AI が考えています…';
@@ -184,8 +202,8 @@ function previewHtml(s: GameState, pv: PreviewInfo): string {
   const la = lost(HUMAN);
   const lb = lost(AI);
   return `<div class="box preview"><h3>このまま戦闘になったら</h3>${line(HUMAN)}${line(AI)}
-    ${la.length ? `<div class="muted">あなたの破壊: ${esc(la.join('、'))}</div>` : ''}
-    ${lb.length ? `<div class="muted">AI の破壊: ${esc(lb.join('、'))}</div>` : ''}
+    ${la.length ? `<div class="muted">${who(HUMAN)}の破壊: ${esc(la.join('、'))}</div>` : ''}
+    ${lb.length ? `<div class="muted">${who(AI)}の破壊: ${esc(lb.join('、'))}</div>` : ''}
     ${s.delayed.length ? '<div class="muted small">予約中の遅延効果が発動した後の予測です</div>' : ''}</div>`;
 }
 
@@ -257,7 +275,7 @@ function unitIndex(s: GameState) {
 
 // ---------------------------------------------------------------- プレイヤー・リーダー
 
-function playerPanel(s: GameState, r: Runner, p: PlayerId, hl: Highlights, pv: PreviewInfo | null, marks: Marks, all: Action[]): string {
+function playerPanel(s: GameState, r: Runner, p: PlayerId, hl: Highlights, pv: PreviewInfo | null, marks: Marks, all: Action[], deckName: string | null): string {
   const st = s.players[p];
   const mark = marks.players.get(p);
   const lifeAfter = pv && pv.life[p] !== st.life ? `<span class="after">→${pv.life[p]}</span>` : '';
@@ -270,18 +288,31 @@ function playerPanel(s: GameState, r: Runner, p: PlayerId, hl: Highlights, pv: P
         <div class="lname">${esc(leaderLabel(l.id))}${l.grown ? ' <span class="tag">成長</span>' : ''}</div>
         <div class="small">${l.grown ? '成長済み' : `成長まで ${Math.min(l.progress, def.growth.threshold)}/${def.growth.threshold}`}</div>
         <div class="small">${ab ? `${esc(ab.name)}（${r.leaderCost(p, idx)}）${l.usedThisRound ? ' <span class="muted">使用済み</span>' : ''}` : '<span class="muted">能力なし（パッシブのみ）</span>'}</div>
-        ${p === HUMAN && ab ? `<button data-leader-use="${idx}" ${usable ? '' : 'disabled'}>使う</button>` : ''}
+        ${p === HUMAN && ab && !deckName ? `<button data-leader-use="${idx}" ${usable ? '' : 'disabled'}>使う</button>` : ''}
       </div>`;
     })
     .join('');
   return `<section class="player ${p === HUMAN ? 'me' : 'ai'}">
-    <h2>${who(p)}${s.activePlayer === p && s.phase === 'action' && !s.result ? ' <span class="turn">手番</span>' : ''}</h2>
+    <h2>${who(p)}${deckName ? ` <span class="small muted">${esc(deckName.replace(/^見本: /, ''))}</span>` : ''}${s.activePlayer === p && s.phase === 'action' && !s.result ? ' <span class="turn">手番</span>' : ''}</h2>
     <div class="life ${hl.players.has(p) ? 'hl' : ''}" data-player="${p}">❤ ${st.life}${lifeAfter}${mark ? `<span class="dmark" data-card-id="${marks.cards.get(`player:${p}`)}" title="${esc(mark.join('、'))}">⏳</span>` : ''}</div>
     <div class="mana"><span class="normal" title="通常マナ（カードに使う）">◆ ${st.mana}/${st.maxMana}</span> <span class="reserve" title="予備マナ（リーダー能力・強化・起動に使う）">◇ ${st.reserve}</span></div>
     <div class="zones small">手札 ${st.hand.length}　山札 ${st.deck.length}　トラッシュ ${st.trash.length}${st.exile.length ? `　除外 ${st.exile.length}` : ''}　使ったスペル ${st.spellsCast}</div>
-    ${p === AI && st.hand.some((c) => c.revealed) ? `<div class="small">公開: ${st.hand.filter((c) => c.revealed).map((c) => `<span data-card-id="${c.cardId}" class="link">${esc(cardName(c.cardId))}</span>`).join('、')}</div>` : ''}
+    ${deckName ? spectateHand(s, r, p) : ''}
+    ${p === AI && !deckName && st.hand.some((c) => c.revealed) ? `<div class="small">公開: ${st.hand.filter((c) => c.revealed).map((c) => `<span data-card-id="${c.cardId}" class="link">${esc(cardName(c.cardId))}</span>`).join('、')}</div>` : ''}
     <div class="leaders">${leaders}</div>
   </section>`;
+}
+
+/** 観戦のときの手札（両者とも中身を見せる） */
+function spectateHand(s: GameState, r: Runner, p: PlayerId): string {
+  const hand = s.players[p].hand;
+  if (!hand.length) return '<div class="small muted">手札なし</div>';
+  return `<div class="spec-hand">${hand
+    .map((c) => {
+      const cost = r.cardCost(p, c);
+      return `<span class="spec-card fac-${getCard(cat, c.cardId).faction}" data-card-id="${c.cardId}"><b>${cost}</b> ${esc(cardName(c.cardId))}${c.revealed ? '（公開）' : ''}</span>`;
+    })
+    .join('')}</div>`;
 }
 
 // ---------------------------------------------------------------- 盤面
@@ -493,13 +524,21 @@ function mulliganHtml(s: GameState): string {
     <p class="muted small">先手: ${who(s.firstPlayer)}</p></div></div>`;
 }
 
-function resultHtml(s: GameState): string {
+function resultHtml(s: GameState, spectate: boolean): string {
   const res = s.result!;
-  const title = res.winner === HUMAN ? '🎉 あなたの勝ち！' : res.winner === AI ? 'AI の勝ち…' : '引き分け';
+  const title = spectate
+    ? res.winner
+      ? `${who(res.winner)}の勝ち`
+      : '引き分け'
+    : res.winner === HUMAN
+      ? '🎉 あなたの勝ち！'
+      : res.winner === AI
+        ? 'AI の勝ち…'
+        : '引き分け';
   const reason = res.reason === 'deckOut' ? '山札切れ' : 'ライフ';
   return `<div class="overlay"><div class="dialog"><h2>${title}</h2>
-    <p>${res.winner ? `決め手: ${reason}` : ''}　第${s.round}ラウンドで決着　ライフ あなた ${s.players[HUMAN].life} / AI ${s.players[AI].life}</p>
-    <div class="row"><button class="primary" data-btn="rematch">同じデッキでもう一度</button><button data-btn="quit">デッキを選び直す</button><button data-btn="close-result">盤面を見る</button></div></div></div>`;
+    <p>${res.winner ? `決め手: ${reason}` : ''}　第${s.round}ラウンドで決着　ライフ ${who(HUMAN)} ${s.players[HUMAN].life} / ${who(AI)} ${s.players[AI].life}</p>
+    <div class="row"><button class="primary" data-btn="rematch">${spectate ? 'もう一度観戦する' : '同じデッキでもう一度'}</button><button data-btn="quit">デッキを選び直す</button><button data-btn="close-result">盤面を見る</button></div></div></div>`;
 }
 
 // ---------------------------------------------------------------- ログ
@@ -576,6 +615,11 @@ function onClick(e: MouseEvent, root: HTMLElement, game: Game, all: Action[], on
   if (btn === 'rematch') return onRematch();
   if (btn === 'close-result') {
     root.querySelector('.overlay')?.remove();
+    return;
+  }
+  if (m.spectate) {
+    if (btn === 'pause') game.togglePause();
+    if (btn === 'step') game.step();
     return;
   }
   if (!game.humanToAct() || game.aiThinking) return;

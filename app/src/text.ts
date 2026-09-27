@@ -15,8 +15,16 @@ export const KEYWORD_LABEL: Record<Keyword, string> = {
   quick: '即効',
 };
 
+/** 画面に出すプレイヤーの呼び名（観戦のときは A・B） */
+const NAMES: Record<PlayerId, string> = { A: 'あなた', B: 'AI' };
+
+export function setPlayerNames(spectate: boolean): void {
+  NAMES.A = spectate ? 'A' : 'あなた';
+  NAMES.B = spectate ? 'B' : 'AI';
+}
+
 export function who(p: unknown): string {
-  return p === HUMAN ? 'あなた' : p === AI ? 'AI' : '?';
+  return p === 'A' || p === 'B' ? NAMES[p] : '?';
 }
 
 export function cardName(id: unknown): string {

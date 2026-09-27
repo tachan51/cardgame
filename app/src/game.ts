@@ -1,5 +1,6 @@
-// 試合の進行: 人間（A）の操作を適用し、AI（B）の番なら少し待ってから AI の手を1手ずつ適用する
-import { applyAction, chooseAction, newGame, playerToAct, type Action, type AiLevel, type DeckDef, type GameState } from '../../engine/src';
+// 試合の進行: 人間（A）の操作を適用し、AI（B）の番なら少し待ってから AI の手を1手ずつ適用する。
+// 観戦（AI 同士の対戦）では A も AI が操作し、一時停止・1手ずつ進める・速さの変更ができる
+import { applyAction, chooseAction, newGame, playerToAct, type Action, type AiLevel, type DeckDef, type GameState, type PlayerId } from '../../engine/src';
 import { cat } from './data';
 import { AI, HUMAN } from './text';
 
@@ -13,9 +14,21 @@ export interface Match {
   lastAi: Action | null;
   /** 直前の人間またはAIのアクションより前のログの長さ（新しい出来事を目立たせる） */
   logMark: number;
-  /** AI の強さ */
+  /** AI の強さ（B） */
   level: AiLevel;
+  /** AI 同士の対戦を観戦する（A も AI が操作する） */
+  spectate?: boolean;
+  /** 観戦のときの A の AI の強さ */
+  levelA?: AiLevel;
 }
+
+/** 観戦の速さ（1手ごとの待ち時間） */
+export const SPEEDS: { label: string; ms: number }[] = [
+  { label: 'ゆっくり', ms: 2000 },
+  { label: 'ふつう', ms: 800 },
+  { label: '速い', ms: 250 },
+  { label: 'とても速い', ms: 0 },
+];
 
 export const LEVEL_LABEL: Record<AiLevel, string> = { easy: 'やさしい', normal: 'ふつう', hard: 'つよい' };
 
@@ -29,8 +42,12 @@ export class Game {
   private thinking = false;
   private worker: Worker | null = null;
   private requestId = 0;
-  private waiting: { id: number; match: Match; state: GameState } | null = null;
+  private waiting: { id: number; match: Match; state: GameState; player: PlayerId } | null = null;
   error: string | null = null;
+  /** 観戦の1手ごとの待ち時間 */
+  speedMs = AI_DELAY_MS;
+  /** 観戦を一時停止しているか */
+  paused = false;
 
   subscribe(fn: Listener): void {
     this.listeners.push(fn);
@@ -40,12 +57,53 @@ export class Game {
     for (const fn of this.listeners) fn();
   }
 
-  start(human: DeckDef, ai: DeckDef, first: 'A' | 'B' | 'random', level: AiLevel = 'normal'): void {
+  start(human: DeckDef, ai: DeckDef, first: 'A' | 'B' | 'random', level: AiLevel = 'normal', opts: { spectate?: boolean; levelA?: AiLevel } = {}): void {
     this.stopTimer();
+    this.paused = false;
     const seed = Math.floor(Math.random() * 2 ** 31);
     const state = newGame(cat, { A: human, B: ai }, { seed, firstPlayer: first === 'random' ? undefined : first });
-    this.match = { state, decks: { human, ai }, lastAi: null, logMark: 0, level };
+    this.match = { state, decks: { human, ai }, lastAi: null, logMark: 0, level, spectate: !!opts.spectate, levelA: opts.levelA ?? level };
     this.afterChange();
+  }
+
+  /** AI が操作するプレイヤー */
+  private aiPlayers(m: Match): PlayerId[] {
+    return m.spectate ? ['A', 'B'] : [AI];
+  }
+
+  /** そのプレイヤーの AI の強さ */
+  levelOf(p: PlayerId): AiLevel {
+    const m = this.match!;
+    return p === 'A' && m.spectate ? (m.levelA ?? m.level ?? 'normal') : (m.level ?? 'normal');
+  }
+
+  /** 今判断する AI のプレイヤー（いなければ null） */
+  private aiToAct(m: Match): PlayerId | null {
+    const ai = this.aiPlayers(m);
+    return playerToAct(m.state).find((p) => ai.includes(p)) ?? null;
+  }
+
+  // ---------------------------------------------------------------- 観戦の操作
+
+  setSpeed(ms: number): void {
+    this.speedMs = ms;
+    this.emit();
+  }
+
+  togglePause(): void {
+    this.paused = !this.paused;
+    if (this.paused && this.timer !== null) {
+      window.clearTimeout(this.timer);
+      this.timer = null;
+    }
+    this.emit();
+    this.scheduleAi();
+  }
+
+  /** 一時停止中に1手だけ進める */
+  step(): void {
+    if (!this.paused || this.thinking || !this.match) return;
+    this.aiStep();
   }
 
   quit(): void {
@@ -80,7 +138,7 @@ export class Game {
   }
 
   humanToAct(): boolean {
-    return !!this.match && playerToAct(this.match.state).includes(HUMAN);
+    return !!this.match && !this.match.spectate && playerToAct(this.match.state).includes(HUMAN);
   }
 
   private afterChange(): void {
@@ -92,9 +150,11 @@ export class Game {
   private scheduleAi(): void {
     const m = this.match;
     if (!m || this.timer !== null || this.thinking || m.state.result) return;
-    if (!playerToAct(m.state).includes(AI)) return;
+    if (!this.aiToAct(m)) return;
+    // 観戦の一時停止中は、マリガン以外は進めない
+    if (m.spectate && this.paused && m.state.phase !== 'mulligan') return;
     // マリガンは人間と同時に行うので待たない。行動フェイズは1手ずつ間をあけて見せる（2-4）
-    const wait = m.state.phase === 'mulligan' ? 0 : AI_DELAY_MS;
+    const wait = m.state.phase === 'mulligan' ? 0 : m.spectate ? this.speedMs : AI_DELAY_MS;
     this.timer = window.setTimeout(() => {
       this.timer = null;
       this.aiStep();
@@ -104,15 +164,17 @@ export class Game {
 
   private aiStep(): void {
     const m = this.match;
-    if (!m || m.state.result || !playerToAct(m.state).includes(AI)) return;
+    const p = m && !m.state.result ? this.aiToAct(m) : null;
+    if (!m || !p) return;
+    const level = this.levelOf(p);
     const worker = this.getWorker();
-    if (!worker) return this.applyAi(m, chooseAction(cat, m.state, AI, { level: m.level ?? 'normal' }).action);
+    if (!worker) return this.applyAi(m, chooseAction(cat, m.state, p, { level }).action);
     // 思考はワーカーで行い、返事が来たら適用する（その間に試合が変わっていたら捨てる）
     const id = ++this.requestId;
-    this.waiting = { id, match: m, state: m.state };
+    this.waiting = { id, match: m, state: m.state, player: p };
     this.thinking = true;
     this.emit();
-    worker.postMessage({ id, state: m.state, player: AI, level: m.level ?? 'normal' });
+    worker.postMessage({ id, state: m.state, player: p, level });
   }
 
   private onWorker(data: { id: number; action?: Action; error?: string }): void {
@@ -123,7 +185,7 @@ export class Game {
     const m = w.match;
     if (this.match !== m || m.state !== w.state) return this.emit();
     // ワーカーで失敗したら、この場で考える
-    this.applyAi(m, data.action ?? chooseAction(cat, m.state, AI, { level: m.level ?? 'normal' }).action);
+    this.applyAi(m, data.action ?? chooseAction(cat, m.state, w.player, { level: this.levelOf(w.player) }).action);
   }
 
   private applyAi(m: Match, action: Action): void {
