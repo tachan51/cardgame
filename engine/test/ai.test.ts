@@ -1,12 +1,13 @@
 // ルールベースの AI（2-5）
 import { describe, expect, it } from 'vitest';
-import { chooseAction, kindKey } from '../src/ai';
+import { chooseAction, determinize, kindKey } from '../src/ai';
 import { applyAction, newGame } from '../src/engine';
 import { legalActions } from '../src/legal';
 import { chooseMulligan, keepValue, type MulliganTable } from '../src/mulligan';
 import { randomInt } from '../src/rng';
 import { buildState } from '../src/scenario';
 import type { GameState, PlayerId } from '../src/types';
+import { publicView } from '../src/view';
 import { cat, decks } from './helpers';
 
 type Policy = 'ai' | 'random';
@@ -145,5 +146,33 @@ describe('読む候補の手の種類（sameKind）', () => {
     // ジャミング技師の起動は対象（敵ユニット2体）ごとに別の種類
     const jammer = s.players.A.board[2]!.uid;
     expect(keys((a) => a.type === 'activate' && a.unit === jammer).size).toBe(2);
+  });
+});
+
+describe('相手の手札を覚える（remember）', () => {
+  const ids = (s: GameState, p: PlayerId) => s.players[p].hand.map((c) => c.cardId).sort();
+
+  it('生成したカードは、相手が覚えておける', () => {
+    let s = buildState(cat, { A: { mana: 10, hand: ['AC-03', 'KN-03'] } });
+    const play = legalActions(cat, s).find((a) => a.type === 'playUnit' && s.players.A.hand.find((c) => c.uid === a.card)?.cardId === 'AC-03')!;
+    s = applyAction(cat, s, play);
+    expect(ids(s, 'A')).toEqual(['AC-01', 'KN-03']);
+    // 覚えないと、生成した魔力の矢も隠れている
+    expect(ids(publicView(s, 'B'), 'A')).not.toContain('AC-01');
+    expect(ids(publicView(s, 'B', { remember: true }), 'A')).toContain('AC-01');
+    expect(ids(publicView(s, 'B', { remember: true }), 'A')).not.toContain('KN-03');
+    // つよいの推測でも、覚えたカードはそのまま
+    expect(ids(determinize(cat, s, 'B', { rngState: 1 }, true), 'A')).toContain('AC-01');
+  });
+
+  it('盤面から手札に戻したカードは、相手が覚えておける', () => {
+    let s = buildState(cat, { A: { mana: 10, hand: ['CY-02'], board: { '1前': 'KN-03' } } });
+    const cast = legalActions(cat, s).find((a) => a.type === 'castSpell')!;
+    s = applyAction(cat, s, cast);
+    for (let n = 0; n < 4 && !s.players.A.hand.some((c) => c.cardId === 'KN-03'); n++) {
+      s = applyAction(cat, s, legalActions(cat, s).find((a) => a.type === 'pass')!);
+    }
+    expect(ids(s, 'A')).toEqual(['KN-03']);
+    expect(ids(publicView(s, 'B', { remember: true }), 'A')).toEqual(['KN-03']);
   });
 });

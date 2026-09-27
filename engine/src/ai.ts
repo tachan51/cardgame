@@ -63,6 +63,8 @@ export interface AiWeights {
    * 起動能力・リーダー能力・スペルは対象が違えば別の種類
    */
   sameKind?: number;
+  /** 相手の手札のうち、生成した・盤面から手札に戻したカードは中身を覚えておく（つよいの推測でもそのまま使う。省略時: つよいだけ覚える） */
+  remember?: boolean;
   /** 次のラウンドのマナ（最大マナ＋1と予備マナ）で使えない手札の価値の倍率（案 B の評価版。調整用、省略時 1） */
   unplayableHand?: number;
 }
@@ -137,6 +139,8 @@ export function chooseAction(cat: Catalog, state: GameState, player: PlayerId, o
   let w = opts.weights ?? (level === 'easy' ? STAGE1_WEIGHTS : STAGE2_WEIGHTS);
   // 「使ったスペルの枚数」で強くなるカードをどれだけ持っているか（自分のデッキの中身は知っている）
   if (w.spellCount) w = { ...w, spellCount: w.spellCount * spellScaling(cat, state.players[player]) };
+  // つよいは、相手の手札のうち中身が分かるカードを覚えておく（明示的に false にすれば覚えない）
+  if (w.remember === undefined && level === 'hard') w = { ...w, remember: true };
   if (state.pending) {
     if (state.pending.player !== player) throw new Error('AI の番ではありません');
     // 山札の上から見て選ぶ: 一番コストの高いカードを取る
@@ -150,7 +154,7 @@ export function chooseAction(cat: Catalog, state: GameState, player: PlayerId, o
   if (state.activePlayer !== player) throw new Error('AI の番ではありません');
   const rng: RngHolder = { rngState: (opts.seed ?? state.rngState ^ (state.log.length * 2654435761)) | 0 };
 
-  const view = sanitize(cat, publicView(state, player));
+  const view = sanitize(cat, publicView(state, player, { remember: !!w.remember }));
   const scored = scoreAll(cat, view, player, w);
   const baseline = scored.find((x) => x.action.type === 'pass')!.score;
 
@@ -378,7 +382,7 @@ function sanitize(cat: Catalog, v: GameState): GameState {
  * 相手の手札と山札は、相手のリーダーの勢力のカードからランダムに選ぶ（公開されたカードはそのまま）。
  * 自分の山札は、中身（自分のデッキ）は分かるが順番は分からないのでシャッフルする
  */
-export function determinize(cat: Catalog, state: GameState, me: PlayerId, rng: RngHolder): GameState {
+export function determinize(cat: Catalog, state: GameState, me: PlayerId, rng: RngHolder, remember = false): GameState {
   const w = structuredClone(state);
   w.log = [];
   w.pending = null;
@@ -387,7 +391,7 @@ export function determinize(cat: Catalog, state: GameState, me: PlayerId, rng: R
   const pool = [...cat.cards.values()].filter((c) => facs.has(c.faction) && !c.token).map((c) => c.id);
   const sample = (): CardInstance => ({ uid: w.nextUid++, cardId: pool[Math.floor(nextRandom(rng) * pool.length)], costMod: 0, revealed: false, generated: false });
   const st = w.players[opp];
-  st.hand = st.hand.map((c) => (c.revealed ? c : sample()));
+  st.hand = st.hand.map((c) => (c.revealed || (remember && c.known) ? c : sample()));
   st.deck = st.deck.map(() => sample());
   shuffleInPlace(rng, w.players[me].deck);
   w.rngState = Math.floor(nextRandom(rng) * 2 ** 31);
@@ -419,7 +423,7 @@ function search(
   const lethal = cands.find((x) => x.score >= 1000);
   if (lethal) return { action: lethal.action, score: lethal.score, baseline };
 
-  const worlds = Array.from({ length: D }, () => determinize(cat, state, me, rng));
+  const worlds = Array.from({ length: D }, () => determinize(cat, state, me, rng, !!w.remember));
   const results: { c: Scored; total: number; n: number }[] = cands.map((c) => ({ c, total: 0, n: 0 }));
   // 状況を1つずつ増やしながら全候補を読む（時間切れになったら、そこまでの平均で決める）
   outer: for (const world of worlds) {
