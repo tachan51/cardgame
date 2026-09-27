@@ -64,6 +64,11 @@ export interface AiWeights {
    * 相手の取れる行動が多いほど大きく（3つ以上で最大）、相手がすでにパスしていて自分のパスで戦闘になるときは 0
    */
   passReact?: number;
+  /**
+   * お互いにパスし続けると passWin ラウンド以内に自分が勝つなら、パスする（調整用、省略時は見ない）。
+   * 残りの山札・ライフ・盤面のまま戦闘を繰り返した結果で判断する
+   */
+  passWin?: number;
   /** 次のラウンドのマナ（最大マナ＋1と予備マナ）で使えない手札の価値の倍率（案 B の評価版。調整用、省略時 1） */
   unplayableHand?: number;
   /** ラウンドの途中で使い残している通常マナ1の価値（省略時は reserve と同じ。予備マナと分ける） */
@@ -184,6 +189,9 @@ export function chooseAction(cat: Catalog, state: GameState, player: PlayerId, o
   const rng: RngHolder = { rngState: (opts.seed ?? state.rngState ^ (state.log.length * 2654435761)) | 0 };
 
   const view = sanitize(cat, publicView(state, player, { remember: !!w.remember }));
+  if (w.passWin && level !== 'easy' && passLockWins(cat, view, player, w.passWin)) {
+    return { action: { type: 'pass', player }, score: 1000, baseline: 1000 };
+  }
   const scored = scoreAll(cat, view, player, w);
   if (w.burstDepth && burstTriggered(view, player, w)) burstSearch(cat, view, player, w, scored);
   const baseline = scored.find((x) => x.action.type === 'pass')!.score;
@@ -339,6 +347,22 @@ function reactValue(cat: Catalog, s: GameState, me: PlayerId): number {
     if (!l.usedThisRound && r.leaderAbility(opponent(me), idx) && r.leaderCost(opponent(me), idx) <= budget) k++;
   });
   return Math.min(1, k / 3);
+}
+
+/** お互いにパスし続けたとき、rounds ラウンド以内に me が勝つか */
+function passLockWins(cat: Catalog, view: GameState, me: PlayerId, rounds: number): boolean {
+  let s = view;
+  const end = view.round + rounds;
+  for (let n = 0; n < 200; n++) {
+    if (s.result) return s.result.winner === me;
+    if (s.pending || s.phase !== 'action' || s.round >= end) return false;
+    try {
+      s = applyAction(cat, s, { type: 'pass', player: s.activePlayer });
+    } catch {
+      return false;
+    }
+  }
+  return false;
 }
 
 function scoreAll(cat: Catalog, view: GameState, me: PlayerId, w: AiWeights): Scored[] {
