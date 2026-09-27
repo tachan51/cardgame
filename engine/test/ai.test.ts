@@ -1,6 +1,6 @@
 // ルールベースの AI（2-5）
 import { describe, expect, it } from 'vitest';
-import { chooseAction } from '../src/ai';
+import { chooseAction, kindKey } from '../src/ai';
 import { applyAction, newGame } from '../src/engine';
 import { legalActions } from '../src/legal';
 import { chooseMulligan, keepValue, type MulliganTable } from '../src/mulligan';
@@ -121,5 +121,29 @@ describe('ルールベースの AI', () => {
     expect(keepValue(cat, 'CY-04', ['knights'], table)).toBe(4);
     expect(keepValue(cat, 'CY-04', ['academy'], table)).toBe(-4);
     expect(keepValue(cat, 'CY-04', ['knights', 'academy'], table)).toBe(0);
+  });
+});
+
+describe('読む候補の手の種類（sameKind）', () => {
+  it('ユニット・召喚するスペルは置くマス、遊撃は移動先を区別せず、スペル・起動能力は対象を区別する', () => {
+    const s = buildState(cat, {
+      A: { mana: 10, hand: ['KN-03', 'KN-03', 'AC-11', 'AC-02'], board: { '1前': 'KN-19', '2前': 'CY-05' } },
+      B: { board: { '1前': 'KN-04', '3前': 'KN-03' } },
+    });
+    const acts = legalActions(cat, s).filter((a) => a.player === 'A');
+    const keys = (pred: (a: (typeof acts)[number]) => boolean) => new Set(acts.filter(pred).map((a) => kindKey(cat, s, a)));
+    const card = (id: string) => (a: (typeof acts)[number]) =>
+      (a.type === 'playUnit' || a.type === 'castSpell') && s.players.A.hand.find((c) => c.uid === a.card)?.cardId === id && !a.enhance;
+    // 王都の弓兵（2枚・置き場所違い）は1種類
+    expect(keys(card('KN-03')).size).toBe(1);
+    // 氷像の召喚（召喚するスペル）はマス違いでも1種類
+    expect(keys(card('AC-11')).size).toBe(1);
+    // ホーミング魔弾は対象（敵ユニット2体と相手プレイヤー）ごとに別の種類
+    expect(keys(card('AC-02')).size).toBe(3);
+    // 軽装騎兵の遊撃は移動先が違っても1種類
+    expect(keys((a) => a.type === 'mobileMove').size).toBe(1);
+    // ジャミング技師の起動は対象（敵ユニット2体）ごとに別の種類
+    const jammer = s.players.A.board[2]!.uid;
+    expect(keys((a) => a.type === 'activate' && a.unit === jammer).size).toBe(2);
   });
 });
