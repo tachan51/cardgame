@@ -105,6 +105,8 @@ export interface AiOptions {
   mctsTop?: number;
   /** MCTS で読む深さ（手の数。省略時 8。ラウンドが終わったらそこまで） */
   mctsDepth?: number;
+  /** MCTS で読む手のうち、似た手（同じカードの置き場所・対象違いなど）は評価の上位から何個までにするか（省略時は制限なし） */
+  mctsPerKey?: number;
   level?: AiLevel;
   /** 評価の重みを差し替える（調整用） */
   weights?: AiWeights;
@@ -481,7 +483,7 @@ function mcts(
   root.player = me;
   // 根の手は、すでに計算した評価の上位（パスは必ず入れる）
   const ranked = scored.filter((x) => Number.isFinite(x.score)).sort((a, b) => b.score - a.score);
-  root.actions = ranked.slice(0, top).map((x) => x.action);
+  root.actions = pickCands(ranked, top, opts.mctsPerKey);
   if (!root.actions.some((a) => a.type === 'pass')) root.actions.push({ type: 'pass', player: me });
   if (root.actions.length === 1) return { action: root.actions[0], score: baseline, baseline };
 
@@ -504,7 +506,7 @@ function mcts(
         const cands = scoreAll(cat, s, p, wLite)
           .filter((x) => Number.isFinite(x.score))
           .sort((a, b) => b.score - a.score);
-        node.actions = cands.slice(0, top).map((x) => x.action);
+        node.actions = pickCands(cands, top, opts.mctsPerKey);
         if (!node.actions.some((a) => a.type === 'pass')) node.actions.push({ type: 'pass', player: p });
       }
       // まだ試していない手があればそれを、なければ UCB が一番大きい手を選ぶ
@@ -555,4 +557,37 @@ function mcts(
   let best = root.edges[0];
   for (const e of root.edges) if (e.n > best.n || (e.n === best.n && e.w > best.w)) best = e;
   return { action: best.action, score: best.n ? best.w / best.n : 0, baseline };
+}
+
+/** 似た手を1つにまとめるための鍵（同じカードを別のマス・別の対象に使う手、同じユニットの遊撃の行き先違いは同じ鍵） */
+function similarKey(a: Action): string {
+  switch (a.type) {
+    case 'playUnit':
+    case 'castSpell':
+      return `${a.type}:${a.card}:${a.enhance ? 1 : 0}`;
+    case 'mobileMove':
+      return `mobile:${a.unit}`;
+    case 'activate':
+      return `activate:${a.unit}:${a.ability}`;
+    case 'leaderAbility':
+      return `leader:${a.leader}`;
+    default:
+      return a.type;
+  }
+}
+
+/** 評価の高い順に並んだ候補から n 個選ぶ。perKey があれば、似た手は perKey 個まで */
+function pickCands(sorted: Scored[], n: number, perKey?: number): Action[] {
+  if (!perKey) return sorted.slice(0, n).map((x) => x.action);
+  const count = new Map<string, number>();
+  const out: Action[] = [];
+  for (const x of sorted) {
+    const k = similarKey(x.action);
+    const c = count.get(k) ?? 0;
+    if (c >= perKey) continue;
+    count.set(k, c + 1);
+    out.push(x.action);
+    if (out.length >= n) break;
+  }
+  return out;
 }
