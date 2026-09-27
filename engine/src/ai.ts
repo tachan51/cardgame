@@ -109,6 +109,9 @@ export const STAGE2_WEIGHTS: AiWeights = {
   planTop: 6,
   // 読む候補に同じ種類の手は1つまで（ユニットの置き場所違いなどで候補が埋まらないように）
   sameKind: 1,
+  // ほかに影響するユニットの存在価値を上げ、それ以外を下げる（ai.md 15章。同じデッキで比べて勝率 52.2%）
+  unitBaseActive: 2,
+  unitBasePlain: 0.3,
 };
 
 export const DEFAULT_WEIGHTS = STAGE2_WEIGHTS;

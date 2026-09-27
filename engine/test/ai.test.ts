@@ -1,6 +1,6 @@
 // ルールベースの AI（2-5）
 import { describe, expect, it } from 'vitest';
-import { chooseAction, determinize, kindKey } from '../src/ai';
+import { affectsOthers, chooseAction, determinize, kindKey } from '../src/ai';
 import { applyAction, newGame } from '../src/engine';
 import { legalActions } from '../src/legal';
 import { chooseMulligan, keepValue, type MulliganTable } from '../src/mulligan';
@@ -174,5 +174,14 @@ describe('相手の手札を覚える（remember）', () => {
     }
     expect(ids(s, 'A')).toEqual(['KN-03']);
     expect(ids(publicView(s, 'B', { remember: true }), 'A')).toEqual(['KN-03']);
+  });
+});
+
+describe('ほかに影響するユニット（affectsOthers）', () => {
+  it('配置時以外の能力が自分以外に働くユニットだけを数える', () => {
+    // ジャミング技師（起動で敵を弱体）・水の精霊（ライフ回復）・巡回騎士（常時効果）・学院の修道女（ラウンド終了時に生成）
+    for (const id of ['CY-05', 'AC-23', 'KN-04', 'AC-21']) expect(affectsOthers(cat, id)).toBe(true);
+    // 学院の石像（自分を回復）・軽装騎兵（自分に先制）・見習い魔法使い（配置時だけ）・王都の弓兵（能力なし）・魔導ゴーレム（コスト軽減）
+    for (const id of ['AC-13', 'KN-19', 'AC-03', 'KN-03', 'AC-22']) expect(affectsOthers(cat, id)).toBe(false);
   });
 });
