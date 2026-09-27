@@ -15,12 +15,13 @@ function hide(_c: CardInstance): CardInstance {
  * 山札は枚数だけ（中身と順番は自分のものも隠す）、相手の手札は公開されたカードだけ見える。
  * AI はこの状態だけを使って判断する
  */
-export function publicView(state: GameState, viewer: PlayerId): GameState {
+export function publicView(state: GameState, viewer: PlayerId, opts: { remember?: boolean } = {}): GameState {
   const v = structuredClone(state);
   for (const p of ['A', 'B'] as const) {
     const st = v.players[p];
     st.deck = st.deck.map(hide);
-    if (p !== viewer) st.hand = st.hand.map((c) => (c.revealed ? c : hide(c)));
+    // remember: 相手の手札のうち、生成した・手札に戻したなどで中身が分かっているカードも見える（覚えておく）
+    if (p !== viewer) st.hand = st.hand.map((c) => (c.revealed || (opts.remember && c.known) ? c : hide(c)));
   }
   if (v.pending) {
     const mine = v.pending.player === viewer;
