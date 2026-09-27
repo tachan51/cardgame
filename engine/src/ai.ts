@@ -107,6 +107,8 @@ export interface AiOptions {
   mctsDepth?: number;
   /** MCTS で読む手のうち、似た手（同じカードの置き場所・対象違いなど）は評価の上位から何個までにするか（省略時は制限なし） */
   mctsPerKey?: number;
+  /** MCTS の葉で、このラウンドの終わりまでふつうの方針で打ち進めてから評価する（省略時は、このまま戦闘になった結果で評価する） */
+  mctsRollout?: boolean;
   level?: AiLevel;
   /** 評価の重みを差し替える（調整用） */
   weights?: AiWeights;
@@ -498,7 +500,21 @@ function mcts(
   if (lethal) return { action: lethal.action, score: lethal.score, baseline };
   // 読みの中の手は、組み合わせの読みなどを外した軽い評価で選ぶ
   const wLite: AiWeights = { ...w, planFollow: 0, quickFollow: false };
-  const winProb = (s: GameState, roundOver: boolean): number => {
+  const winProb = (s0: GameState, roundOver0: boolean): number => {
+    let s = s0;
+    let roundOver = roundOver0;
+    // 葉からこのラウンドの終わりまで、双方ふつうの方針で打ち進める
+    if (opts.mctsRollout && !s.result && !roundOver) {
+      const round = s.round;
+      for (let n = 0; n < 30 && !s.result && s.round === round && !s.pending && s.phase === 'action'; n++) {
+        try {
+          s = applyAction(cat, s, chooseAction(cat, s, s.activePlayer, { level: 'normal', weights: wLite }).action);
+        } catch {
+          break;
+        }
+      }
+      roundOver = s.round !== round;
+    }
     if (s.result) return s.result.winner === me ? 1 : s.result.winner === null ? 0.5 : 0;
     const v = evaluate(cat, roundOver ? s : previewCombat(cat, s).state, me, w, roundOver);
     return 1 / (1 + Math.exp(-v / scale));
