@@ -63,7 +63,7 @@ export interface AiWeights {
    * 起動能力・リーダー能力・スペルは対象が違えば別の種類
    */
   sameKind?: number;
-  /** 相手の手札のうち、生成した・盤面から手札に戻したカードは中身を覚えておく（つよいの推測でもそのまま使う） */
+  /** 相手の手札のうち、生成した・盤面から手札に戻したカードは中身を覚えておく（つよいの推測でもそのまま使う。省略時: つよいだけ覚える） */
   remember?: boolean;
   /** 次のラウンドのマナ（最大マナ＋1と予備マナ）で使えない手札の価値の倍率（案 B の評価版。調整用、省略時 1） */
   unplayableHand?: number;
@@ -139,6 +139,8 @@ export function chooseAction(cat: Catalog, state: GameState, player: PlayerId, o
   let w = opts.weights ?? (level === 'easy' ? STAGE1_WEIGHTS : STAGE2_WEIGHTS);
   // 「使ったスペルの枚数」で強くなるカードをどれだけ持っているか（自分のデッキの中身は知っている）
   if (w.spellCount) w = { ...w, spellCount: w.spellCount * spellScaling(cat, state.players[player]) };
+  // つよいは、相手の手札のうち中身が分かるカードを覚えておく（明示的に false にすれば覚えない）
+  if (w.remember === undefined && level === 'hard') w = { ...w, remember: true };
   if (state.pending) {
     if (state.pending.player !== player) throw new Error('AI の番ではありません');
     // 山札の上から見て選ぶ: 一番コストの高いカードを取る
