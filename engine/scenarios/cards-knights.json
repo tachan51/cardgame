@@ -949,10 +949,6 @@
        "unit": "B:1前"
       }
      }
-    },
-    {
-     "type": "pass",
-     "player": "B"
     }
    ],
    "expect": {
@@ -2443,7 +2439,7 @@
        "leaders": [
         {},
         {
-         "progress": 2
+         "progress": 1
         }
        ],
        "board": {
