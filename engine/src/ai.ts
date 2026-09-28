@@ -6,7 +6,7 @@
 //            良さそうな手は「相手がパスした後の自分の次の手」まで読む
 //   hard   … 段階3。段階2で良さそうな手を絞り、相手の手札を推測した「ありうる状況」を何通りか作って、
 //            そのラウンドの終わりまで双方が段階2の方針で打ち進めた結果の平均で選ぶ（決定化したロールアウト）。思考時間に上限がある
-import { opponent } from './board';
+import { opponent, rowOf } from './board';
 import type { Catalog } from './catalog';
 import { getCard, getLeader } from './catalog';
 import { applyAction } from './engine';
@@ -63,6 +63,15 @@ export interface AiWeights {
    * 起動能力・リーダー能力・スペルは対象が違えば別の種類
    */
   sameKind?: number;
+  /**
+   * キーワードごとの価値（省略したものは keyword）。射撃は前列と後列で分ける
+   * （射撃は後列から攻撃できる。前列の射撃は普通のユニットと同じように戦う）
+   */
+  kwRangedFront?: number;
+  kwRangedBack?: number;
+  kwPierce?: number;
+  kwFirstStrike?: number;
+  kwMobile?: number;
   /** 自分の後列の空きマス1つあたりの減点（相手の分は加点。調整用、省略時 0） */
   emptyBack?: number;
   /**
@@ -112,6 +121,9 @@ export const STAGE2_WEIGHTS: AiWeights = {
   // ほかに影響するユニットの存在価値を上げ、それ以外を下げる（ai.md 15章。同じデッキで比べて勝率 52.2%）
   unitBaseActive: 2,
   unitBasePlain: 0.3,
+  // 盾は 1.5 → 0.5、遊撃は 0.5 → 2.0（ai.md 16章。つよい同士で比べて勝率 53.5%、ふつうは互角）
+  shield: 0.5,
+  kwMobile: 2,
 };
 
 export const DEFAULT_WEIGHTS = STAGE2_WEIGHTS;
@@ -314,7 +326,9 @@ export function evaluate(cat: Catalog, s: GameState, me: PlayerId, w: AiWeights 
   const side = (p: PlayerId) => {
     const st = s.players[p];
     let v = st.life * w.life - Math.max(0, 8 - st.life) * w.lowLife;
-    for (const u of st.board) if (u) v += unitValue(r, u, w);
+    st.board.forEach((u, i) => {
+      if (u) v += unitValue(r, u, w, i);
+    });
     if (w.emptyBack) for (let i = 1; i < st.board.length; i += 2) if (!st.board[i]) v -= w.emptyBack;
     const oppFactions = w.handTable && p === me ? s.players[opp].leaders.map((l) => getLeader(cat, l.id).faction) : null;
     st.hand.forEach((c, i) => {
@@ -363,14 +377,17 @@ function cardCostGuess(cat: Catalog, c: CardInstance): number {
   return c.cardId === '?' ? 3 : getCard(cat, c.cardId).cost;
 }
 
-function unitValue(r: Runner, u: Unit, w: AiWeights): number {
+function unitValue(r: Runner, u: Unit, w: AiWeights, i: number): number {
   const kws = r.keywords(u);
   const base = w.unitBaseActive === undefined && w.unitBasePlain === undefined
     ? w.unitBase
     : affectsOthers(r.cat, u.cardId) ? (w.unitBaseActive ?? w.unitBase) : (w.unitBasePlain ?? w.unitBase);
   let v = base + r.attack(u) * w.attack + Math.max(0, r.health(u)) * w.health;
   if (u.shield) v += w.shield;
-  for (const k of ['ranged', 'pierce', 'firstStrike', 'mobile'] as const) if (kws.has(k)) v += w.keyword;
+  if (kws.has('ranged')) v += (rowOf(i) === 'back' ? w.kwRangedBack : w.kwRangedFront) ?? w.keyword;
+  if (kws.has('pierce')) v += w.kwPierce ?? w.keyword;
+  if (kws.has('firstStrike')) v += w.kwFirstStrike ?? w.keyword;
+  if (kws.has('mobile')) v += w.kwMobile ?? w.keyword;
   return v;
 }
 
