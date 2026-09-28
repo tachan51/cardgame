@@ -1379,6 +1379,54 @@
           "reserve": 0
         }
       }
+    },
+    {
+      "name": "9章 ライフは初期値（20）を超えて回復しない（魔女の聖水の強化・水の精霊）",
+      "refs": [
+        "9",
+        "AC-05",
+        "AC-23"
+      ],
+      "setup": {
+        "A": {
+          "life": 19,
+          "maxMana": 4,
+          "reserve": 2,
+          "hand": [
+            "AC-05"
+          ],
+          "board": {
+            "1前": "AC-23"
+          }
+        },
+        "B": {}
+      },
+      "steps": [
+        {
+          "type": "castSpell",
+          "player": "A",
+          "card": "AC-05",
+          "enhance": true,
+          "targets": {
+            "target": {
+              "player": "A"
+            }
+          }
+        },
+        {
+          "expect": {
+            "A": {
+              "life": 20
+            }
+          }
+        }
+      ],
+      "expect": {
+        "A": {
+          "life": 20,
+          "handCount": 1
+        }
+      }
     }
   ]
 }

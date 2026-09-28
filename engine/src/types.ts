@@ -345,6 +345,8 @@ export interface PlayerState {
   spellsCast: number;
   /** この試合で使ったスペルのカードID（使った順） */
   castSpellIds: string[];
+  /** ライフの上限（初期ライフ。省略時は START_LIFE） */
+  maxLife?: number;
   /** この試合で自分の味方が戦闘ダメージを耐えた回数（KN-23） */
   endured?: number;
   /** このラウンド中はスペルのコストが0（そのラウンドの番号。AC-25） */

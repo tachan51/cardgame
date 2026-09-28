@@ -294,7 +294,7 @@ type Condition =
 | `generateRandom` | `where`, `count`, `distinctNames?` | 自分の2勢力のカード（トークン専用を除く）から条件に合うものをランダムに手札に生成する | AC-08 |
 | `generateCopyOf` | `of`, `reveal?` | そのユニットと同名のカードを手札に生成する（トークン専用のカードも可）。`reveal` なら公開する | CY-07 |
 | `gainReserve` | `amount` | 予備マナを得る | AC-07 |
-| `gainLife` | `amount` | 自分のライフを回復する（上限なし） | AC-05, AC-23 |
+| `gainLife` | `amount` | 自分のライフを回復する（初期ライフを超えない） | AC-23 |
 | `refillMana` | — | 通常マナを最大まで回復する | — |
 | `fight` | `a`, `b`, `combat?` | 2体が互いに攻撃力と同じダメージを与え合う（どちらかがいなければ何もしない）。`combat` なら戦闘ダメージとして扱い、残った側は「耐えた」に数える | KN-07 |
 | `resolveCombat` | `lanes` | 指定レーンで戦闘を行う（ルール仕様書 11.7） | KN-17, KN-22 |

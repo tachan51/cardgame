@@ -76,7 +76,12 @@ export function newGame(cat: Catalog, decks: Record<PlayerId, DeckDef>, opts: Ne
     }
     if (!opts.noShuffle) shuffleInPlace(s, s.players[p].deck);
   }
-  if (opts.startLife !== undefined) for (const p of ['A', 'B'] as const) s.players[p].life = opts.startLife;
+  if (opts.startLife !== undefined) {
+    for (const p of ['A', 'B'] as const) {
+      s.players[p].life = opts.startLife;
+      s.players[p].maxLife = opts.startLife;
+    }
+  }
   s.firstPlayer = opts.firstPlayer ?? (randomInt(s, 2) === 0 ? 'A' : 'B');
   s.activePlayer = s.firstPlayer;
   const r = new Runner(cat, s);

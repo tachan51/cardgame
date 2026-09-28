@@ -3,7 +3,7 @@
 import { cellIndex, cellName, laneOf, leftRight, opponent, otherRow, rowOf } from './board';
 import type { Catalog } from './catalog';
 import { getCard, getLeader } from './catalog';
-import { CELLS, HAND_LIMIT, LANES, MAX_MANA_CAP } from './constants';
+import { CELLS, HAND_LIMIT, LANES, MAX_MANA_CAP, START_LIFE } from './constants';
 import { pickRandom, randomInt, shuffleInPlace } from './rng';
 import type {
   Ability,
@@ -714,6 +714,14 @@ export class Runner {
     return { hit: true, blocked: false };
   }
 
+  /** ライフを回復する。初期ライフを超えない（ルール仕様書 9章） */
+  gainLife(p: PlayerId, amount: number): void {
+    const st = this.pl(p);
+    const n = Math.max(0, Math.min(amount, (st.maxLife ?? START_LIFE) - st.life));
+    st.life += n;
+    this.log('gainLife', { player: p, amount: n, life: st.life });
+  }
+
   damagePlayer(p: PlayerId, amount: number, reason: string): void {
     if (amount <= 0) return;
     this.pl(p).life -= amount;
@@ -967,10 +975,7 @@ export class Runner {
         const amount = this.value(e.amount, ctx);
         for (const x of this.units(e.target, ctx)) this.heal(x.unit, amount);
         // プレイヤーを回復する（AC-05）
-        for (const q of this.players(e.target, ctx)) {
-          this.pl(q).life += amount;
-          this.log('gainLife', { player: q, amount, life: this.pl(q).life });
-        }
+        for (const q of this.players(e.target, ctx)) this.gainLife(q, amount);
         return;
       }
       case 'buff': {
@@ -1126,10 +1131,7 @@ export class Runner {
         return;
       }
       case 'gainLife': {
-        const st = this.pl(me);
-        const n = this.value(e.amount, ctx);
-        st.life += n;
-        this.log('gainLife', { player: me, amount: n, life: st.life });
+        this.gainLife(me, this.value(e.amount, ctx));
         return;
       }
       case 'refillMana':
