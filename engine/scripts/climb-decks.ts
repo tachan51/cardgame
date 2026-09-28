@@ -1,5 +1,6 @@
 // 強いデッキを探す（山登り）。出発点のデッキを少しずつ変え、相手のデッキたちへの勝率が上がった変更を残す
-//   npx tsx scripts/climb-decks.ts --start a.json --opponents b.json,c.json --steps 8 --variants 6 --games 3 --out best.json
+//   npx tsx scripts/climb-decks.ts --start a.json --opponents b.json,c.json --steps 8 --variants 6 --games 3 --out best.json [--level hard]
+//   npx tsx scripts/climb-decks.ts --eval a.json,b.json --opponents c.json,d.json --games 4 [--level hard]   （変えずに勝率だけ測る）
 //
 // 1手ごとに --variants 個の変えたデッキを作り、それぞれ相手のデッキと先手・後手を入れ替えて --games 試合ずつ対戦する（ふつう同士）。
 // 今のデッキも同じ試合で測り直し、一番勝率の高いものを次の出発点にする。
@@ -21,7 +22,9 @@ const arg = (k: string, d: string) => {
   return i >= 0 ? args[i + 1] : d;
 };
 const readDeck = (f: string) => JSON.parse(readFileSync(f, 'utf8')) as DeckDef;
-let current = readDeck(arg('start', ''));
+const evalList = arg('eval', '');
+let current = readDeck(arg('start', '') || evalList.split(',')[0]);
+const level = arg('level', 'normal') as 'normal' | 'hard';
 const opponents = arg('opponents', '').split(',').map(readDeck);
 const steps = Number(arg('steps', '8'));
 const variants = Number(arg('variants', '6'));
@@ -81,7 +84,7 @@ async function evaluate(decks: DeckDef[]): Promise<number[]> {
     chunks.map(
       (chunk) =>
         new Promise<void>((resolve, reject) => {
-          const w = new Worker(new URL('./explore-decks-worker.mjs', import.meta.url), { workerData: chunk.map(({ seed, a, b }) => ({ seed, a, b })) });
+          const w = new Worker(new URL('./explore-decks-worker.mjs', import.meta.url), { workerData: chunk.map(({ seed, a, b }) => ({ seed, a, b, level })) });
           let i = 0;
           w.on('message', (r: GameRecord) => {
             const j = chunk[i++];
@@ -97,6 +100,12 @@ async function evaluate(decks: DeckDef[]): Promise<number[]> {
 }
 
 const show = (d: DeckDef) => d.cards.map((c) => `${getCard(cat, c.id).name}×${c.count}`).join('、');
+if (evalList) {
+  const list = evalList.split(',').map(readDeck);
+  const rates = await evaluate(list);
+  list.forEach((d, k) => process.stdout.write(`${d.name ?? d.id}: ${(rates[k] * 100).toFixed(1)}%\n`));
+  process.exit(0);
+}
 for (let step = 1; step <= steps; step++) {
   const cands = [current, ...Array.from({ length: variants }, (_, k) => mutate(current, step * 100 + k))];
   const rates = await evaluate(cands);
