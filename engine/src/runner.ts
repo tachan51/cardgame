@@ -1554,7 +1554,7 @@ export function canonical(vals: TargetValue[]): string {
  * オラクルの選び方（AI を読み込んでいないとき）: 使えるカードのうちコストが一番高いものを、
  * 最初に見つかった置き場所・対象で使う
  */
-function defaultOracle(cat: Catalog, state: GameState, player: PlayerId, cardIds: string[]): { cardId: string; action: Action } | null {
+export function defaultOracle(cat: Catalog, state: GameState, player: PlayerId, cardIds: string[]): { cardId: string; action: Action } | null {
   const r = new Runner(cat, state);
   const st = state.players[player];
   const sorted = [...cardIds].sort((a, b) => getCard(cat, b).cost - getCard(cat, a).cost);
