@@ -121,6 +121,9 @@ export const STAGE2_WEIGHTS: AiWeights = {
   // ほかに影響するユニットの存在価値を上げ、それ以外を下げる（ai.md 15章。同じデッキで比べて勝率 52.2%）
   unitBaseActive: 2,
   unitBasePlain: 0.3,
+  // 盾は 1.5 → 0.5、遊撃は 0.5 → 2.0（ai.md 16章。つよい同士で比べて勝率 53.5%、ふつうは互角）
+  shield: 0.5,
+  kwMobile: 2,
 };
 
 export const DEFAULT_WEIGHTS = STAGE2_WEIGHTS;
