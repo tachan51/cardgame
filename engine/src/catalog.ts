@@ -32,12 +32,14 @@ const OPS = new Set([
   'returnToHand', 'summon', 'draw', 'drawUntil', 'lookAtTopPickOne', 'tutorRandom', 'generate',
   'generateFromCastSpells', 'gainReserve', 'gainLife', 'refillMana', 'fight', 'resolveCombat', 'modifyCost',
   'modifyLeaderAbilityCost', 'reveal', 'delay', 'atRoundEnd', 'if', 'forEach', 'repeat', 'summonRandom',
+  'transform', 'grantRandomKeywords', 'generateCopyOf', 'generateRandom', 'pickCastSpell', 'byChoice', 'shuffleBoard',
+  'freeSpellsThisRound', 'oracle',
 ]);
 const TRIGGERS = new Set([
   'onPlay', 'onDestroyed', 'onMove', 'onEnemyMove', 'onAnyUnitMove', 'onSpellCast',
-  'onAllyEndureCombatDamage', 'roundStart', 'roundEnd', 'combatStart', 'combatEnd',
+  'onAllyEndureCombatDamage', 'onDealCombatDamage', 'roundStart', 'roundEnd', 'combatStart', 'combatEnd',
 ]);
-const TARGET_KINDS = new Set(['unit', 'cell', 'lane', 'unitOrPlayer', 'cardInHand']);
+const TARGET_KINDS = new Set(['unit', 'cell', 'lane', 'unitOrPlayer', 'cardInHand', 'choice']);
 const GROWTH = new Set(['allyEnduredCombatDamage', 'unitMoved', 'leaderAbilityUsed', 'spellsCast']);
 
 /** 勢力ファイルからカタログを作る。問題があれば CatalogError を投げる */
@@ -94,6 +96,7 @@ class Checker {
     for (const t of specs ?? []) {
       if (!TARGET_KINDS.has(t.kind)) this.add(`対象の種類 ${t.kind} は使えません`);
       if (ids.has(t.id)) this.add(`対象の名前 ${t.id} が重複しています`);
+      if (t.kind === 'choice' && !(t.choices && t.choices.length >= 2)) this.add(`選択肢 ${t.id} には choices が2つ以上必要です`);
       if (t.where) this.condition(t.where);
       const owner = t.cellOwner;
       if (owner && typeof owner === 'object') {
@@ -132,7 +135,9 @@ class Checker {
       this.lane(s.cell.lane, refs);
     } else if ('randomCell' in s) {
       if (s.randomCell !== 'ally' && s.randomCell !== 'enemy') this.add(`randomCell ${s.randomCell} は使えません`);
-    } else if (!('cellsRelative' in s)) this.add(`セレクタの形が不正です: ${JSON.stringify(s)}`);
+    } else if ('cross' in s) this.selector(s.cross, refs);
+    else if ('combatTargetOf' in s) this.selector(s.combatTargetOf, refs);
+    else if (!('cellsRelative' in s)) this.add(`セレクタの形が不正です: ${JSON.stringify(s)}`);
   }
 
   lane(l: unknown, refs: Set<string>): void {
@@ -147,8 +152,9 @@ class Checker {
   value(v: Value, refs: Set<string>): void {
     if (typeof v === 'number') return;
     if ('attackOf' in v) this.selector(v.attackOf, refs);
+    else if ('healthOf' in v) this.selector(v.healthOf, refs);
     else if ('count' in v) {
-      if (v.count !== 'spellsCastThisGame' && v.count !== 'unitMovesThisGame') this.add(`数値 ${v.count} は使えません`);
+      if (!['spellsCastThisGame', 'unitMovesThisGame', 'allyEnduresThisGame'].includes(v.count)) this.add(`数値 ${v.count} は使えません`);
     } else if ('max' in v) this.value(v.max, refs);
   }
 
@@ -161,11 +167,11 @@ class Checker {
         continue;
       }
       const any = e as Record<string, unknown>;
-      for (const key of ['target', 'to', 'a', 'b', 'subject', 'targets', 'at']) {
+      for (const key of ['target', 'to', 'a', 'b', 'subject', 'targets', 'at', 'of']) {
         if (any[key] !== undefined) this.selector(any[key] as Selector, refs);
       }
       for (const key of ['amount', 'attack', 'health', 'count', 'times']) {
-        if (any[key] !== undefined && !(e.op === 'tutorRandom' || e.op === 'generateFromCastSpells' || e.op === 'generate'))
+        if (any[key] !== undefined && !(e.op === 'tutorRandom' || e.op === 'generateFromCastSpells' || e.op === 'generate' || e.op === 'generateRandom'))
           this.value(any[key] as Value, refs);
       }
       if ('keywords' in e) for (const k of e.keywords) if (!KEYWORDS.includes(k)) this.add(`キーワード ${k} は使えません`);
@@ -181,6 +187,11 @@ class Checker {
         this.effects(e.effects, refs);
       }
       if (e.op === 'atRoundEnd' || e.op === 'forEach' || e.op === 'repeat') hasDelay = this.effects(e.effects, refs) || hasDelay;
+      if (e.op === 'byChoice') {
+        if (!refs.has(e.ref)) this.add(`対象 ${e.ref} が targets にありません`);
+        for (const c of e.cases) hasDelay = this.effects(c, refs) || hasDelay;
+      }
+      if (e.op === 'oracle') (e.exclude ?? []).forEach((id) => this.cardRef(id));
       if (e.op === 'if') {
         hasDelay = this.effects(e.then, refs) || hasDelay;
         if (e.else) hasDelay = this.effects(e.else, refs) || hasDelay;
@@ -209,6 +220,7 @@ class Checker {
         return false;
       case 'activated':
         if (a.cost < 0) this.add('起動のコストが負です');
+        if (a.condition) this.condition(a.condition);
         this.effects(a.effects, this.targets(a.targets));
         return false;
       case 'static':

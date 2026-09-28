@@ -34,6 +34,7 @@ TypeScript 版のエンジンは `npm test` ですべて実行する（`test/sce
 | `unusedMana` | 0 | 前のラウンドの使い残し |
 | `castSpells` | `[]` | この試合で使ったスペルのID。`spellsCast` を省略するとこの枚数になる |
 | `spellsCast` | | 使ったスペルの枚数 |
+| `endured` | 0 | この試合で味方が戦闘ダメージを耐えた回数（KN-23） |
 | `leaders` | A: アルト＋レイ、B: レイ＋ノエル | `"leader-alto"` または `{ "id", "grown", "progress", "used", "costMod" }` |
 | `hand` | `[]` | 手札。`"KN-09"` または `{ "card": "KN-09", "costMod": -1 }` |
 | `deck` | `KN-03` を10枚 | 山札。先頭が一番上 |
@@ -70,6 +71,7 @@ TypeScript 版のエンジンは `npm test` ですべて実行する（`test/sce
 | `{ "lane": 3 }` | レーン |
 | `{ "player": "B" }` | プレイヤー本体 |
 | `{ "card": "AC-02" }` | 自分の手札のカード |
+| `{ "choice": 0 }` | 選択肢の番号（0から。KN-18） |
 
 強化・起動・リーダー能力のコストは、予備マナから必ず先に払う（16.2）。
 

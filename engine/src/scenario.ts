@@ -30,6 +30,8 @@ export interface ScenarioPlayer {
   reserve?: number;
   unusedMana?: number;
   spellsCast?: number;
+  /** この試合で味方が戦闘ダメージを耐えた回数（KN-23） */
+  endured?: number;
   castSpells?: string[];
   leaders?: (string | { id: string; grown?: boolean; progress?: number; used?: boolean; costMod?: number })[];
   hand?: (string | { card: string; costMod?: number })[];
@@ -99,7 +101,7 @@ export interface ScenarioExpect {
 }
 
 /** シナリオの中の対象の書き方: {"unit":"B:2前"} {"cell":"A:1後"} {"lane":3} {"player":"B"} {"card":"AC-02"} */
-export type ScenarioTarget = { unit: string } | { cell: string } | { lane: number } | { player: PlayerId } | { card: string };
+export type ScenarioTarget = { unit: string } | { cell: string } | { lane: number } | { player: PlayerId } | { card: string } | { choice: number };
 
 export type ScenarioStep =
   | ({ type: string; player: PlayerId; illegal?: boolean; note?: string } & Record<string, unknown>)
@@ -149,6 +151,7 @@ export function buildState(cat: Catalog, setup: ScenarioSetup): GameState {
     st.unusedMana = sp.unusedMana ?? 0;
     st.castSpellIds = [...(sp.castSpells ?? [])];
     st.spellsCast = sp.spellsCast ?? st.castSpellIds.length;
+    if (sp.endured !== undefined) st.endured = sp.endured;
     (sp.leaders ?? []).forEach((l, idx) => {
       if (typeof l === 'string') return;
       const ls = st.leaders[idx];
@@ -226,6 +229,7 @@ function toTargets(s: GameState, p: PlayerId, raw: Record<string, ScenarioTarget
       }
       if ('lane' in t) return { kind: 'lane', lane: t.lane };
       if ('player' in t) return { kind: 'player', p: t.player };
+      if ('choice' in t) return { kind: 'choice', n: t.choice };
       return { kind: 'card', uid: handUid(s, p, t.card, used) };
     });
   }
