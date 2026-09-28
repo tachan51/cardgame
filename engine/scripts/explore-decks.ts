@@ -23,11 +23,14 @@ interface Job {
   seed: number;
   a: DeckDef;
   b: DeckDef;
+  /** AI の強さ（省略時 normal。climb-decks.ts の --level） */
+  level?: 'normal' | 'hard';
 }
 
 if (!isMainThread) {
   for (const j of workerData as Job[]) {
-    const r = playGame(cat, { A: j.a, B: j.b }, { seed: j.seed, levels: { A: 'normal', B: 'normal' } });
+    const level = j.level ?? 'normal';
+    const r = playGame(cat, { A: j.a, B: j.b }, { seed: j.seed, levels: { A: level, B: level }, ai: { A: { timeLimitMs: 800 }, B: { timeLimitMs: 800 } } });
     parentPort!.postMessage(r);
   }
 } else {

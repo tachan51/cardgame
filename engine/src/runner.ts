@@ -443,8 +443,15 @@ export class Runner {
     }
     if ('cross' in sel) {
       const out: Cell[] = [];
+      const add = (p: PlayerId, i: number) => {
+        if (!out.some((o) => o.p === p && o.i === i)) out.push({ p, i });
+      };
       for (const c of this.cells(sel.cross, ctx)) {
-        for (const i of [c.i, otherRow(c.i), ...leftRight(c.i)]) if (!out.some((o) => o.p === c.p && o.i === i)) out.push({ p: c.p, i });
+        add(c.p, c.i);
+        add(c.p, otherRow(c.i));
+        for (const i of leftRight(c.i)) add(c.p, i);
+        // レーンは「自分の後列・前列・相手の前列・後列」と縦に並ぶので、前列の前は向かい合う相手の前列
+        if (rowOf(c.i) === 'front') add(opponent(c.p), c.i);
       }
       return out;
     }
