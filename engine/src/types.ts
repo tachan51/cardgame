@@ -88,7 +88,8 @@ export type Value =
   /** そのユニットの今の残り体力（KN-21） */
   | { healthOf: Selector; ifGone?: number }
   /** myMovesThisGame: この試合で自分がユニット（敵味方問わず）を移動させた回数（CY-21・CY-25） */
-  | { count: 'spellsCastThisGame' | 'unitMovesThisGame' | 'myMovesThisGame' | 'allyEnduresThisGame' }
+  /** myMoveRoundsThisGame: この試合で自分がユニットを移動させたラウンドの数（CY-25） */
+  | { count: 'spellsCastThisGame' | 'unitMovesThisGame' | 'myMovesThisGame' | 'myMoveRoundsThisGame' | 'allyEnduresThisGame' }
   | { max: Value; cap: number };
 
 export type Duration = 'permanent' | 'thisRound';
@@ -347,8 +348,10 @@ export interface PlayerState {
   spellsCast: number;
   /** この試合で使ったスペルのカードID（使った順） */
   castSpellIds: string[];
-  /** この試合で自分がユニットを移動させた回数（効果・リーダー能力・自分の遊撃。CY-21・CY-25） */
+  /** この試合で自分がユニットを移動させた回数（効果・リーダー能力・自分の遊撃。CY-21） */
   moves?: number;
+  /** この試合で自分がユニットを移動させたラウンドの数（CY-25） */
+  moveRounds?: number;
   /** 最後にユニットを移動させたラウンド（レイの成長条件） */
   moveRound?: number;
   /** ライフの上限（初期ライフ。省略時は START_LIFE） */

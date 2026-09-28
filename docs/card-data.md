@@ -232,7 +232,8 @@ type Value =
   | { healthOf: Selector; ifGone?: number }   // そのユニットの残り体力（KN-21）
   | { count: "spellsCastThisGame" }           // この試合で自分が使ったスペルの枚数
   | { count: "unitMovesThisGame" }            // この試合でユニット（敵味方問わず）が移動した回数
-  | { count: "myMovesThisGame" }              // この試合で自分がユニット（敵味方問わず）を移動させた回数（CY-21・CY-25）
+  | { count: "myMovesThisGame" }              // この試合で自分がユニット（敵味方問わず）を移動させた回数（CY-21）
+  | { count: "myMoveRoundsThisGame" }         // この試合で自分がユニットを移動させたラウンドの数（CY-25）
   | { count: "allyEnduresThisGame" }          // この試合で自分の味方が戦闘ダメージを耐えた回数（KN-23）
   | { max: Value; cap: number };              // 上限つき
 ```
@@ -573,7 +574,7 @@ type Condition =
 | CY-18 サイバー忍者 | 起動で `{ "combatTargetOf": "self" }` に `damage`、自分に先制（このラウンド中） |
 | CY-23 マザーAI「オラクル」 | 配置時に `refillMana` → `oracle`（`exclude: ["CY-23"]`） |
 | CY-24 機動要塞「バベル」 | `onDealCombatDamage`（6.12） |
-| CY-25 衛星兵器「ラグナロク」 | 遅延の中で `enemyPlayer` に `damage`（`amount` に `myMovesThisGame`。発動時の値） |
+| CY-25 衛星兵器「ラグナロク」 | 遅延の中で `enemyPlayer` に `damage`（`amount` に `myMoveRoundsThisGame`。発動時の値） |
 | AC-02 ホーミング魔弾 / AC-05 魔女の聖水 | 対象の `kind: "unitOrPlayer"`（AC-05 は味方側。`heal` はプレイヤーならライフを回復） |
 | AC-08 学院の図書委員 | 配置時に `generateRandom`（`where: { "type": "spell" }`）。強化（replace）で `count: 2`・`distinctNames` |
 | AC-09 召喚ガチャ | `summonRandom`。強化（replace）で対象を2マス（`count: 2`）にし、`distinctNames` |

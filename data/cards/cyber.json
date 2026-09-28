@@ -846,13 +846,13 @@
               "op": "damage",
               "target": "enemyPlayer",
               "amount": {
-                "count": "myMovesThisGame"
+                "count": "myMoveRoundsThisGame"
               }
             }
           ]
         }
       ],
-      "text": "遅延：相手プレイヤーにXダメージ（Xはこの試合中にユニットを移動させた回数）"
+      "text": "遅延：相手プレイヤーにXダメージ（Xはこの試合中にユニットを移動させたラウンド数）"
     }
   ]
 }

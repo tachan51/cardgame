@@ -154,7 +154,7 @@ class Checker {
     if ('attackOf' in v) this.selector(v.attackOf, refs);
     else if ('healthOf' in v) this.selector(v.healthOf, refs);
     else if ('count' in v) {
-      if (!['spellsCastThisGame', 'unitMovesThisGame', 'myMovesThisGame', 'allyEnduresThisGame'].includes(v.count)) this.add(`数値 ${v.count} は使えません`);
+      if (!['spellsCastThisGame', 'unitMovesThisGame', 'myMovesThisGame', 'myMoveRoundsThisGame', 'allyEnduresThisGame'].includes(v.count)) this.add(`数値 ${v.count} は使えません`);
     } else if ('max' in v) this.value(v.max, refs);
   }
 

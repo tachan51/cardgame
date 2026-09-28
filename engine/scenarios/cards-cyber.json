@@ -585,7 +585,7 @@
       "expect": {"A": {"leaders": [{}, {"progress": 0}]}, "B": {"board": {"1前": {"card": "KN-09", "damage": 0, "shield": false}, "1後": null, "2前": {"card": "KN-08", "damage": 3}, "2後": {"card": "KN-03", "damage": 0}, "3前": null, "3後": null}, "trash": ["KN-03"]}}
     },
     {
-      "name": "衛星兵器ラグナロク: 9マナ・遅延。発動時に相手プレイヤーにXダメージ（Xはこの試合で自分がユニットを移動させた回数。前のラウンドの移動も数え、相手による移動は数えない）",
+      "name": "衛星兵器ラグナロク: 9マナ・遅延。発動時に相手プレイヤーにXダメージ（Xはこの試合で自分がユニットを移動させたラウンド数。同じラウンドに何回移動させても1、相手による移動は数えない）",
       "refs": ["CY-25", "14.1", "12"],
       "setup": {"round": 9, "A": {"maxMana": 9, "mana": 3, "hand": ["CY-13", "CY-25"], "board": {"1前": "CY-01"}}, "B": {"board": {"2前": "KN-03", "3前": "CY-03"}}},
       "steps": [
@@ -596,6 +596,8 @@
         {"do": "endRound"},
         {"expect": {"round": 10, "activePlayer": "B", "A": {"mana": 10}}},
         {"type": "pass", "player": "B"},
+        {"type": "mobileMove", "player": "A", "unit": "1後", "to": "1前"},
+        {"type": "pass", "player": "B"},
         {"type": "castSpell", "player": "A", "card": "CY-25"},
         {"expect": {"activePlayer": "B", "A": {"mana": 1, "delayed": ["CY-25"]}, "B": {"life": 20}}},
         {"type": "pass", "player": "B"}
@@ -603,16 +605,16 @@
       "expect": {"activePlayer": "B", "A": {"delayed": [], "trash": ["CY-25", "CY-13"]}, "B": {"life": 18}}
     },
     {
-      "name": "衛星兵器ラグナロク: Xは発動するときに数える（予約した後、発動までに自分が移動させた回数も数える）",
+      "name": "衛星兵器ラグナロク: Xは発動するときに数える（予約した後、発動までにユニットを移動させたラウンドも数える）",
       "refs": ["CY-25", "14.1", "CY-24", "KN-22"],
       "setup": {"round": 10, "activePlayer": "B", "A": {"mana": 10, "hand": ["CY-25"], "board": {"1前": "CY-01", "2後": "CY-24"}}, "B": {"mana": 10, "hand": ["KN-22"], "board": {"2前": "KN-08", "3前": "CY-03"}}},
       "steps": [
         {"type": "mobileMove", "player": "B", "unit": "3前", "to": "3後"},
-        {"type": "mobileMove", "player": "A", "unit": "1前", "to": "1後"},
+        {"type": "pass", "player": "A"},
         {"type": "castSpell", "player": "B", "card": "KN-22"},
-        {"type": "castSpell", "player": "A", "card": "CY-25", "note": "次の相手の手番の始めに開戦が発動し、戦闘でバベルが敵を後列へ移動させる（自分の移動2回目）。その後の自分の手番の始めにラグナロクが発動する"}
+        {"type": "castSpell", "player": "A", "card": "CY-25", "note": "予約した時点では、自分はまだユニットを移動させていない（X=0）。次の相手の手番の始めに開戦が発動し、戦闘でバベルが敵を後列へ移動させる（このラウンドに初めて移動させた）。その後の自分の手番の始めにラグナロクが発動する"}
       ],
-      "expect": {"A": {"mana": 1, "delayed": [], "trash": ["CY-25"]}, "B": {"life": 18, "board": {"2前": null, "2後": {"card": "KN-08"}}}}
+      "expect": {"A": {"mana": 1, "delayed": [], "trash": ["CY-25"]}, "B": {"life": 19, "board": {"2前": null, "2後": {"card": "KN-08"}}}}
     },
     {
       "name": "レイ 強制転送（5）: 敵ユニットをその持ち主の空きマスへ移動（成長に1回数える）。1ラウンド1回",
