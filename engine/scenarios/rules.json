@@ -14,9 +14,8 @@
         "A": {
           "board": {
             "3前": {
-              "card": "KN-19",
-              "attack": 0,
-              "health": 2,
+              "card": "KN-04",
+              "attack": 2,
               "keywords": [
                 "pierce"
               ]
@@ -32,7 +31,8 @@
         "B": {
           "board": {
             "3前": {
-              "card": "KN-12",
+              "card": "KN-20",
+              "health": 3,
               "shield": true
             },
             "3後": "KN-03"
@@ -55,14 +55,14 @@
             }
           },
           "trash": [
-            "KN-19"
+            "KN-04"
           ]
         },
         "B": {
           "life": 20,
           "board": {
             "3前": {
-              "card": "KN-12",
+              "card": "KN-20",
               "health": 1,
               "damage": 4,
               "shield": false
@@ -83,7 +83,12 @@
       "setup": {
         "A": {
           "board": {
-            "1前": "KN-23"
+            "1前": {
+              "card": "KN-25",
+              "keywords": [
+                "firstStrike"
+              ]
+            }
           }
         },
         "B": {
@@ -102,13 +107,13 @@
         "A": {
           "board": {
             "1前": {
-              "card": "KN-23",
+              "card": "KN-25",
               "damage": 0
             }
           }
         },
         "B": {
-          "life": 15,
+          "life": 16,
           "board": {
             "1前": null,
             "1後": null
@@ -129,7 +134,12 @@
       "setup": {
         "A": {
           "board": {
-            "1前": "KN-23"
+            "1前": {
+              "card": "KN-19",
+              "keywords": [
+                "pierce"
+              ]
+            }
           }
         },
         "B": {
@@ -150,7 +160,7 @@
             "1前": null
           },
           "trash": [
-            "KN-23"
+            "KN-19"
           ]
         },
         "B": {
@@ -325,7 +335,7 @@
           "maxMana": 4,
           "hand": [
             "KN-03",
-            "AC-18"
+            "KN-04"
           ]
         },
         "B": {
@@ -361,16 +371,18 @@
           }
         },
         {
-          "type": "castSpell",
+          "type": "playUnit",
           "player": "A",
-          "card": "AC-18"
+          "card": "KN-04",
+          "cell": "4後"
         },
         {
           "expect": {
             "passStreak": 0,
+            "activePlayer": "B",
             "A": {
               "hand": [],
-              "spellsCast": 1
+              "mana": 0
             }
           }
         },
@@ -404,10 +416,13 @@
           "mana": 5,
           "reserve": 0,
           "board": {
-            "1前": null
+            "1前": null,
+            "4後": {
+              "card": "KN-04",
+              "damage": 0
+            }
           },
           "trash": [
-            "AC-18",
             "KN-03"
           ],
           "handCount": 1
@@ -880,8 +895,8 @@
         "B": {
           "board": {
             "1前": {
-              "card": "KN-19",
-              "attack": 0
+              "card": "KN-17",
+              "attack": 1
             }
           }
         }
@@ -1171,14 +1186,14 @@
       "setup": {
         "A": {
           "maxMana": 2,
-          "reserve": 0,
+          "reserve": 2,
           "hand": [
             "KN-09",
             "CY-02",
-            "KN-06"
+            "KN-16"
           ],
           "board": {
-            "1後": "KN-10"
+            "1後": "KN-17"
           }
         },
         "B": {
@@ -1206,7 +1221,7 @@
         {
           "type": "castSpell",
           "player": "A",
-          "card": "KN-06",
+          "card": "KN-16",
           "enhance": true,
           "targets": {
             "ally": {
@@ -1253,10 +1268,17 @@
       ],
       "expect": {
         "A": {
-          "mana": 0,
+          "mana": 2,
+          "reserve": 0,
+          "hand": [
+            "KN-09",
+            "CY-02",
+            "KN-16",
+            "KN-03"
+          ],
           "board": {
             "1後": {
-              "attack": 5
+              "card": "KN-17"
             }
           }
         }
@@ -1273,23 +1295,30 @@
           "maxMana": 2,
           "reserve": 2,
           "hand": [
-            "KN-06"
+            "KN-07"
           ],
           "board": {
             "1前": "KN-04"
           }
         },
-        "B": {}
+        "B": {
+          "board": {
+            "1前": "KN-03"
+          }
+        }
       },
       "steps": [
         {
           "type": "castSpell",
           "player": "A",
-          "card": "KN-06",
+          "card": "KN-07",
           "enhance": true,
           "targets": {
             "ally": {
               "unit": "A:1前"
+            },
+            "enemy": {
+              "unit": "B:1前"
             }
           }
         }
@@ -1300,7 +1329,7 @@
           "reserve": 0,
           "board": {
             "1前": {
-              "health": 6
+              "health": 5
             }
           }
         }
@@ -1316,23 +1345,30 @@
           "maxMana": 4,
           "reserve": 1,
           "hand": [
-            "KN-06"
+            "KN-07"
           ],
           "board": {
             "1前": "KN-04"
           }
         },
-        "B": {}
+        "B": {
+          "board": {
+            "1前": "KN-03"
+          }
+        }
       },
       "steps": [
         {
           "type": "castSpell",
           "player": "A",
-          "card": "KN-06",
+          "card": "KN-07",
           "enhance": true,
           "targets": {
             "ally": {
               "unit": "A:1前"
+            },
+            "enemy": {
+              "unit": "B:1前"
             }
           }
         }
@@ -1341,6 +1377,54 @@
         "A": {
           "mana": 1,
           "reserve": 0
+        }
+      }
+    },
+    {
+      "name": "9章 ライフは初期値（20）を超えて回復しない（魔女の聖水の強化・水の精霊）",
+      "refs": [
+        "9",
+        "AC-05",
+        "AC-23"
+      ],
+      "setup": {
+        "A": {
+          "life": 19,
+          "maxMana": 4,
+          "reserve": 2,
+          "hand": [
+            "AC-05"
+          ],
+          "board": {
+            "1前": "AC-23"
+          }
+        },
+        "B": {}
+      },
+      "steps": [
+        {
+          "type": "castSpell",
+          "player": "A",
+          "card": "AC-05",
+          "enhance": true,
+          "targets": {
+            "target": {
+              "player": "A"
+            }
+          }
+        },
+        {
+          "expect": {
+            "A": {
+              "life": 20
+            }
+          }
+        }
+      ],
+      "expect": {
+        "A": {
+          "life": 20,
+          "handCount": 1
         }
       }
     }

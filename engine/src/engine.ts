@@ -4,7 +4,7 @@ import type { Catalog } from './catalog';
 import { getCard, getLeader, validateDeck } from './catalog';
 import { CELLS, START_HAND, START_LIFE } from './constants';
 import { randomInt, shuffleInPlace } from './rng';
-import { IllegalAction, NeedChoice, Runner } from './runner';
+import { IllegalAction, NeedChoice, Runner, setPlayHook } from './runner';
 import type { Action, CardInstance, DeckDef, DelayedEntry, EffectContext, GameState, PlayerId, PlayerState, TargetSpec } from './types';
 
 export interface NewGameOptions {
@@ -76,7 +76,12 @@ export function newGame(cat: Catalog, decks: Record<PlayerId, DeckDef>, opts: Ne
     }
     if (!opts.noShuffle) shuffleInPlace(s, s.players[p].deck);
   }
-  if (opts.startLife !== undefined) for (const p of ['A', 'B'] as const) s.players[p].life = opts.startLife;
+  if (opts.startLife !== undefined) {
+    for (const p of ['A', 'B'] as const) {
+      s.players[p].life = opts.startLife;
+      s.players[p].maxLife = opts.startLife;
+    }
+  }
   s.firstPlayer = opts.firstPlayer ?? (randomInt(s, 2) === 0 ? 'A' : 'B');
   s.activePlayer = s.firstPlayer;
   const r = new Runner(cat, s);
@@ -243,14 +248,18 @@ function playUnit(r: Runner, a: Extract<Action, { type: 'playUnit' }>): void {
   if (enhanced && !def.enhance) throw new IllegalAction('強化できないカードです');
   const plan = r.paymentPlan(p, r.cardCost(p, inst), enhanced ? r.enhanceCost(p, def) : 0);
   if (!plan) throw new IllegalAction('マナが足りません');
-  const specs = onPlayTargetSpecs(r, inst.cardId, enhanced);
-  const err = r.checkTargets(specs, a.targets, p, false, inst.uid);
-  if (err) throw new IllegalAction(err);
+  // 配置時の効果の対象は、ユニットを置いてから選ぶ（7.1 手順6。置いたマスは空きマスではない）
+  const u = r.newUnit(p, inst.cardId, inst.uid, false, inst.generated);
+  r.placeUnit(p, a.cell, u);
+  const err = r.checkTargets(onPlayTargetSpecs(r, inst.cardId, enhanced), a.targets, p, false, inst.uid, u.uid);
+  if (err) {
+    r.pl(p).board[a.cell] = null;
+    r.touch();
+    throw new IllegalAction(err);
+  }
 
   r.takeFromHand(p, inst.uid);
   r.pay(p, plan);
-  const u = r.newUnit(p, inst.cardId, inst.uid, false, inst.generated);
-  r.placeUnit(p, a.cell, u);
   r.log('playUnit', { player: p, card: inst.cardId, uid: u.uid, cell: cellName(a.cell), enhanced, paid: plan });
   // 配置時の効果（7.1 手順6）
   const targets = a.targets ?? {};
@@ -319,9 +328,10 @@ function activate(r: Runner, a: Extract<Action, { type: 'activate' }>): void {
   const ab = def.abilities?.[a.ability];
   if (!ab || ab.kind !== 'activated') throw new IllegalAction('起動能力がありません');
   if (loc.unit.activatedUsed.includes(a.ability)) throw new IllegalAction('このラウンドはもう使いました');
+  if (ab.condition && !r.unitMatches(loc, ab.condition)) throw new IllegalAction('今は使えません');
   const plan = r.paymentPlan(p, 0, ab.cost);
   if (!plan) throw new IllegalAction('マナが足りません');
-  const err = r.checkTargets(ab.targets, a.targets, p, true);
+  const err = r.checkTargets(ab.targets, a.targets, p, true, undefined, loc.unit.uid);
   if (err) throw new IllegalAction(err);
 
   r.pay(p, plan);
@@ -353,3 +363,9 @@ function leaderAbility(r: Runner, a: Extract<Action, { type: 'leaderAbility' }>)
     delays: [],
   });
 }
+
+// 効果の中でカードを使う（オラクル）ときは、手札から使うときと同じ手順で行う
+setPlayHook((r, a) => {
+  if (a.type === 'playUnit') playUnit(r, a);
+  else if (a.type === 'castSpell') castSpell(r, a);
+});

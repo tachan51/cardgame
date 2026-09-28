@@ -3,10 +3,11 @@
 import { cellIndex, cellName, laneOf, leftRight, opponent, otherRow, rowOf } from './board';
 import type { Catalog } from './catalog';
 import { getCard, getLeader } from './catalog';
-import { CELLS, HAND_LIMIT, LANES, MAX_MANA_CAP } from './constants';
+import { CELLS, HAND_LIMIT, LANES, MAX_MANA_CAP, START_LIFE } from './constants';
 import { pickRandom, randomInt, shuffleInPlace } from './rng';
 import type {
   Ability,
+  Action,
   CardDef,
   CardInstance,
   Condition,
@@ -38,6 +39,23 @@ export class NeedChoice {
 
 export class IllegalAction extends Error {}
 
+/** 効果の中でカードを使う（オラクル）。engine.ts が登録する */
+export type PlayHook = (r: Runner, action: Action) => void;
+/**
+ * オラクルが使うカードと手を選ぶ（CY-23）。state は今の状態の複製、cardIds は候補のカード。
+ * 返す action の card は、state の手札に1枚加えたと考えたときの番号（呼び出し側で置き換える）
+ */
+export type OracleChooser = (cat: Catalog, state: GameState, player: PlayerId, cardIds: string[]) => { cardId: string; action: Action } | null;
+let playHook: PlayHook | null = null;
+let oracleChooser: OracleChooser | null = null;
+export function setPlayHook(f: PlayHook): void {
+  playHook = f;
+}
+/** オラクルの選び方を登録する（ai.ts が読み込まれると、つよい AI の選び方になる） */
+export function setOracleChooser(f: OracleChooser | null): void {
+  oracleChooser = f;
+}
+
 export interface Located {
   unit: Unit;
   p: PlayerId;
@@ -54,6 +72,7 @@ type GameEvent =
   | { type: 'destroyed'; uid: number; cardId: string; owner: PlayerId; cell: number }
   | { type: 'spellCast'; p: PlayerId }
   | { type: 'endure'; uid: number; owner: PlayerId }
+  | { type: 'combatDamage'; uid: number; owner: PlayerId; source: number }
   | { type: 'phase'; when: 'roundStart' | 'roundEnd' | 'combatStart' | 'combatEnd' };
 
 interface QueuedTrigger {
@@ -233,6 +252,8 @@ export class Runner {
 
   cardCost(p: PlayerId, inst: CardInstance): number {
     const def = this.card(inst.cardId);
+    // このラウンド中はスペルのコストが0（AC-25）
+    if (def.type === 'spell' && this.pl(p).freeSpellsRound === this.s.round) return 0;
     let mod = def.type === 'spell' ? this.statics().players[p].spellCost : 0;
     for (const a of def.abilities ?? []) {
       if (a.kind === 'costReduction') mod -= this.value(a.by, { controller: p, source: { kind: 'hand', cardId: def.id, uid: inst.uid }, targets: {} });
@@ -361,7 +382,11 @@ export class Runner {
       }
       return out;
     }
-    if ('randomCell' in sel || 'cellsRelative' in sel) {
+    if ('combatTargetOf' in sel) {
+      const t = this.combatTarget(sel.combatTargetOf, ctx);
+      return t?.unit ? [t.unit] : [];
+    }
+    if ('randomCell' in sel || 'cellsRelative' in sel || 'cross' in sel) {
       return this.cells(sel, ctx).flatMap((c) => {
         const u = this.unitAt(c.p, c.i);
         return u ? [{ unit: u, p: c.p, i: c.i }] : [];
@@ -382,6 +407,7 @@ export class Runner {
     }
     if (f.row) list = list.filter((x) => rowOf(x.i) === f.row);
     if (f.cardId) list = list.filter((x) => x.unit.cardId === f.cardId);
+    if (f.tag) list = list.filter((x) => (this.card(x.unit.cardId).tags ?? []).includes(f.tag!));
     if (f.where) list = list.filter((x) => this.unitMatches(x, f.where!));
     if (f.random !== undefined) list = pickRandom(this.s, list, f.random);
     return list;
@@ -415,6 +441,13 @@ export class Runner {
       const q = sel.cell.owner === 'ally' ? ctx.controller : opponent(ctx.controller);
       return this.lanes(sel.cell.lane, ctx).map((lane) => ({ p: q, i: cellIndex(lane, sel.cell.row) }));
     }
+    if ('cross' in sel) {
+      const out: Cell[] = [];
+      for (const c of this.cells(sel.cross, ctx)) {
+        for (const i of [c.i, otherRow(c.i), ...leftRight(c.i)]) if (!out.some((o) => o.p === c.p && o.i === i)) out.push({ p: c.p, i });
+      }
+      return out;
+    }
     if ('randomCell' in sel) {
       const q = sel.randomCell === 'ally' ? ctx.controller : opponent(ctx.controller);
       const i = randomInt(this.s, CELLS);
@@ -428,10 +461,29 @@ export class Runner {
   players(sel: Selector, ctx: EffectContext): PlayerId[] {
     if (sel === 'enemyPlayer') return [opponent(ctx.controller)];
     if (sel === 'allyPlayer') return [ctx.controller];
+    if (typeof sel === 'object' && 'combatTargetOf' in sel) {
+      const t = this.combatTarget(sel.combatTargetOf, ctx);
+      return t?.player ? [t.player] : [];
+    }
     if (typeof sel === 'object' && 'ref' in sel) {
       return (ctx.targets[sel.ref] ?? []).flatMap((v) => (v.kind === 'player' ? [v.p] : []));
     }
     return [];
+  }
+
+  /** ユニットが戦闘で攻撃する対象（8.3）。後列にいて射撃がなければ攻撃しないので、なし */
+  private combatTarget(sel: Selector, ctx: EffectContext): { unit?: Located; player?: PlayerId } | null {
+    const x = this.units(sel, ctx)[0];
+    if (!x) return null;
+    if (rowOf(x.i) === 'back' && !this.hasKeyword(x.unit, 'ranged')) return null;
+    const q = opponent(x.p);
+    const lane = laneOf(x.i);
+    for (const row of ['front', 'back'] as const) {
+      const i = cellIndex(lane, row);
+      const u = this.unitAt(q, i);
+      if (u) return { unit: { unit: u, p: q, i } };
+    }
+    return { player: q };
   }
 
   /** セレクタが指す手札のカード（効果の持ち主の手札だけ） */
@@ -454,7 +506,15 @@ export class Runner {
       const u = this.units(v.attackOf, ctx)[0];
       return u ? this.attack(u.unit) : (v.ifGone ?? 0);
     }
-    if ('count' in v) return v.count === 'unitMovesThisGame' ? (this.s.unitMoves ?? 0) : this.pl(ctx.controller).spellsCast;
+    if ('healthOf' in v) {
+      const u = this.units(v.healthOf, ctx)[0];
+      return u ? Math.max(0, this.health(u.unit)) : (v.ifGone ?? 0);
+    }
+    if ('count' in v) {
+      if (v.count === 'unitMovesThisGame') return this.s.unitMoves ?? 0;
+      if (v.count === 'allyEnduresThisGame') return this.pl(ctx.controller).endured ?? 0;
+      return this.pl(ctx.controller).spellsCast;
+    }
     return Math.min(this.value(v.max, ctx), v.cap);
   }
 
@@ -492,7 +552,7 @@ export class Runner {
    * 対象の指定1つについて、選べる値の一覧を返す（count が2以上なら組み合わせ）。
    * chosen はそれより前の対象で選んだ値、exclude は選べない手札（今使っているカード）
    */
-  targetOptions(spec: TargetSpec, controller: PlayerId, chosen: EffectContext['targets'], exclude?: number): TargetValue[][] {
+  targetOptions(spec: TargetSpec, controller: PlayerId, chosen: EffectContext['targets'], exclude?: number, selfUid?: number): TargetValue[][] {
     const singles: TargetValue[] = [];
     const opp = opponent(controller);
     switch (spec.kind) {
@@ -500,6 +560,7 @@ export class Runner {
       case 'unitOrPlayer': {
         for (const x of this.allUnits()) {
           if (!this.sideMatches(spec.side, x.p, controller)) continue;
+          if (spec.other && x.unit.uid === selfUid) continue;
           if (spec.where && !this.unitMatches(x, spec.where)) continue;
           singles.push({ kind: 'unit', uid: x.unit.uid });
         }
@@ -537,6 +598,9 @@ export class Runner {
       case 'lane':
         for (let lane = 1; lane <= LANES; lane++) singles.push({ kind: 'lane', lane });
         break;
+      case 'choice':
+        (spec.choices ?? []).forEach((_, n) => singles.push({ kind: 'choice', n }));
+        break;
       case 'cardInHand': {
         const q = spec.side === 'enemy' ? opp : controller;
         for (const c of this.pl(q).hand) {
@@ -553,12 +617,12 @@ export class Runner {
   }
 
   /** 対象の指定の並びに対して、選べる組み合わせをすべて返す。必要な対象を選べなければ空 */
-  targetCombos(specs: TargetSpec[] | undefined, controller: PlayerId, required: boolean, exclude?: number): EffectContext['targets'][] {
+  targetCombos(specs: TargetSpec[] | undefined, controller: PlayerId, required: boolean, exclude?: number, selfUid?: number): EffectContext['targets'][] {
     let acc: EffectContext['targets'][] = [{}];
     for (const spec of specs ?? []) {
       const next: EffectContext['targets'][] = [];
       for (const chosen of acc) {
-        const opts = this.targetOptions(spec, controller, chosen, exclude);
+        const opts = this.targetOptions(spec, controller, chosen, exclude, selfUid);
         if (!opts.length) {
           if (required && !spec.optional) continue;
           next.push({ ...chosen, [spec.id]: [] });
@@ -578,11 +642,12 @@ export class Runner {
     controller: PlayerId,
     required: boolean,
     exclude?: number,
+    selfUid?: number,
   ): string | null {
     const chosen: EffectContext['targets'] = {};
     for (const spec of specs ?? []) {
       const val = given?.[spec.id] ?? [];
-      const opts = this.targetOptions(spec, controller, chosen, exclude);
+      const opts = this.targetOptions(spec, controller, chosen, exclude, selfUid);
       if (!opts.length) {
         if (required && !spec.optional) return `対象 ${spec.id} を選べません`;
         if (val.length) return `対象 ${spec.id} は選べません`;
@@ -647,6 +712,14 @@ export class Runner {
     u.damage += amount - absorbed;
     this.log('damage', { uid: u.uid, card: u.cardId, amount, reason });
     return { hit: true, blocked: false };
+  }
+
+  /** ライフを回復する。初期ライフを超えない（ルール仕様書 9章） */
+  gainLife(p: PlayerId, amount: number): void {
+    const st = this.pl(p);
+    const n = Math.max(0, Math.min(amount, (st.maxLife ?? START_LIFE) - st.life));
+    st.life += n;
+    this.log('gainLife', { player: p, amount: n, life: st.life });
   }
 
   damagePlayer(p: PlayerId, amount: number, reason: string): void {
@@ -735,12 +808,14 @@ export class Runner {
     return true;
   }
 
-  generate(p: PlayerId, cardId: string): void {
+  generate(p: PlayerId, cardId: string): CardInstance | null {
     const st = this.pl(p);
-    if (st.hand.length >= HAND_LIMIT) return;
+    if (st.hand.length >= HAND_LIMIT) return null;
     // 生成したカードは、何を生成したかが相手にも分かる
-    st.hand.push({ uid: this.newUid(), cardId, costMod: 0, revealed: false, generated: true, known: true });
+    const inst: CardInstance = { uid: this.newUid(), cardId, costMod: 0, revealed: false, generated: true, known: true };
+    st.hand.push(inst);
     this.log('generate', { player: p, card: cardId });
+    return inst;
   }
 
   /** 手札のカードを取り除いて返す（コストの変化と公開はなくなる） */
@@ -832,6 +907,8 @@ export class Runner {
         return ev.type === 'spellCast' && ev.p === q;
       case 'onAllyEndureCombatDamage':
         return ev.type === 'endure' && ev.owner === q;
+      case 'onDealCombatDamage':
+        return ev.type === 'combatDamage' && ev.source === selfUid;
       case 'roundStart':
       case 'roundEnd':
       case 'combatStart':
@@ -897,6 +974,8 @@ export class Runner {
       case 'heal': {
         const amount = this.value(e.amount, ctx);
         for (const x of this.units(e.target, ctx)) this.heal(x.unit, amount);
+        // プレイヤーを回復する（AC-05）
+        for (const q of this.players(e.target, ctx)) this.gainLife(q, amount);
         return;
       }
       case 'buff': {
@@ -953,10 +1032,11 @@ export class Runner {
       }
       case 'returnToHand':
         for (const x of this.units(e.target, ctx)) {
-          const inst = this.removeFromBoard(x);
+          // トークン（効果で出したユニット）も、そのカードとして手札に戻る（CY-02）
+          const inst = this.removeFromBoard(x) ?? { uid: x.unit.uid, cardId: x.unit.cardId, costMod: 0, revealed: false, generated: true };
           this.log('returnToHand', { uid: x.unit.uid, card: x.unit.cardId, player: x.p });
           // 盤面から手札に戻したカードは、相手にも中身が分かる
-          if (inst && this.addToHand(x.unit.owner, inst)) inst.known = true;
+          if (this.addToHand(x.unit.owner, inst)) inst.known = true;
         }
         return;
       case 'summon': {
@@ -1051,10 +1131,7 @@ export class Runner {
         return;
       }
       case 'gainLife': {
-        const st = this.pl(me);
-        const n = this.value(e.amount, ctx);
-        st.life += n;
-        this.log('gainLife', { player: me, amount: n, life: st.life });
+        this.gainLife(me, this.value(e.amount, ctx));
         return;
       }
       case 'refillMana':
@@ -1067,8 +1144,13 @@ export class Runner {
         if (!a || !b) return;
         const atkA = this.attack(a.unit);
         const atkB = this.attack(b.unit);
-        this.damageUnit(b.unit, atkA, reason);
-        this.damageUnit(a.unit, atkB, reason);
+        const hitB = this.damageUnit(b.unit, atkA, reason).hit;
+        const hitA = this.damageUnit(a.unit, atkB, reason).hit;
+        // 戦闘ダメージとして与え合う（KN-07）: 耐えたユニットを数える
+        if (e.combat) {
+          this.checkDeaths();
+          this.recordEndure([hitA ? a.unit.uid : -1, hitB ? b.unit.uid : -1]);
+        }
         return;
       }
       case 'resolveCombat':
@@ -1125,6 +1207,106 @@ export class Runner {
         for (let k = 0; k < n && !this.s.result; k++) this.runEffects(e.effects, ctx, scope);
         return;
       }
+      case 'transform':
+        for (const x of this.units(e.target, ctx)) {
+          // 変化前の状態はすべてなくなる。番号は同じなので、後の効果で同じユニットとして参照できる
+          const u = this.newUnit(x.unit.owner, e.cardId, x.unit.uid, false);
+          this.pl(x.p).board[x.i] = u;
+          this.touch();
+          this.log('transform', { uid: u.uid, from: x.unit.cardId, card: e.cardId, player: x.p, cell: cellName(x.i) });
+        }
+        return;
+      case 'grantRandomKeywords': {
+        const n = Math.min(this.value(e.count, ctx), e.keywords.length);
+        if (n <= 0) return;
+        for (const x of this.units(e.target, ctx)) {
+          const picked = pickRandom(this.s, e.keywords, n);
+          this.runEffect({ op: 'grantKeyword', target: { ref: '__random' }, keywords: picked, duration: e.duration }, { ...ctx, targets: { __random: [{ kind: 'unit', uid: x.unit.uid }] } }, scope);
+        }
+        return;
+      }
+      case 'generateCopyOf':
+        for (const x of this.units(e.of, ctx).slice(0, 1)) {
+          const inst = this.generate(me, x.unit.cardId);
+          if (inst && e.reveal) {
+            inst.revealed = true;
+            this.log('reveal', { player: me, card: inst.cardId });
+          }
+        }
+        return;
+      case 'generateRandom': {
+        const facs = new Set(this.pl(me).leaders.map((l) => getLeader(this.cat, l.id).faction));
+        const pool = [...this.cat.cards.values()].filter((c) => facs.has(c.faction) && !c.token && this.cardMatches(c.id, e.where)).map((c) => c.id);
+        if (!pool.length) return;
+        const picked = e.distinctNames ? pickRandom(this.s, pool, e.count) : Array.from({ length: e.count }, () => pickRandom(this.s, pool, 1)[0]);
+        for (const id of picked) this.generate(me, id);
+        return;
+      }
+      case 'pickCastSpell': {
+        const names = pickRandom(this.s, [...new Set(this.pl(me).castSpellIds)], e.look);
+        if (!names.length) return;
+        // 選択肢の番号は見たカードの並び順（1から）
+        const n = this.ask(
+          me,
+          names.map((cardId, k) => ({ uid: k + 1, cardId })),
+        );
+        this.log('pickCast', { player: me, looked: names.length });
+        this.generate(me, names[n - 1]);
+        return;
+      }
+      case 'byChoice': {
+        const v = ctx.targets[e.ref]?.[0];
+        if (v?.kind !== 'choice') return;
+        this.runEffects(e.cases[v.n] ?? [], ctx, scope);
+        return;
+      }
+      case 'shuffleBoard': {
+        const moves: { from: Located; to: number }[] = [];
+        for (const p of this.playerOrder()) {
+          const units = this.allUnits().filter((x) => x.p === p);
+          const cells = [...Array(CELLS).keys()];
+          shuffleInPlace(this.s, cells);
+          units.forEach((x, k) => moves.push({ from: x, to: cells[k] }));
+        }
+        return this.moveUnits(moves, me);
+      }
+      case 'freeSpellsThisRound':
+        this.pl(me).freeSpellsRound = this.s.round;
+        this.log('freeSpells', { player: me });
+        return;
+      case 'oracle':
+        return this.oracle(me, e.exclude ?? []);
+    }
+  }
+
+  /** 戦闘ダメージを受けて盤面に残ったユニットを「耐えた」と数える（11.7） */
+  private recordEndure(uids: number[]): void {
+    const endured = this.allUnits().filter((x) => uids.includes(x.unit.uid));
+    if (!endured.length) return;
+    for (const x of endured) {
+      this.log('endure', { uid: x.unit.uid, card: x.unit.cardId, player: x.p });
+      this.addProgress(x.p, 'allyEnduredCombatDamage', 1);
+      this.pl(x.p).endured = (this.pl(x.p).endured ?? 0) + 1;
+    }
+    this.emit(endured.map((x) => ({ type: 'endure', uid: x.unit.uid, owner: x.p })));
+  }
+
+  /** オラクル（CY-23）: 自分の2勢力のカードから選んだ1枚を手札に生成し、コストを払って使う */
+  private oracle(me: PlayerId, exclude: string[]): void {
+    const facs = new Set(this.pl(me).leaders.map((l) => getLeader(this.cat, l.id).faction));
+    const ids = [...this.cat.cards.values()].filter((c) => facs.has(c.faction) && !c.token && !exclude.includes(c.id)).map((c) => c.id);
+    const pick = (oracleChooser ?? defaultOracle)(this.cat, structuredClone({ ...this.s, pending: null }), me, ids);
+    if (!pick || !playHook) return;
+    const inst = this.generate(me, pick.cardId);
+    if (!inst) return;
+    this.log('oracle', { player: me, card: pick.cardId });
+    const action = { ...pick.action, card: inst.uid } as Action;
+    try {
+      playHook(this, action);
+    } catch (err) {
+      if (!(err instanceof IllegalAction)) throw err;
+      // 使えなければ、生成したカードは手札に残る
+      this.log('oracleFailed', { player: me, card: pick.cardId, reason: err.message });
     }
   }
 
@@ -1169,12 +1351,14 @@ export class Runner {
       return { ...a, q, lane, target: front ?? back ?? null, back };
     });
     const hitUnits = new Set<number>();
+    const dealt: GameEvent[] = [];
     const hit = (target: Unit | null, q: PlayerId, lane: number, amount: number, pierce: boolean, isFront: boolean, src: Unit) => {
       if (amount <= 0) return;
       if (!target) return this.damagePlayer(q, amount, src.cardId);
       const before = this.health(target);
       const r = this.damageUnit(target, amount, src.cardId);
       hitUnits.add(target.uid);
+      if (!r.blocked) dealt.push({ type: 'combatDamage', uid: target.uid, owner: q, source: src.uid });
       if (!pierce || r.blocked) return;
       const excess = amount - Math.max(0, before);
       if (excess <= 0) return;
@@ -1190,14 +1374,9 @@ export class Runner {
     this.checkDeaths();
     if (this.checkWinner()) return;
     // 戦闘ダメージを耐えた（11.7）
-    const endured = this.allUnits().filter((x) => hitUnits.has(x.unit.uid));
-    if (endured.length) {
-      for (const x of endured) {
-        this.log('endure', { uid: x.unit.uid, card: x.unit.cardId, player: x.p });
-        this.addProgress(x.p, 'allyEnduredCombatDamage', 1);
-      }
-      this.emit(endured.map((x) => ({ type: 'endure', uid: x.unit.uid, owner: x.p })));
-    }
+    this.recordEndure([...hitUnits]);
+    // 戦闘ダメージを与えた（CY-24）
+    this.emit(dealt);
     this.settle();
   }
 
@@ -1360,6 +1539,8 @@ function key(v: TargetValue): string {
       return `x${v.p}${v.i}`;
     case 'lane':
       return `l${v.lane}`;
+    case 'choice':
+      return `o${v.n}`;
     case 'player':
       return `p${v.p}`;
   }
@@ -1367,4 +1548,31 @@ function key(v: TargetValue): string {
 
 export function canonical(vals: TargetValue[]): string {
   return vals.map(key).sort().join(',');
+}
+
+/**
+ * オラクルの選び方（AI を読み込んでいないとき）: 使えるカードのうちコストが一番高いものを、
+ * 最初に見つかった置き場所・対象で使う
+ */
+export function defaultOracle(cat: Catalog, state: GameState, player: PlayerId, cardIds: string[]): { cardId: string; action: Action } | null {
+  const r = new Runner(cat, state);
+  const st = state.players[player];
+  const sorted = [...cardIds].sort((a, b) => getCard(cat, b).cost - getCard(cat, a).cost);
+  for (const id of sorted) {
+    const def = getCard(cat, id);
+    const cost = r.cardCost(player, { uid: -1, cardId: id, costMod: 0, revealed: false, generated: true });
+    if (!r.paymentPlan(player, cost, 0)) continue;
+    if (def.type === 'unit') {
+      const cell = st.board.findIndex((u) => !u);
+      if (cell < 0) continue;
+      const specs = (def.abilities ?? []).flatMap((a) => (a.kind === 'trigger' && a.when === 'onPlay' ? (a.targets ?? []) : []));
+      const targets = r.targetCombos(specs, player, false).find((t) => !Object.values(t).flat().some((v) => v.kind === 'cell' && v.p === player && v.i === cell));
+      if (!targets) continue;
+      return { cardId: id, action: { type: 'playUnit', player, card: -1, cell, targets } };
+    }
+    const targets = r.targetCombos(def.targets, player, true)[0];
+    if (!targets) continue;
+    return { cardId: id, action: { type: 'castSpell', player, card: -1, targets } };
+  }
+  return null;
 }

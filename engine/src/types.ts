@@ -17,6 +17,8 @@ export type TriggerType =
   | 'onAnyUnitMove'
   | 'onSpellCast'
   | 'onAllyEndureCombatDamage'
+  /** このユニットの戦闘の攻撃が、盾に防がれずにユニットにダメージを与えたとき（eventUnit はダメージを受けたユニット。CY-24） */
+  | 'onDealCombatDamage'
   | 'roundStart'
   | 'roundEnd'
   | 'combatStart'
@@ -36,8 +38,12 @@ export type CellOwnerSpec = 'ally' | 'enemy' | 'any' | { ownerOf: string } | { s
 
 export interface TargetSpec {
   id: string;
-  kind: 'unit' | 'cell' | 'lane' | 'unitOrPlayer' | 'cardInHand';
+  kind: 'unit' | 'cell' | 'lane' | 'unitOrPlayer' | 'cardInHand' | 'choice';
   side?: Side;
+  /** kind が choice のとき、選択肢の名前（選んだ番号を byChoice で使う。KN-18） */
+  choices?: string[];
+  /** 起動能力の対象に、そのユニット自身を含めない（「他の味方」。KN-06） */
+  other?: boolean;
   count?: number;
   where?: Condition;
   cellOwner?: CellOwnerSpec;
@@ -57,6 +63,8 @@ export type Selector =
         lane?: LaneRef;
         row?: Row;
         cardId?: string;
+        /** その属性を持つカードのユニットだけ（CY-20 の「ドローン属性」） */
+        tag?: string;
         where?: Condition;
         random?: number;
         /** このユニット自身を除く（「他の味方」） */
@@ -67,13 +75,19 @@ export type Selector =
   /** そのプレイヤーの盤面のマス（空きマスを含む8マス）からランダムに1つ。選ぶたびに引き直す（AC-08） */
   | { randomCell: 'ally' | 'enemy' }
   | { cellsRelative: 'leftRight' }
+  /** そのマス（または、そのユニットのいるマス）と、前後左右のマス（CY-11） */
+  | { cross: Selector }
+  /** そのユニットが戦闘で攻撃する対象（同じレーンの相手の前列 → 後列 → 相手本体。後列にいて射撃がなければ、なし。CY-18） */
+  | { combatTargetOf: Selector }
   | 'enemyPlayer'
   | 'allyPlayer';
 
 export type Value =
   | number
   | { attackOf: Selector; ifGone?: number }
-  | { count: 'spellsCastThisGame' | 'unitMovesThisGame' }
+  /** そのユニットの今の残り体力（KN-21） */
+  | { healthOf: Selector; ifGone?: number }
+  | { count: 'spellsCastThisGame' | 'unitMovesThisGame' | 'allyEnduresThisGame' }
   | { max: Value; cap: number };
 
 export type Duration = 'permanent' | 'thisRound';
@@ -103,7 +117,8 @@ export type Effect =
   | { op: 'gainReserve'; amount: Value }
   | { op: 'gainLife'; amount: Value }
   | { op: 'refillMana' }
-  | { op: 'fight'; a: Selector; b: Selector }
+  /** combat なら戦闘ダメージとして扱う（戦闘ダメージを耐えた数に入る。KN-07） */
+  | { op: 'fight'; a: Selector; b: Selector; combat?: boolean }
   | { op: 'resolveCombat'; lanes: LaneRef }
   | { op: 'modifyCost'; target: Selector; amount: number }
   | { op: 'modifyLeaderAbilityCost'; amount: number }
@@ -113,7 +128,25 @@ export type Effect =
   | { op: 'if'; condition: Condition; subject: Selector; then: Effect[]; else?: Effect[] }
   | { op: 'forEach'; targets: Selector; effects: Effect[] }
   /** effects を times 回くり返す（AC-08） */
-  | { op: 'repeat'; times: Value; effects: Effect[] };
+  | { op: 'repeat'; times: Value; effects: Effect[] }
+  /** ユニットを別のカードのユニットに変える。変化前の状態（ダメージ・強化・キーワード・盾・トークンかどうか）はすべてなくなる（KN-16） */
+  | { op: 'transform'; target: Selector; cardId: string }
+  /** keywords のうち異なる count 個をランダムに与える（KN-23） */
+  | { op: 'grantRandomKeywords'; target: Selector; keywords: Keyword[]; count: Value; duration: Duration }
+  /** そのユニットと同名のカードを自分の手札に生成する（トークン専用のカードも生成できる。CY-07） */
+  | { op: 'generateCopyOf'; of: Selector; reveal?: boolean }
+  /** 自分のリーダー2人の勢力のカード（トークン専用を除く）から、条件に合うものをランダムに手札に生成する（AC-08） */
+  | { op: 'generateRandom'; where: Condition; count: number; distinctNames?: boolean }
+  /** この試合で自分が使ったスペルから名前の異なるランダムな look 枚を見て、1枚を選んで手札に生成する（AC-18） */
+  | { op: 'pickCastSpell'; look: number }
+  /** 対象 ref（kind: choice）で選んだ番号の効果を処理する（KN-18） */
+  | { op: 'byChoice'; ref: string; cases: Effect[][] }
+  /** すべてのユニットを、その持ち主の盤面でランダムに移動させる。もといたマスに移っても移動に数える（CY-25） */
+  | { op: 'shuffleBoard' }
+  /** このラウンド中、自分のスペルのコスト（強化の分を除く）を0にする（AC-25） */
+  | { op: 'freeSpellsThisRound' }
+  /** 自分の2勢力のカードから最良の1枚を選んで手札に生成し、コストを払って使う（CY-23。選び方は setOracleChooser） */
+  | { op: 'oracle'; exclude?: string[] };
 
 export type EffectOp = Effect['op'];
 
@@ -131,7 +164,8 @@ export interface StaticModifier {
 export type Ability =
   | { kind: 'trigger'; when: TriggerType; condition?: Condition; targets?: TargetSpec[]; effects: Effect[] }
   | { kind: 'static'; modifiers: StaticModifier[] }
-  | { kind: 'activated'; cost: number; targets?: TargetSpec[]; effects: Effect[] }
+  /** condition があれば、そのユニットが条件を満たすときだけ使える（KN-19） */
+  | { kind: 'activated'; cost: number; condition?: Condition; targets?: TargetSpec[]; effects: Effect[] }
   | { kind: 'inHand'; when: TriggerType; effects: Effect[] }
   /** 手札にある間、コストを by だけ下げる（by はそのカードの持ち主から見た値。AC-22・CY-21） */
   | { kind: 'costReduction'; by: Value };
@@ -157,6 +191,8 @@ export interface CardDef {
   effects?: Effect[];
   abilities?: Ability[];
   enhance?: Enhance;
+  /** 属性（「ドローン属性」など。CY-01・CY-03） */
+  tags?: string[];
   /** 効果で出すためだけのカード（トークン）。デッキには入れられない（TK-01） */
   token?: boolean;
   text: string;
@@ -259,7 +295,8 @@ export type TargetValue =
   | { kind: 'cell'; p: PlayerId; i: number }
   | { kind: 'lane'; lane: number }
   | { kind: 'player'; p: PlayerId }
-  | { kind: 'card'; uid: number };
+  | { kind: 'card'; uid: number }
+  | { kind: 'choice'; n: number };
 
 export type Targets = Record<string, TargetValue[]>;
 
@@ -308,6 +345,12 @@ export interface PlayerState {
   spellsCast: number;
   /** この試合で使ったスペルのカードID（使った順） */
   castSpellIds: string[];
+  /** ライフの上限（初期ライフ。省略時は START_LIFE） */
+  maxLife?: number;
+  /** この試合で自分の味方が戦闘ダメージを耐えた回数（KN-23） */
+  endured?: number;
+  /** このラウンド中はスペルのコストが0（そのラウンドの番号。AC-25） */
+  freeSpellsRound?: number;
   leaders: LeaderState[];
   /** 山札。添字 0 が一番上 */
   deck: CardInstance[];

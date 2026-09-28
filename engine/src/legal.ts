@@ -42,9 +42,22 @@ export function legalActions(cat: Catalog, state: GameState): Action[] {
       if (def.type === 'unit') {
         const empties = [...Array(CELLS).keys()].filter((i) => !st.board[i]);
         if (!empties.length) continue;
-        const combos = r.targetCombos(onPlayTargetSpecs(r, inst.cardId, enhance), p, false, inst.uid);
-        for (const cell of empties)
+        const specs = onPlayTargetSpecs(r, inst.cardId, enhance);
+        for (const cell of empties) {
+          // 配置時の効果の対象は、そのマスにユニットを置いた状態で選ぶ（engine.ts の playUnit と同じ）
+          let combos: ReturnType<Runner['targetCombos']> = [{}];
+          if (specs.length) {
+            st.board[cell] = r.newUnit(p, inst.cardId, inst.uid, false);
+            r.touch();
+            try {
+              combos = r.targetCombos(specs, p, false, inst.uid, inst.uid);
+            } finally {
+              st.board[cell] = null;
+              r.touch();
+            }
+          }
           for (const targets of combos) out.push(clean({ type: 'playUnit', player: p, card: inst.uid, cell, enhance, targets }));
+        }
       } else {
         const combos = r.targetCombos(spellTargetSpecs(r, inst.cardId, enhance), p, true, inst.uid);
         for (const targets of combos) out.push(clean({ type: 'castSpell', player: p, card: inst.uid, enhance, targets }));
@@ -53,15 +66,16 @@ export function legalActions(cat: Catalog, state: GameState): Action[] {
   }
 
   // 盤面のユニット
-  st.board.forEach((u) => {
+  st.board.forEach((u, i) => {
     if (!u) return;
     if (!u.mobileUsed && r.hasKeyword(u, 'mobile')) {
       for (let to = 0; to < CELLS; to++) if (!st.board[to]) out.push({ type: 'mobileMove', player: p, unit: u.uid, to });
     }
     (getCard(cat, u.cardId).abilities ?? []).forEach((ab, idx) => {
       if (ab.kind !== 'activated' || u.activatedUsed.includes(idx)) return;
+      if (ab.condition && !r.unitMatches({ unit: u, p, i }, ab.condition)) return;
       if (!affordable(0, ab.cost)) return;
-      for (const targets of r.targetCombos(ab.targets, p, true)) out.push(clean({ type: 'activate', player: p, unit: u.uid, ability: idx, targets }));
+      for (const targets of r.targetCombos(ab.targets, p, true, undefined, u.uid)) out.push(clean({ type: 'activate', player: p, unit: u.uid, ability: idx, targets }));
     });
   });
 

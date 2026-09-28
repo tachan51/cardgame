@@ -171,9 +171,19 @@
       "keywords": [
         "quick"
       ],
+      "targets": [
+        {
+          "id": "target",
+          "kind": "unitOrPlayer",
+          "side": "ally"
+        }
+      ],
       "effects": [
         {
-          "op": "gainLife",
+          "op": "heal",
+          "target": {
+            "ref": "target"
+          },
           "amount": 2
         },
         {
@@ -187,12 +197,15 @@
         "appliesTo": "effects",
         "effects": [
           {
-            "op": "gainLife",
+            "op": "heal",
+            "target": {
+              "ref": "target"
+            },
             "amount": 2
           }
         ]
       },
-      "text": "ライフを2回復。カードを1枚引く。強化（2）: さらに2回復"
+      "text": "味方ユニット1体または自分のライフを2回復。カードを1枚引く。強化（2）: さらに2回復"
     },
     {
       "id": "AC-06",
@@ -250,28 +263,43 @@
     },
     {
       "id": "AC-08",
-      "name": "数打ちゃ当たる",
+      "name": "学院の図書委員",
       "faction": "academy",
-      "type": "spell",
-      "cost": 2,
-      "effects": [
+      "type": "unit",
+      "cost": 4,
+      "attack": 4,
+      "health": 4,
+      "abilities": [
         {
-          "op": "repeat",
-          "times": {
-            "count": "spellsCastThisGame"
-          },
+          "kind": "trigger",
+          "when": "onPlay",
           "effects": [
             {
-              "op": "damage",
-              "target": {
-                "randomCell": "enemy"
+              "op": "generateRandom",
+              "where": {
+                "type": "spell"
               },
-              "amount": 1
+              "count": 1
             }
           ]
         }
       ],
-      "text": "相手の盤面のマスをランダムに1つ選び、そのマスにいるユニットに1ダメージ。これをこの試合で自分が使ったスペルの枚数分行う"
+      "enhance": {
+        "cost": 2,
+        "mode": "replace",
+        "appliesTo": 0,
+        "effects": [
+          {
+            "op": "generateRandom",
+            "where": {
+              "type": "spell"
+            },
+            "count": 2,
+            "distinctNames": true
+          }
+        ]
+      },
+      "text": "配置時：自分の2勢力のスペルからランダムに1枚を自分の手札に生成する。強化(2):1枚ではなく名前の異なる2枚"
     },
     {
       "id": "AC-09",
@@ -388,26 +416,10 @@
           "cardId": "TK-01",
           "at": {
             "ref": "cell"
-          },
-          "as": "statue"
+          }
         }
       ],
-      "enhance": {
-        "cost": 2,
-        "mode": "add",
-        "appliesTo": "effects",
-        "effects": [
-          {
-            "op": "buff",
-            "target": {
-              "ref": "statue"
-            },
-            "health": 3,
-            "duration": "permanent"
-          }
-        ]
-      },
-      "text": "自分の盤面の空きマス1つに「動く氷像」（TK-01）を出す。強化（2）: それを+0/+3"
+      "text": "自分の盤面の空きマス1つに「動く氷像」（TK-01）を出す"
     },
     {
       "id": "AC-12",
@@ -568,7 +580,7 @@
       "name": "雷鳴の詠唱",
       "faction": "academy",
       "type": "spell",
-      "cost": 4,
+      "cost": 3,
       "keywords": [
         "delay"
       ],
@@ -618,26 +630,16 @@
       "faction": "academy",
       "type": "spell",
       "cost": 2,
+      "keywords": [
+        "quick"
+      ],
       "effects": [
         {
-          "op": "generateFromCastSpells",
-          "count": 1,
-          "distinctNames": true
+          "op": "pickCastSpell",
+          "look": 3
         }
       ],
-      "enhance": {
-        "cost": 2,
-        "mode": "replace",
-        "appliesTo": "effects",
-        "effects": [
-          {
-            "op": "generateFromCastSpells",
-            "count": 2,
-            "distinctNames": true
-          }
-        ]
-      },
-      "text": "この試合で自分が使ったスペルの中から1枚をランダムに選び、手札に生成する。強化(2): 1枚ではなく、名前の異なる2枚"
+      "text": "この試合で自分が使ったスペルから名前の異なるランダムな3枚を見て、1枚を選んで手札に生成する"
     },
     {
       "id": "AC-19",
@@ -645,8 +647,8 @@
       "faction": "academy",
       "type": "unit",
       "cost": 5,
-      "attack": 5,
-      "health": 4,
+      "attack": 4,
+      "health": 3,
       "abilities": [
         {
           "kind": "trigger",
@@ -721,7 +723,7 @@
       "type": "unit",
       "cost": 4,
       "attack": 2,
-      "health": 4,
+      "health": 5,
       "abilities": [
         {
           "kind": "trigger",
@@ -752,8 +754,8 @@
       "faction": "academy",
       "type": "unit",
       "cost": 10,
-      "attack": 7,
-      "health": 4,
+      "attack": 5,
+      "health": 5,
       "keywords": [
         "pierce"
       ],
@@ -849,9 +851,6 @@
       "cost": 10,
       "attack": 10,
       "health": 10,
-      "keywords": [
-        "ranged"
-      ],
       "abilities": [
         {
           "kind": "trigger",
@@ -863,33 +862,22 @@
                 "type": "spell"
               },
               "count": 3,
-              "distinctNames": true,
-              "as": "spells"
+              "distinctNames": true
             },
             {
-              "op": "reveal",
-              "target": {
-                "ref": "spells"
-              }
-            },
-            {
-              "op": "modifyCost",
-              "target": {
-                "ref": "spells"
-              },
-              "amount": -9
+              "op": "freeSpellsThisRound"
             }
           ]
         }
       ],
-      "text": "配置時: 山札から名前の異なるランダムなスペル3枚を手札に加えて相手に公開し、それらのコストを−9"
+      "text": "配置時: 山札から名前の異なるランダムなスペル3枚を手札に加える。このラウンド中、自分のスペルのコストは0になる"
     },
     {
       "id": "TK-01",
       "name": "動く氷像",
       "faction": "academy",
       "type": "unit",
-      "cost": 3,
+      "cost": 1,
       "attack": 5,
       "health": 5,
       "abilities": [
@@ -898,15 +886,14 @@
           "when": "roundEnd",
           "effects": [
             {
-              "op": "damage",
-              "target": "self",
-              "amount": 2
+              "op": "destroy",
+              "target": "self"
             }
           ]
         }
       ],
       "token": true,
-      "text": "ラウンド終了時: このユニットに2ダメージ"
+      "text": "ラウンド終了時: このユニットを破壊する"
     }
   ]
 }

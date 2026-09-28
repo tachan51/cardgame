@@ -57,6 +57,8 @@ export function targetText(v: TargetValue, units: Map<number, { cardId: string; 
       return `${who(v.p)}の本体`;
     case 'card':
       return '手札のカード';
+    case 'choice':
+      return `選択肢${'ABCDEFGH'[v.n] ?? v.n + 1}`;
   }
 }
 
@@ -128,6 +130,16 @@ export function logText(e: LogEntry): string | null {
       return `${p}が山札からカードを${e.count}枚手札に加えた`;
     case 'pick':
       return `${p}が山札の上から見て1枚手札に加えた`;
+    case 'pickCast':
+      return `${p}が使ったスペルから1枚選んで手札に生成した`;
+    case 'transform':
+      return `${who(e.player)}の${c('from')}が${c()}に変化した`;
+    case 'oracle':
+      return `${p}のオラクルが${c()}を選んだ`;
+    case 'oracleFailed':
+      return `${p}のオラクルは${c()}を使えなかった`;
+    case 'freeSpells':
+      return `このラウンド中、${p}のスペルのコストは0`;
     case 'gainReserve':
       return `${p}の予備マナが${e.reserve}に`;
     case 'gainLife':

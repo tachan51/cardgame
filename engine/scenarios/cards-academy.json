@@ -15,25 +15,25 @@
     {
       "name": "AC-01 魔力の矢: 強化はない。マス指定なので移動したユニットには当たらない",
       "refs": ["AC-01", "14.1"],
-      "setup": {"A": {"mana": 3, "hand": ["AC-01"]}, "B": {"board": {"2前": "KN-19"}}},
+      "setup": {"A": {"mana": 3, "hand": ["AC-01"]}, "B": {"board": {"2前": "CY-03"}}},
       "steps": [
         {"type": "castSpell", "player": "A", "card": "AC-01", "enhance": true, "targets": {"cell": {"cell": "B:2前"}}, "illegal": true},
         {"type": "castSpell", "player": "A", "card": "AC-01", "targets": {"cell": {"cell": "B:2前"}}},
         {"expect": {"A": {"hand": [], "mana": 2, "delayed": ["AC-01"]}}},
         {"type": "mobileMove", "player": "B", "unit": "2前", "to": "4後"}
       ],
-      "expect": {"A": {"delayed": [], "trash": ["AC-01"]}, "B": {"board": {"2前": null, "4後": {"card": "KN-19", "damage": 0}}}}
+      "expect": {"A": {"delayed": [], "trash": ["AC-01"]}, "B": {"board": {"2前": null, "4後": {"card": "CY-03", "damage": 0}}}}
     },
     {
       "name": "AC-02 火球: 敵ユニットを対象にした遅延ダメージは移動したユニットを追いかける",
       "refs": ["AC-02", "14.1"],
-      "setup": {"A": {"mana": 2, "hand": ["AC-02"]}, "B": {"board": {"2前": "KN-19"}}},
+      "setup": {"A": {"mana": 2, "hand": ["AC-02"]}, "B": {"board": {"2前": "CY-03"}}},
       "steps": [
         {"type": "castSpell", "player": "A", "card": "AC-02", "targets": {"target": {"unit": "B:2前"}}},
         {"expect": {"A": {"delayed": ["AC-02"]}}},
         {"type": "mobileMove", "player": "B", "unit": "2前", "to": "4後"}
       ],
-      "expect": {"A": {"delayed": [], "trash": ["AC-02"]}, "B": {"board": {"2前": null, "4後": null}, "trash": ["KN-19"]}}
+      "expect": {"A": {"delayed": [], "trash": ["AC-02"]}, "B": {"board": {"2前": null, "4後": null}, "trash": ["CY-03"]}}
     },
     {
       "name": "AC-02 火球: 相手プレイヤーに2ダメージ。自分や味方ユニットは対象にできない",
@@ -78,30 +78,41 @@
       "expect": {"result": null, "A": {"hand": [], "deckCount": 0, "board": {"2前": {"card": "AC-04"}}}}
     },
     {
-      "name": "AC-05 魔女の聖水: ライフを2回復して1枚引く。即効で追加の手番。強化（2）はマナが足りなければ行えない",
-      "refs": ["AC-05", "14.2", "15.1", "11.6"],
-      "setup": {"A": {"life": 15, "mana": 3, "hand": ["AC-05"], "deck": ["KN-04", "KN-05"]}},
+      "name": "AC-05 魔女の聖水: 自分を対象にライフを2回復して1枚引く。即効で追加の手番。敵ユニットや相手は対象にできない。強化（2）はマナが足りなければ行えない",
+      "refs": ["AC-05", "14.2", "15.1", "11.6", "7.2"],
+      "setup": {"A": {"life": 15, "mana": 3, "hand": ["AC-05"], "deck": ["KN-04", "KN-05"]}, "B": {"life": 15, "board": {"1前": {"card": "KN-04", "damage": 2}}}},
       "steps": [
-        {"type": "castSpell", "player": "A", "card": "AC-05", "enhance": true, "illegal": true},
-        {"type": "castSpell", "player": "A", "card": "AC-05"}
+        {"type": "castSpell", "player": "A", "card": "AC-05", "targets": {"target": {"player": "B"}}, "illegal": true},
+        {"type": "castSpell", "player": "A", "card": "AC-05", "targets": {"target": {"unit": "B:1前"}}, "illegal": true},
+        {"type": "castSpell", "player": "A", "card": "AC-05", "enhance": true, "targets": {"target": {"player": "A"}}, "illegal": true},
+        {"type": "castSpell", "player": "A", "card": "AC-05", "targets": {"target": {"player": "A"}}}
       ],
-      "expect": {"activePlayer": "A", "A": {"life": 17, "mana": 1, "hand": ["KN-04"], "deckCount": 1, "trash": ["AC-05"], "spellsCast": 1}}
+      "expect": {"activePlayer": "A", "A": {"life": 17, "mana": 1, "hand": ["KN-04"], "deckCount": 1, "trash": ["AC-05"], "spellsCast": 1}, "B": {"life": 15, "board": {"1前": {"damage": 2}}}}
     },
     {
-      "name": "AC-05 魔女の聖水（強化）: さらに2回復（合計4）。強化コストは予備マナから先に払う",
+      "name": "AC-05 魔女の聖水（強化）: 味方ユニットを対象にするとダメージを2＋2回復（ライフは変わらない）。強化コストは予備マナから先に払う",
       "refs": ["AC-05", "15.1", "16.2"],
-      "setup": {"A": {"life": 10, "maxMana": 3, "reserve": 2, "hand": ["AC-05"], "deck": ["KN-04"]}},
+      "setup": {"A": {"life": 10, "maxMana": 3, "reserve": 2, "hand": ["AC-05"], "deck": ["KN-04"], "board": {"1前": {"card": "KN-06", "damage": 4}, "2前": {"card": "KN-03", "damage": 1}}}},
       "steps": [
-        {"type": "castSpell", "player": "A", "card": "AC-05", "enhance": true}
+        {"type": "castSpell", "player": "A", "card": "AC-05", "enhance": true, "targets": {"target": {"unit": "A:1前"}}}
       ],
-      "expect": {"activePlayer": "A", "A": {"life": 14, "mana": 1, "reserve": 0, "hand": ["KN-04"], "deckCount": 0, "trash": ["AC-05"]}, "B": {"life": 20}}
+      "expect": {"activePlayer": "A", "A": {"life": 10, "mana": 1, "reserve": 0, "hand": ["KN-04"], "deckCount": 0, "trash": ["AC-05"], "board": {"1前": {"card": "KN-06", "damage": 0, "health": 5}, "2前": {"damage": 1}}}, "B": {"life": 20}}
+    },
+    {
+      "name": "AC-05 魔女の聖水: 自分を対象にすると強化で合計4回復",
+      "refs": ["AC-05", "15.1"],
+      "setup": {"A": {"life": 10, "mana": 4, "hand": ["AC-05"], "deck": ["KN-04"], "board": {"1前": {"card": "KN-03", "damage": 1}}}},
+      "steps": [
+        {"type": "castSpell", "player": "A", "card": "AC-05", "enhance": true, "targets": {"target": {"player": "A"}}}
+      ],
+      "expect": {"A": {"life": 14, "mana": 0, "board": {"1前": {"damage": 1}}}}
     },
     {
       "name": "AC-05 魔女の聖水: 山札が0枚でも回復はする。引けなくても敗北しない",
       "refs": ["AC-05", "11.6", "9.1"],
       "setup": {"A": {"life": 18, "mana": 2, "hand": ["AC-05"], "deck": []}},
       "steps": [
-        {"type": "castSpell", "player": "A", "card": "AC-05"}
+        {"type": "castSpell", "player": "A", "card": "AC-05", "targets": {"target": {"player": "A"}}}
       ],
       "expect": {"result": null, "A": {"life": 20, "hand": [], "trash": ["AC-05"]}}
     },
@@ -149,13 +160,23 @@
       "expect": {"activePlayer": "A", "A": {"reserve": 7, "mana": 0, "maxMana": 1}}
     },
     {
-      "name": "AC-08 数打ちゃ当たる: それより前に使ったスペルの枚数だけ撃つ（自身は数えない）。0枚なら何も起きない",
-      "refs": ["AC-08", "11.7"],
-      "setup": {"A": {"mana": 2, "hand": ["AC-08"]}, "B": {"board": {"1前": "KN-04", "1後": "KN-04", "2前": "KN-04", "2後": "KN-04", "3前": "KN-04", "3後": "KN-04", "4前": "KN-04", "4後": "KN-04"}}},
+      "name": "AC-08 学院の図書委員: 4コスト 4/4。配置時にリーダーの勢力のスペルを1枚手札に生成する。強化（2）はマナが足りなければ行えない",
+      "refs": ["AC-08", "11.7", "15.1"],
+      "setup": {"A": {"leaders": ["leader-alto", "leader-noel"], "mana": 5, "hand": ["AC-08"], "deck": ["KN-03"]}},
       "steps": [
-        {"type": "castSpell", "player": "A", "card": "AC-08"}
+        {"type": "playUnit", "player": "A", "card": "AC-08", "cell": "1前", "enhance": true, "illegal": true},
+        {"type": "playUnit", "player": "A", "card": "AC-08", "cell": "1前"}
       ],
-      "expect": {"A": {"mana": 0, "spellsCast": 1, "trash": ["AC-08"]}, "B": {"board": {"1前": {"damage": 0}, "1後": {"damage": 0}, "2前": {"damage": 0}, "2後": {"damage": 0}, "3前": {"damage": 0}, "3後": {"damage": 0}, "4前": {"damage": 0}, "4後": {"damage": 0}}}}
+      "expect": {"activePlayer": "B", "A": {"mana": 1, "handCount": 1, "deckCount": 1, "spellsCast": 0, "board": {"1前": {"card": "AC-08", "attack": 4, "health": 4}}}}
+    },
+    {
+      "name": "AC-08 学院の図書委員（強化2）: 1枚ではなく2枚生成する",
+      "refs": ["AC-08", "11.7", "15.1", "16.2"],
+      "setup": {"A": {"maxMana": 4, "reserve": 2, "hand": ["AC-08"]}},
+      "steps": [
+        {"type": "playUnit", "player": "A", "card": "AC-08", "cell": "2後", "enhance": true}
+      ],
+      "expect": {"A": {"mana": 0, "reserve": 0, "handCount": 2, "board": {"2後": {"card": "AC-08"}}}}
     },
     {
       "name": "AC-09 召喚ガチャ: 自分の空きマス1つに、王都の弓兵・巡回騎士・ストリートサムライ・ジャミング技師のうちランダムな1体を出す（トークン）",
@@ -200,31 +221,30 @@
       "expect": {"A": {"mana": 6, "spellsCast": 1, "board": {"2前": {"card": "KN-03", "attack": 2, "health": 2}}}}
     },
     {
-      "name": "AC-11 氷像の召喚: 自分の空きマスに動く氷像（TK-01。5/5のトークン）を出す。ラウンド終了時に自分に2ダメージで、3ラウンド目の終わりに破壊される（トラッシュに行かない）",
+      "name": "AC-11 氷像の召喚: 自分の空きマスに動く氷像（TK-01。5/5のトークン）を出す。ラウンド終了時に破壊される（トラッシュに行かない。自分へのダメージはない）",
       "refs": ["AC-11", "TK-01", "6.4", "10.3", "11.7"],
-      "setup": {"A": {"mana": 3, "hand": ["AC-11"]}},
+      "setup": {"A": {"mana": 3, "hand": ["AC-11"], "board": {"2前": "KN-03"}}},
       "steps": [
+        {"type": "castSpell", "player": "A", "card": "AC-11", "targets": {"cell": {"cell": "A:2前"}}, "illegal": true},
+        {"type": "castSpell", "player": "A", "card": "AC-11", "targets": {"cell": {"cell": "B:1前"}}, "illegal": true},
         {"type": "castSpell", "player": "A", "card": "AC-11", "targets": {"cell": {"cell": "A:1前"}}},
         {"expect": {"A": {"mana": 0, "trash": ["AC-11"], "board": {"1前": {"card": "TK-01", "token": true, "attack": 5, "health": 5, "damage": 0}}}}},
-        {"do": "roundEnd"},
-        {"expect": {"A": {"board": {"1前": {"card": "TK-01", "damage": 2, "health": 3}}}}},
-        {"do": "startRound"},
-        {"do": "roundEnd"},
-        {"expect": {"A": {"board": {"1前": {"card": "TK-01", "damage": 4, "health": 1}}}}},
-        {"do": "startRound"},
         {"do": "roundEnd"}
       ],
-      "expect": {"A": {"board": {"1前": null}, "trash": ["AC-11"]}}
+      "expect": {"A": {"life": 20, "board": {"1前": null, "2前": {"card": "KN-03"}}, "trash": ["AC-11"]}}
     },
     {
-      "name": "AC-11 氷像の召喚（強化2）: 出した動く氷像を+0/+3（永続）",
-      "refs": ["AC-11", "15.1", "10.4"],
-      "setup": {"A": {"mana": 5, "hand": ["AC-11"]}},
+      "name": "AC-11 氷像の召喚: 強化はない。出したラウンドの戦闘には参加する",
+      "refs": ["AC-11", "TK-01", "15.1", "8.4"],
+      "setup": {"A": {"mana": 5, "hand": ["AC-11"]}, "B": {"board": {"2前": "KN-04"}}},
       "steps": [
-        {"type": "castSpell", "player": "A", "card": "AC-11", "enhance": true, "targets": {"cell": {"cell": "A:2後"}}},
+        {"type": "castSpell", "player": "A", "card": "AC-11", "enhance": true, "targets": {"cell": {"cell": "A:2前"}}, "illegal": true},
+        {"type": "castSpell", "player": "A", "card": "AC-11", "targets": {"cell": {"cell": "A:2前"}}},
+        {"do": "combat"},
+        {"expect": {"A": {"board": {"2前": {"card": "TK-01", "damage": 2}}}, "B": {"board": {"2前": null}, "trash": ["KN-04"]}}},
         {"do": "roundEnd"}
       ],
-      "expect": {"A": {"mana": 0, "board": {"2後": {"card": "TK-01", "attack": 5, "maxHealth": 8, "health": 6}}}}
+      "expect": {"A": {"mana": 2, "board": {"2前": null}, "trash": ["AC-11"]}}
     },
     {
       "name": "AC-12 結界術の教師: 起動（3）で味方に盾。1ラウンド1回で、次のラウンドには再び使える",
@@ -256,7 +276,7 @@
     {
       "name": "AC-14 崩落の予言: コスト3。ラウンド終了時にその時点でマスにいるユニットを破壊（遅延ではない）。効果はそのラウンドだけ",
       "refs": ["AC-14", "6.4", "7.2"],
-      "setup": {"A": {"mana": 3, "hand": ["AC-14"], "board": {"1前": "KN-04"}}, "B": {"mana": 4, "hand": ["KN-04"], "board": {"2前": "KN-19"}}},
+      "setup": {"A": {"mana": 3, "hand": ["AC-14"], "board": {"1前": "KN-04"}}, "B": {"mana": 4, "hand": ["KN-04"], "board": {"2前": "CY-03"}}},
       "steps": [
         {"type": "castSpell", "player": "A", "card": "AC-14", "targets": {"cell": {"cell": "A:1前"}}, "illegal": true},
         {"type": "castSpell", "player": "A", "card": "AC-14", "targets": {"cell": {"cell": "B:2前"}}},
@@ -265,7 +285,7 @@
         {"type": "pass", "player": "A"},
         {"type": "playUnit", "player": "B", "card": "KN-04", "cell": "2前"},
         {"do": "roundEnd"},
-        {"expect": {"B": {"board": {"2前": null, "4後": {"card": "KN-19"}}, "trash": ["KN-04"]}, "A": {"board": {"1前": {"card": "KN-04"}}}}},
+        {"expect": {"B": {"board": {"2前": null, "4後": {"card": "CY-03"}}, "trash": ["KN-04"]}, "A": {"board": {"1前": {"card": "KN-04"}}}}},
         {"do": "startRound"},
         {"type": "playUnit", "player": "B", "card": "KN-03", "cell": "2前"},
         {"do": "roundEnd"}
@@ -308,7 +328,7 @@
       "refs": ["AC-16", "15.1"],
       "setup": {"A": {"life": 10, "mana": 3, "hand": ["AC-05"], "deck": ["KN-04"], "board": {"3後": "AC-16"}}},
       "steps": [
-        {"type": "castSpell", "player": "A", "card": "AC-05", "enhance": true}
+        {"type": "castSpell", "player": "A", "card": "AC-05", "enhance": true, "targets": {"target": {"player": "A"}}}
       ],
       "expect": {"A": {"mana": 0, "life": 14, "hand": ["KN-04"]}}
     },
@@ -317,9 +337,9 @@
       "refs": ["AC-16", "15.1"],
       "setup": {"A": {"life": 10, "mana": 4, "hand": ["AC-05", "KN-01"], "deck": ["KN-04"], "board": {"2後": "AC-16", "3後": "AC-16", "4後": "AC-16"}}},
       "steps": [
-        {"type": "castSpell", "player": "A", "card": "AC-05", "enhance": true},
+        {"type": "castSpell", "player": "A", "card": "AC-05", "enhance": true, "targets": {"target": {"player": "A"}}},
         {"expect": {"activePlayer": "A", "A": {"mana": 2, "life": 14, "hand": ["KN-01", "KN-04"]}}},
-        {"type": "playUnit", "player": "A", "card": "KN-01", "cell": "1前", "enhance": true}
+        {"type": "playUnit", "player": "A", "card": "KN-01", "cell": "1前", "enhance": true, "targets": {"target": {"player": "A"}}}
       ],
       "expect": {"A": {"mana": 0, "board": {"1前": {"card": "KN-01", "health": 4}}}}
     },
@@ -328,14 +348,14 @@
       "refs": ["AC-16"],
       "setup": {"A": {"mana": 3, "hand": ["AC-05"]}, "B": {"board": {"3後": "AC-16"}}},
       "steps": [
-        {"type": "castSpell", "player": "A", "card": "AC-05", "enhance": true, "illegal": true}
+        {"type": "castSpell", "player": "A", "card": "AC-05", "enhance": true, "targets": {"target": {"player": "A"}}, "illegal": true}
       ],
       "expect": {"A": {"hand": ["AC-05"], "mana": 3}}
     },
     {
-      "name": "AC-17 雷鳴の詠唱: 対象を選ばない。遅延: 敵ユニットすべてに1ダメージ（盾は防ぐ。味方と本体は無傷）",
+      "name": "AC-17 雷鳴の詠唱: コスト3。対象を選ばない。遅延: 敵ユニットすべてに1ダメージ（盾は防ぐ。味方と本体は無傷）",
       "refs": ["AC-17", "14.1", "11.7"],
-      "setup": {"A": {"mana": 4, "hand": ["AC-17"], "board": {"2前": "KN-03"}}, "B": {"board": {"1前": "KN-03", "3後": "KN-04", "4前": "KN-09"}}},
+      "setup": {"A": {"mana": 3, "hand": ["AC-17"], "board": {"2前": "KN-03"}}, "B": {"board": {"1前": "KN-03", "3後": "KN-04", "4前": "KN-09"}}},
       "steps": [
         {"type": "castSpell", "player": "A", "card": "AC-17"},
         {"expect": {"activePlayer": "B", "A": {"mana": 0, "delayed": ["AC-17"]}, "B": {"board": {"1前": {"damage": 0}}}}},
@@ -346,7 +366,7 @@
     {
       "name": "AC-17 雷鳴の詠唱（強化3）: 敵ユニットすべてに1ダメージを2回ずつ（盾は1回目だけ防ぐ）。発動時点の敵に当たる",
       "refs": ["AC-17", "14.1", "15.1"],
-      "setup": {"A": {"mana": 7, "hand": ["AC-17"]}, "B": {"board": {"1前": "KN-03", "3後": "KN-04", "4前": "KN-09"}}},
+      "setup": {"A": {"mana": 6, "hand": ["AC-17"]}, "B": {"board": {"1前": "KN-03", "3後": "KN-04", "4前": "KN-09"}}},
       "steps": [
         {"type": "castSpell", "player": "A", "card": "AC-17", "enhance": true},
         {"expect": {"A": {"mana": 0, "delayed": ["AC-17"]}}},
@@ -366,58 +386,34 @@
       "expect": {"result": null, "A": {"delayed": [], "trash": ["AC-17"]}, "B": {"life": 20}}
     },
     {
-      "name": "AC-18 禁書の閲覧: コスト2。使ったスペルから1枚をランダムに生成（候補が1種類なら確定）",
+      "name": "AC-18 禁書の閲覧: コスト2・即効。使ったスペルから名前の異なる3枚を見て1枚を選び、手札に生成する（遅延のスペルも候補）",
+      "refs": ["AC-18", "11.7", "14.2"],
+      "setup": {"A": {"mana": 2, "hand": ["AC-18"], "castSpells": ["AC-01", "AC-02", "AC-17", "AC-02"]}},
+      "steps": [
+        {"type": "castSpell", "player": "A", "card": "AC-18"},
+        {"expect": {"pending": true}},
+        {"type": "choose", "player": "A", "card": "AC-17"}
+      ],
+      "expect": {"pending": false, "activePlayer": "A", "A": {"mana": 0, "hand": ["AC-17"], "spellsCast": 5, "trash": ["AC-18"]}}
+    },
+    {
+      "name": "AC-18 禁書の閲覧: 候補の名前が1種類なら選ばずに生成する",
       "refs": ["AC-18", "11.7"],
       "setup": {"A": {"mana": 2, "hand": ["AC-18"], "castSpells": ["AC-07", "AC-07"]}},
       "steps": [
         {"type": "castSpell", "player": "A", "card": "AC-18"}
       ],
-      "expect": {"A": {"mana": 0, "hand": ["AC-07"], "spellsCast": 3, "trash": ["AC-18"]}}
+      "expect": {"pending": false, "activePlayer": "A", "A": {"mana": 0, "hand": ["AC-07"], "spellsCast": 3, "trash": ["AC-18"]}}
     },
     {
-      "name": "AC-18 禁書の閲覧: 候補が複数でも強化しなければ生成は1枚。遅延のスペルも候補",
-      "refs": ["AC-18", "11.7"],
-      "setup": {"A": {"mana": 2, "hand": ["AC-18"], "castSpells": ["AC-01", "AC-02", "AC-17"]}},
-      "steps": [
-        {"type": "castSpell", "player": "A", "card": "AC-18"}
-      ],
-      "expect": {"A": {"handCount": 1}}
-    },
-    {
-      "name": "AC-18 禁書の閲覧（強化）: 名前の異なる2枚を生成（名前が2種類だけなら確定）",
+      "name": "AC-18 禁書の閲覧: 強化はない。スペルを使っていなければ何も生成しない（自身は候補に含まない）",
       "refs": ["AC-18", "11.7", "15.1"],
-      "setup": {"A": {"mana": 4, "hand": ["AC-18"], "castSpells": ["AC-07", "AC-05", "AC-07"]}},
-      "steps": [
-        {"type": "castSpell", "player": "A", "card": "AC-18", "enhance": true}
-      ],
-      "expect": {"A": {"mana": 0, "hand": ["AC-05", "AC-07"], "spellsCast": 4, "trash": ["AC-18"]}}
-    },
-    {
-      "name": "AC-18 禁書の閲覧（強化）: 候補が3種類以上でも生成は2枚",
-      "refs": ["AC-18", "11.7", "15.1"],
-      "setup": {"A": {"mana": 4, "hand": ["AC-18"], "castSpells": ["AC-01", "AC-02", "AC-17"]}},
-      "steps": [
-        {"type": "castSpell", "player": "A", "card": "AC-18", "enhance": true}
-      ],
-      "expect": {"A": {"handCount": 2}}
-    },
-    {
-      "name": "AC-18 禁書の閲覧（強化）: 名前が1種類しかなければ1枚だけ生成する",
-      "refs": ["AC-18", "11.7", "15.1"],
-      "setup": {"A": {"mana": 4, "hand": ["AC-18"], "castSpells": ["AC-07", "AC-07"]}},
-      "steps": [
-        {"type": "castSpell", "player": "A", "card": "AC-18", "enhance": true}
-      ],
-      "expect": {"A": {"hand": ["AC-07"]}}
-    },
-    {
-      "name": "AC-18 禁書の閲覧: スペルを使っていなければ何も生成しない（自身は候補に含まない）",
-      "refs": ["AC-18", "11.7"],
       "setup": {"A": {"mana": 4, "hand": ["AC-18"]}},
       "steps": [
-        {"type": "castSpell", "player": "A", "card": "AC-18", "enhance": true}
+        {"type": "castSpell", "player": "A", "card": "AC-18", "enhance": true, "illegal": true},
+        {"type": "castSpell", "player": "A", "card": "AC-18"}
       ],
-      "expect": {"A": {"hand": [], "spellsCast": 1}}
+      "expect": {"pending": false, "A": {"mana": 2, "hand": [], "spellsCast": 1, "trash": ["AC-18"]}}
     },
     {
       "name": "AC-19 炎の精霊: 自分のスペル使用時にランダムな敵ユニット1体に2ダメージ（敵が1体だけ。相手のスペルでは誘発しない）",
@@ -429,7 +425,7 @@
         {"type": "pass", "player": "A"},
         {"type": "castSpell", "player": "B", "card": "AC-07"}
       ],
-      "expect": {"A": {"board": {"2前": {"damage": 0}, "1前": {"card": "AC-19", "attack": 5, "health": 4, "damage": 0}}}, "B": {"life": 20, "board": {"3前": {"damage": 2}}}}
+      "expect": {"A": {"board": {"2前": {"damage": 0}, "1前": {"card": "AC-19", "attack": 4, "health": 3, "damage": 0}}}, "B": {"life": 20, "board": {"3前": {"damage": 2}}}}
     },
     {
       "name": "AC-19 炎の精霊: 敵ユニットがいなければ何もしない（本体には当たらない）",
@@ -482,7 +478,7 @@
       "expect": {"A": {"hand": ["AC-07"]}}
     },
     {
-      "name": "AC-22 魔導ゴーレム: 7/4 貫通。自分がスペルを使った回数だけコスト−1（相手のスペルでは下がらない）",
+      "name": "AC-22 魔導ゴーレム: 5/5 貫通。自分がスペルを使った回数だけコスト−1（相手のスペルでは下がらない）",
       "refs": ["AC-22", "11.7"],
       "setup": {"A": {"maxMana": 10, "hand": ["AC-22", "AC-07", "AC-07", "AC-07"]}, "B": {"mana": 1, "hand": ["AC-07"]}},
       "steps": [
@@ -498,7 +494,7 @@
         {"expect": {"A": {"handCosts": {"AC-22": 7}, "mana": 7}}},
         {"type": "playUnit", "player": "A", "card": "AC-22", "cell": "1前"}
       ],
-      "expect": {"A": {"mana": 0, "board": {"1前": {"card": "AC-22", "attack": 7, "health": 4, "keywords": ["pierce"]}}}}
+      "expect": {"A": {"mana": 0, "board": {"1前": {"card": "AC-22", "attack": 5, "health": 5, "keywords": ["pierce"]}}}}
     },
     {
       "name": "AC-22 魔導ゴーレム: 手札に来る前に使ったスペルも数える（使い魔の黒猫で引いた時点でコスト10−4）",
@@ -519,7 +515,7 @@
         {"expect": {"A": {"mana": 0, "board": {"1前": {"card": "AC-22"}}}}},
         {"do": "combat"}
       ],
-      "expect": {"A": {"board": {"1前": {"card": "AC-22", "damage": 2, "health": 2}}}, "B": {"life": 15, "board": {"1前": null}, "trash": ["KN-03"]}}
+      "expect": {"A": {"board": {"1前": {"card": "AC-22", "damage": 2, "health": 3}}}, "B": {"life": 17, "board": {"1前": null}, "trash": ["KN-03"]}}
     },
     {
       "name": "AC-23 水の精霊: 3コスト 1/5。自分のスペル使用時にライフを1回復（複数いればそれぞれ。配置や相手のスペルでは誘発しない）",
@@ -539,20 +535,18 @@
     {
       "name": "AC-24 終焉の詠唱: 発動時点で体力3以下の敵ユニットを除外（盾は無関係、発動前に体力を上げれば残る、味方は対象外）",
       "refs": ["AC-24", "14.1", "11.7"],
-      "setup": {"A": {"mana": 9, "hand": ["AC-24"], "board": {"2前": "KN-03"}}, "B": {"mana": 2, "hand": ["KN-06"], "board": {"1前": "KN-03", "3前": {"card": "KN-01", "health": 2}, "4後": "KN-09"}}},
+      "setup": {"A": {"mana": 9, "hand": ["AC-24"], "board": {"2前": "KN-03"}}, "B": {"mana": 3, "hand": ["KN-11"], "board": {"1前": "KN-04", "3前": {"card": "KN-01", "health": 2}, "4後": "KN-09"}}},
       "steps": [
         {"type": "castSpell", "player": "A", "card": "AC-24"},
-        {"expect": {"A": {"delayed": ["AC-24"]}}},
-        {"type": "castSpell", "player": "B", "card": "KN-06", "targets": {"ally": {"unit": "B:1前"}}},
-        {"expect": {"activePlayer": "B", "B": {"board": {"1前": {"health": 4}}}}},
-        {"type": "pass", "player": "B"}
+        {"expect": {"A": {"delayed": ["AC-24"]}, "B": {"board": {"1前": {"health": 3}}}}},
+        {"type": "castSpell", "player": "B", "card": "KN-11"}
       ],
-      "expect": {"A": {"delayed": [], "trash": ["AC-24"], "exile": [], "board": {"2前": {"card": "KN-03"}}}, "B": {"exile": ["KN-09"], "trash": ["KN-06"], "board": {"1前": {"card": "KN-03"}, "3前": {"card": "KN-01"}, "4後": null}}}
+      "expect": {"A": {"delayed": [], "trash": ["AC-24"], "exile": [], "board": {"2前": {"card": "KN-03"}}}, "B": {"exile": ["KN-09"], "trash": ["KN-11"], "board": {"1前": {"card": "KN-04", "health": 4}, "3前": {"card": "KN-01"}, "4後": null}}}
     },
     {
-      "name": "AC-24 終焉の詠唱（強化）: 体力5以下の敵ユニットを除外。除外はトラッシュに置かない",
+      "name": "AC-24 終焉の詠唱（強化）: 体力5以下の敵ユニットを除外（体力6は残る）。除外はトラッシュに置かない",
       "refs": ["AC-24", "15.1", "11.7"],
-      "setup": {"A": {"mana": 10, "reserve": 5, "hand": ["AC-24"]}, "B": {"board": {"1前": "KN-03", "2後": {"card": "KN-05", "health": 2}, "3前": {"card": "KN-01", "health": 2}, "4後": "KN-09"}}},
+      "setup": {"A": {"mana": 10, "reserve": 5, "hand": ["AC-24"]}, "B": {"board": {"1前": "KN-03", "2後": {"card": "KN-05", "health": 5}, "3前": {"card": "KN-01", "health": 2}, "4後": "KN-09"}}},
       "steps": [
         {"type": "castSpell", "player": "A", "card": "AC-24", "enhance": true},
         {"expect": {"A": {"mana": 3, "reserve": 0}}},
@@ -561,16 +555,27 @@
       "expect": {"B": {"exile": ["KN-01", "KN-03", "KN-09"], "trash": [], "board": {"1前": null, "2後": {"card": "KN-05"}, "3前": null, "4後": null}}}
     },
     {
-      "name": "AC-25 天空の大魔導師: 配置時に山札から名前の異なるスペル3枚を手札に加えて公開し、コスト−9（0未満にならない）。強化コストは下がらない",
-      "refs": ["AC-25", "11.7"],
-      "setup": {"A": {"mana": 10, "reserve": 5, "hand": ["AC-25", "AC-07"], "deck": ["KN-03", "AC-24", "AC-10", "KN-04", "AC-17", "AC-24"]}},
+      "name": "AC-25 天空の大魔導師: 10/10（射撃なし）。配置時に山札から名前の異なるスペル3枚を手札に加える（公開しない）。このラウンド中は自分のスペルのコストが0（強化コストは払う）",
+      "refs": ["AC-25", "11.7", "15.1"],
+      "setup": {"A": {"mana": 10, "reserve": 5, "hand": ["AC-25", "AC-07"], "deck": ["KN-03", "AC-24", "AC-10", "KN-04", "AC-17", "AC-24"]}, "B": {"hand": ["AC-07"]}},
       "steps": [
         {"type": "playUnit", "player": "A", "card": "AC-25", "cell": "1前"},
-        {"expect": {"A": {"mana": 0, "hand": ["AC-07", "AC-10", "AC-17", "AC-24"], "revealed": ["AC-10", "AC-17", "AC-24"], "handCosts": {"AC-10": 0, "AC-17": 0, "AC-24": 0, "AC-07": 1}, "deckCount": 3, "board": {"1前": {"card": "AC-25", "attack": 10, "health": 10, "keywords": ["ranged"]}}}}},
+        {"expect": {"A": {"mana": 0, "hand": ["AC-07", "AC-10", "AC-17", "AC-24"], "revealed": [], "handCosts": {"AC-10": 0, "AC-17": 0, "AC-24": 0, "AC-07": 0}, "deckCount": 3, "board": {"1前": {"card": "AC-25", "attack": 10, "health": 10, "noKeywords": ["ranged"]}}}, "B": {"handCosts": {"AC-07": 1}}}},
         {"type": "pass", "player": "B"},
         {"type": "castSpell", "player": "A", "card": "AC-24", "enhance": true}
       ],
-      "expect": {"A": {"mana": 0, "reserve": 0, "delayed": ["AC-24"], "revealed": ["AC-10", "AC-17"], "hand": ["AC-07", "AC-10", "AC-17"]}}
+      "expect": {"A": {"mana": 0, "reserve": 0, "delayed": ["AC-24"], "hand": ["AC-07", "AC-10", "AC-17"], "spellsCast": 1}}
+    },
+    {
+      "name": "AC-25 天空の大魔導師: スペルのコスト0はそのラウンドだけ。次のラウンドには元に戻る",
+      "refs": ["AC-25", "11.7", "6.4"],
+      "setup": {"A": {"mana": 10, "hand": ["AC-25", "AC-07", "AC-17"], "deck": ["KN-03", "KN-03", "KN-03"]}},
+      "steps": [
+        {"type": "playUnit", "player": "A", "card": "AC-25", "cell": "1前"},
+        {"expect": {"A": {"hand": ["AC-07", "AC-17"], "handCosts": {"AC-07": 0, "AC-17": 0}}}},
+        {"do": "endRound"}
+      ],
+      "expect": {"round": 2, "A": {"handCosts": {"AC-07": 1, "AC-17": 3}}}
     },
     {
       "name": "AC-25 天空の大魔導師: 名前の異なるスペルが足りなければあるだけ加える（同名は1枚だけ）",
@@ -579,7 +584,7 @@
       "steps": [
         {"type": "playUnit", "player": "A", "card": "AC-25", "cell": "2前"}
       ],
-      "expect": {"A": {"hand": ["AC-07"], "revealed": ["AC-07"], "handCosts": {"AC-07": 0}, "deckCount": 3}}
+      "expect": {"A": {"hand": ["AC-07"], "revealed": [], "handCosts": {"AC-07": 0}, "deckCount": 3}}
     },
     {
       "name": "AC-25 天空の大魔導師: 手札が上限になったら、加えられなかった分は山札に残る",

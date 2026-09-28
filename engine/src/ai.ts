@@ -14,7 +14,7 @@ import { handAdjust } from './hand-table';
 import { legalActions } from './legal';
 import { chooseMulligan, type MulliganPolicy } from './mulligan';
 import { nextRandom, shuffleInPlace, type RngHolder } from './rng';
-import { canonical, Runner } from './runner';
+import { canonical, defaultOracle, Runner, setOracleChooser } from './runner';
 import type { Action, CardInstance, FactionId, GameState, PlayerId, Unit } from './types';
 import { previewCombat, publicView } from './view';
 
@@ -159,6 +159,18 @@ const now = () => (typeof performance !== 'undefined' ? performance.now() : Date
 
 /** player の手を選ぶ。player が判断する番でなければエラー */
 export function chooseAction(cat: Catalog, state: GameState, player: PlayerId, opts: AiOptions = {}): AiDecision {
+  thinking++;
+  try {
+    return chooseInner(cat, state, player, opts);
+  } finally {
+    thinking--;
+  }
+}
+
+/** AI が手を考えている最中か（その中でオラクルが使われたら、軽い選び方にする） */
+let thinking = 0;
+
+function chooseInner(cat: Catalog, state: GameState, player: PlayerId, opts: AiOptions): AiDecision {
   const level = opts.level ?? 'normal';
   let w = opts.weights ?? (level === 'easy' ? STAGE1_WEIGHTS : STAGE2_WEIGHTS);
   // 「使ったスペルの枚数」で強くなるカードをどれだけ持っているか（自分のデッキの中身は知っている）
@@ -465,6 +477,19 @@ function search(
   rng: RngHolder,
   opts: AiOptions,
 ): AiDecision {
+  return searchInner(cat, state, me, w, scored, baseline, rng, opts);
+}
+
+function searchInner(
+  cat: Catalog,
+  state: GameState,
+  me: PlayerId,
+  w: AiWeights,
+  scored: Scored[],
+  baseline: number,
+  rng: RngHolder,
+  opts: AiOptions,
+): AiDecision {
   const start = now();
   const limit = opts.timeLimitMs ?? 1500;
   const K = opts.candidates ?? 6;
@@ -523,3 +548,72 @@ function replyValue(cat: Catalog, world: GameState, a: Action, me: PlayerId, _op
   if (s.result || s.round >= end) return evaluate(cat, s, me, w, true);
   return evaluate(cat, previewCombat(cat, s).state, me, w, false);
 }
+
+// ---------------------------------------------------------------- オラクル（CY-23）
+
+/**
+ * オラクルが使うカードと手を、つよい AI の方法で選ぶ。候補は cardIds のカードを手札に1枚加えたときに打てる手すべて。
+ * 段階2の評価で候補を絞り、ありうる状況3通りでラウンドの終わりまで読んだ平均で決める（時間の上限はなく、結果は決まる）。
+ * AI が手を考えている最中（先読みの中）に使われたときは、コストが一番高いカードを使うと見なす（runner.ts の defaultOracle）
+ */
+export function oracleChoose(cat: Catalog, state: GameState, me: PlayerId, cardIds: string[]): { cardId: string; action: Action } | null {
+  // AI が手を考えている最中（先読みの中で試しに使うとき）は、コストが一番高いカードを使うと見なす
+  if (thinking > 0) return defaultOracle(cat, state, me, cardIds);
+  const w: AiWeights = { ...STAGE2_WEIGHTS, remember: true };
+  const w1: AiWeights = { ...w, planFollow: 0 };
+  const st0 = structuredClone(state);
+  st0.pending = null;
+  st0.log = [];
+  st0.activePlayer = me;
+  const uid = st0.nextUid++;
+  st0.players[me].hand.push({ uid, cardId: cardIds[0], costMod: 0, revealed: false, generated: true, known: true });
+  const withCard = (base: GameState, id: string): GameState => {
+    const x = structuredClone(base);
+    x.players[me].hand.find((c) => c.uid === uid)!.cardId = id;
+    return x;
+  };
+  const cands: { cardId: string; action: Action; score: number; key: string }[] = [];
+  for (const id of new Set(cardIds)) {
+    const view = sanitize(cat, publicView(withCard(st0, id), me, { remember: true }));
+    for (const a of legalActions(cat, view)) {
+      if ((a.type !== 'playUnit' && a.type !== 'castSpell') || a.card !== uid) continue;
+      const score = scoreAfter(cat, view, a, me, w1);
+      if (Number.isFinite(score)) cands.push({ cardId: id, action: a, score, key: kindKey(cat, view, a) });
+    }
+  }
+  if (!cands.length) return null;
+  cands.sort((a, b) => b.score - a.score);
+  if (cands[0].score >= 1000) return { cardId: cands[0].cardId, action: cands[0].action };
+  // 同じ種類の手は1つまでにして、上位6手を読む
+  const top: typeof cands = [];
+  const kinds = new Set<string>();
+  for (const c of cands) {
+    if (kinds.has(c.key)) continue;
+    kinds.add(c.key);
+    top.push(c);
+    if (top.length >= 6) break;
+  }
+  const rng: RngHolder = { rngState: (state.rngState ^ 0x5bd1e995) | 0 };
+  // 読みの中でオラクルが使われたら、軽い選び方にする
+  thinking++;
+  try {
+    const worlds = Array.from({ length: 3 }, () => determinize(cat, st0, me, rng, true));
+    let best = top[0];
+    let bestAvg = -Infinity;
+    for (const c of top) {
+      let total = 0;
+      for (const world of worlds) total += replyValue(cat, withCard(world, c.cardId), c.action, me, opponent(me), w, Infinity);
+      const avg = total / worlds.length;
+      if (avg > bestAvg + 0.05) {
+        best = c;
+        bestAvg = avg;
+      }
+    }
+    return { cardId: best.cardId, action: best.action };
+  } finally {
+    thinking--;
+  }
+}
+
+// AI を読み込むと、オラクルはこの選び方で選ぶ
+setOracleChooser(oracleChoose);

@@ -28,14 +28,26 @@ describe('操作の組み立て', () => {
   });
 
   it('強化するかを選ぶ。予備マナは必ず先に払うので、支払い方は聞かない', () => {
-    const s = buildState(cat, { A: { maxMana: 5, reserve: 2, hand: ['KN-06'], board: { '1前': 'KN-04' } } });
-    const sel: Selection = { source: { kind: 'hand', uid: handUid(s, 'KN-06') }, picks: {} };
+    // 昇進（2）＋強化（3）
+    const s = buildState(cat, { A: { maxMana: 5, reserve: 2, hand: ['KN-16'], board: { '1前': 'KN-04' } } });
+    const sel: Selection = { source: { kind: 'hand', uid: handUid(s, 'KN-16') }, picks: {} };
     const all = allLegal(s);
     const st = nextStep(all, sel, s);
-    expect(st).toMatchObject({ kind: 'enhance', options: [{ enhance: false, cost: 2 }, { enhance: true, cost: 4 }] });
+    expect(st).toMatchObject({ kind: 'enhance', options: [{ enhance: false, cost: 2 }, { enhance: true, cost: 5 }] });
     sel.enhance = true;
     // 対象の味方は1体だけなので自動で決まる
     expect(nextStep(all, sel, s)).toMatchObject({ kind: 'ready', action: { type: 'castSpell', enhance: true } });
+  });
+
+  it('選択肢のあるスペルは、どれを選ぶかを聞く（兵士招集）', () => {
+    const s = buildState(cat, { A: { maxMana: 7, hand: ['KN-18'] } });
+    const sel: Selection = { source: { kind: 'hand', uid: handUid(s, 'KN-18') }, picks: {} };
+    const all = allLegal(s);
+    const st = nextStep(all, sel, s);
+    expect(st).toMatchObject({ kind: 'target', id: 'mode', spec: { kind: 'choice' } });
+    if (st.kind === 'target') expect(st.values).toEqual([{ kind: 'choice', n: 0 }, { kind: 'choice', n: 1 }]);
+    sel.picks.mode = [{ kind: 'choice', n: 1 }];
+    expect(nextStep(all, sel, s)).toMatchObject({ kind: 'ready', action: { type: 'castSpell', targets: { mode: [{ kind: 'choice', n: 1 }] } } });
   });
 
   it('ユニット → その持ち主の空きマス の順に選ぶ（転送遅延）', () => {
