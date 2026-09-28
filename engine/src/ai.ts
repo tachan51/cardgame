@@ -131,6 +131,8 @@ export const STAGE2_WEIGHTS: AiWeights = {
   // 盾は 1.5 → 0.5、遊撃は 0.5 → 2.0（ai.md 16章。つよい同士で比べて勝率 53.5%、ふつうは互角）
   shield: 0.5,
   kwMobile: 2,
+  // ラウンドの途中の手も、次のラウンドの開始後の盤面で評価する（ai.md 18章。検証用デッキを含めた総当たりで勝率 54.0%）
+  evalAt: 'nextRound',
 };
 
 export const DEFAULT_WEIGHTS = STAGE2_WEIGHTS;
