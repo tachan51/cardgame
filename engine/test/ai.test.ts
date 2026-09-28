@@ -128,7 +128,7 @@ describe('ルールベースの AI', () => {
 describe('読む候補の手の種類（sameKind）', () => {
   it('ユニット・召喚するスペルは置くマス、遊撃は移動先を区別せず、スペル・起動能力は対象を区別する', () => {
     const s = buildState(cat, {
-      A: { mana: 10, hand: ['KN-03', 'KN-03', 'AC-11', 'AC-02'], board: { '1前': 'KN-19', '2前': 'CY-05' } },
+      A: { mana: 10, hand: ['KN-03', 'KN-03', 'AC-11', 'AC-02'], board: { '1前': 'KN-14', '2前': 'CY-05' } },
       B: { board: { '1前': 'KN-04', '3前': 'KN-03' } },
     });
     const acts = legalActions(cat, s).filter((a) => a.player === 'A');
@@ -141,7 +141,7 @@ describe('読む候補の手の種類（sameKind）', () => {
     expect(keys(card('AC-11')).size).toBe(1);
     // ホーミング魔弾は対象（敵ユニット2体と相手プレイヤー）ごとに別の種類
     expect(keys(card('AC-02')).size).toBe(3);
-    // 軽装騎兵の遊撃は移動先が違っても1種類
+    // 突撃騎兵の遊撃は移動先が違っても1種類
     expect(keys((a) => a.type === 'mobileMove').size).toBe(1);
     // ジャミング技師の起動は対象（敵ユニット2体）ごとに別の種類
     const jammer = s.players.A.board[2]!.uid;
@@ -181,7 +181,30 @@ describe('ほかに影響するユニット（affectsOthers）', () => {
   it('配置時以外の能力が自分以外に働くユニットだけを数える', () => {
     // ジャミング技師（起動で敵を弱体）・水の精霊（ライフ回復）・巡回騎士（常時効果）・学院の修道女（ラウンド終了時に生成）
     for (const id of ['CY-05', 'AC-23', 'KN-04', 'AC-21']) expect(affectsOthers(cat, id)).toBe(true);
-    // 学院の石像（自分を回復）・軽装騎兵（自分に先制）・見習い魔法使い（配置時だけ）・王都の弓兵（能力なし）・魔導ゴーレム（コスト軽減）
-    for (const id of ['AC-13', 'KN-19', 'AC-03', 'KN-03', 'AC-22']) expect(affectsOthers(cat, id)).toBe(false);
+    // 学院の石像（自分を回復）・白銀の盾騎士（自分に盾）・見習い魔法使い（配置時だけ）・王都の弓兵（能力なし）・魔導ゴーレム（コスト軽減）
+    for (const id of ['AC-13', 'KN-13', 'AC-03', 'KN-03', 'AC-22']) expect(affectsOthers(cat, id)).toBe(false);
   });
+});
+
+describe('マザーAI「オラクル」（CY-23）', () => {
+  it('通常マナを最大まで回復し、2勢力のカードから選んだ1枚をコストを払って使う', () => {
+    const s = buildState(cat, {
+      A: { maxMana: 10, hand: ['CY-23'], leaders: ['leader-alto', 'leader-rei'], board: { '1前': 'KN-04' } },
+      B: { board: { '1前': 'KN-08', '2前': 'KN-09' } },
+    });
+    const play = legalActions(cat, s).find((a) => a.type === 'playUnit' && a.cell === 3)!;
+    const t = Date.now();
+    const next = applyAction(cat, s, play);
+    expect(Date.now() - t).toBeLessThan(20000);
+    const log = next.log.find((e) => e.type === 'oracle');
+    expect(log).toBeTruthy();
+    const def = cat.cards.get(log!.card as string)!;
+    expect(['knights', 'cyber']).toContain(def.faction);
+    expect(def.id).not.toBe('CY-23');
+    // 使ったカードは手札に残らず、そのコストが通常マナから引かれている
+    expect(next.players.A.hand.length).toBe(0);
+    expect(next.players.A.mana).toBeLessThanOrEqual(10 - def.cost);
+    // 同じ状態からは同じ手を選ぶ
+    expect(applyAction(cat, s, play).log.find((e) => e.type === 'oracle')!.card).toBe(log!.card);
+  }, 60000);
 });

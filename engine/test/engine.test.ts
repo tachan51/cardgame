@@ -38,7 +38,7 @@ describe('カードデータ（1-4）', () => {
     const files = structuredClone(loadFactions()) as FactionFile[];
     const kn = files.find((f) => f.faction.id === 'knights')!;
     kn.cards.push({ ...kn.cards[0] }); // ID の重複
-    const c = kn.cards.find((x) => x.id === 'KN-15')!;
+    const c = kn.cards.find((x) => x.id === 'KN-07')!;
     c.keywords = []; // 遅延の処理があるのにキーワードがない
     (c.effects![0] as { effects: { op: string }[] }).effects[0].op = 'explode'; // 知らない処理
     const cy = files.find((f) => f.faction.id === 'cyber')!;
@@ -50,7 +50,7 @@ describe('カードデータ（1-4）', () => {
       expect(e).toBeInstanceOf(CatalogError);
       const text = (e as CatalogError).problems.join('\n');
       expect(text).toContain('KN-01: カードIDが重複しています');
-      expect(text).toContain('KN-15: キーワードに遅延がありません'.slice(0, 7));
+      expect(text).toContain('KN-07: キーワードに遅延がありません'.slice(0, 7));
       expect(text).toContain('処理 explode は使えません');
       expect(text).toContain('存在しないカード XX-99');
     }
@@ -120,12 +120,13 @@ describe('合法手（18章）', () => {
   });
 
   it('強化のコストは予備マナから必ず先に払う（内訳違いの手はない）', () => {
-    const s = buildState(cat, { A: { maxMana: 5, reserve: 3, hand: ['KN-06'], board: { '1前': 'KN-04' } } });
+    // 鼓舞の号令（3）＋強化（3）: 強化の3は予備マナから払う
+    const s = buildState(cat, { A: { maxMana: 5, reserve: 3, hand: ['KN-11'], board: { '1前': 'KN-04' } } });
     const acts = legalActions(cat, s).filter((a) => a.type === 'castSpell' && a.enhance);
     expect(acts.length).toBe(1);
     const next = applyAction(cat, s, acts[0]);
-    expect(next.players.A.reserve).toBe(1);
-    expect(next.players.A.mana).toBe(3);
+    expect(next.players.A.reserve).toBe(0);
+    expect(next.players.A.mana).toBe(2);
   });
 
   it('対象を選べないスペルは合法手に入らない', () => {
@@ -138,10 +139,10 @@ describe('選択（山札の上から見て選ぶ）', () => {
   it('CY-06 データ検索: 選択を待ち、選んだカードが手札に入る', () => {
     let s = buildState(cat, { A: { maxMana: 3, hand: ['CY-06'], deck: ['KN-01', 'KN-09', 'KN-23', 'KN-25'] } });
     s = applyAction(cat, s, { type: 'castSpell', player: 'A', card: s.players.A.hand[0].uid });
-    expect(s.pending?.options.map((o) => o.cardId)).toEqual(['KN-01', 'KN-09']);
+    expect(s.pending?.options.map((o) => o.cardId)).toEqual(['KN-01', 'KN-09', 'KN-23']);
     expect(playerToAct(s)).toEqual(['A']);
     const acts = legalActions(cat, s);
-    expect(acts.length).toBe(2);
+    expect(acts.length).toBe(3);
     expect(() => applyAction(cat, s, { type: 'pass', player: 'A' })).toThrow(IllegalAction);
     const pick = acts.find((a) => a.type === 'choose' && s.pending!.options.find((o) => o.uid === a.option)!.cardId === 'KN-09')!;
     s = applyAction(cat, s, pick);
@@ -178,11 +179,12 @@ describe('公開情報とプレビュー', () => {
   });
 
   it('戦闘のプレビューは元の状態を変えない', () => {
-    const s = buildState(cat, { A: { board: { '1前': 'KN-23' } }, B: { board: { '1前': 'KN-04' } } });
+    // 突撃騎兵（5/1 先制）に貫通: 巡回騎士（2/3）を先に倒し、超えた2が本体へ
+    const s = buildState(cat, { A: { board: { '1前': { card: 'KN-14', keywords: ['pierce'] } } }, B: { board: { '1前': 'KN-04' } } });
     const before = JSON.stringify(s);
     const pv = previewCombat(cat, s);
     expect(JSON.stringify(s)).toBe(before);
-    expect(pv.life.B).toBe(11);
+    expect(pv.life.B).toBe(18);
     expect(pv.destroyed.length).toBe(1);
   });
 });
@@ -221,27 +223,23 @@ describe('ランダムな効果（カードリスト v0.8）', () => {
     const uid = s.players.A.hand.find((c) => c.cardId === card)!.uid;
     return applyAction(cat, s, { type: 'castSpell', player: 'A', card: uid, targets, enhance } as Action);
   };
-  const totalDamage = (s: GameState) => s.players.B.board.reduce((n, u) => n + (u?.damage ?? 0), 0);
 
-  it('数打ちゃ当たる: 相手の8マスが埋まっていれば、使ったスペルの枚数だけ必ず当たる', () => {
-    const full = Object.fromEntries(['1前', '1後', '2前', '2後', '3前', '3後', '4前', '4後'].map((c) => [c, { card: 'KN-04', health: 10 }]));
-    for (let seed = 1; seed <= 10; seed++) {
-      const s = buildState(cat, { seed, A: { mana: 2, spellsCast: 5, hand: ['AC-08'] }, B: { board: full } });
-      expect(totalDamage(cast(s, 'AC-08'))).toBe(5);
+  it('学院の図書委員: 自分の2勢力のスペルから1枚を生成する（強化なら名前の異なる2枚）', () => {
+    const play = (s: GameState, enhance: boolean) =>
+      applyAction(cat, s, { type: 'playUnit', player: 'A', card: s.players.A.hand[0].uid, cell: 0, enhance } as Action);
+    for (let seed = 1; seed <= 20; seed++) {
+      // リーダーはレイとノエル（電脳・学院）
+      const base = { seed, A: { mana: 6, hand: ['AC-08'], leaders: ['leader-rei', 'leader-noel'] } };
+      const one = play(buildState(cat, base), false).players.A.hand;
+      expect(one.length).toBe(1);
+      const def = cat.cards.get(one[0].cardId)!;
+      expect(def.type).toBe('spell');
+      expect(['cyber', 'academy']).toContain(def.faction);
+      expect(def.token).toBeFalsy();
+      const two = play(buildState(cat, base), true).players.A.hand;
+      expect(two.length).toBe(2);
+      expect(two[0].cardId).not.toBe(two[1].cardId);
     }
-  });
-
-  it('数打ちゃ当たる: 空きマスも選ばれるので、ユニットが1体だけなら外れもある', () => {
-    let hits = 0;
-    for (let seed = 1; seed <= 10; seed++) {
-      const s = buildState(cat, { seed, A: { mana: 2, spellsCast: 16, hand: ['AC-08'] }, B: { board: { '2前': { card: 'KN-04', health: 30 } } } });
-      const d = totalDamage(cast(s, 'AC-08'));
-      expect(d).toBeLessThan(16);
-      hits += d;
-    }
-    // 1マスに当たる確率は 1/8。160回のうちおよそ20回
-    expect(hits).toBeGreaterThan(5);
-    expect(hits).toBeLessThan(40);
   });
 
   it('召喚ガチャ（強化）: 名前の異なる2体を、4種類の候補から出す', () => {

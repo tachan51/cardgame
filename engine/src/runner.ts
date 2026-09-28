@@ -1248,7 +1248,7 @@ export class Runner {
           me,
           names.map((cardId, k) => ({ uid: k + 1, cardId })),
         );
-        this.log('pick', { player: me, looked: names.length });
+        this.log('pickCast', { player: me, looked: names.length });
         this.generate(me, names[n - 1]);
         return;
       }
@@ -1558,7 +1558,8 @@ function defaultOracle(cat: Catalog, state: GameState, player: PlayerId, cardIds
   const sorted = [...cardIds].sort((a, b) => getCard(cat, b).cost - getCard(cat, a).cost);
   for (const id of sorted) {
     const def = getCard(cat, id);
-    if (!r.paymentPlan(player, def.type === 'spell' && st.freeSpellsRound === state.round ? 0 : def.cost, 0)) continue;
+    const cost = r.cardCost(player, { uid: -1, cardId: id, costMod: 0, revealed: false, generated: true });
+    if (!r.paymentPlan(player, cost, 0)) continue;
     if (def.type === 'unit') {
       const cell = st.board.findIndex((u) => !u);
       if (cell < 0) continue;

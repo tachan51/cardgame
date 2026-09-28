@@ -429,6 +429,12 @@ function promptHtml(s: GameState, step: Step | null, game: Game): string {
     case 'target': {
       const n = step.need > 1 ? `（${step.picked.length}/${step.need}）` : '';
       body = `${targetPrompt(step)}${n}`;
+      // 選択肢を選ぶ対象（兵士招集など）はボタンで選ぶ
+      if (step.spec?.kind === 'choice') {
+        body += ' ' + step.values
+          .flatMap((v) => (v.kind === 'choice' ? [`<button data-btn="choice-${v.n}">${esc(step.spec?.choices?.[v.n] ?? String(v.n + 1))}</button>`] : []))
+          .join(' ');
+      }
       break;
     }
     case 'confirm':
@@ -454,6 +460,8 @@ function targetPrompt(step: Extract<Step, { kind: 'target' }>): string {
       return `${side}ユニットか本体（ライフ）を選んでください`;
     case 'cardInHand':
       return '手札のカードを選んでください';
+    case 'choice':
+      return 'どれか1つを選んでください';
     default:
       return '対象を選んでください';
   }
@@ -501,7 +509,12 @@ function chooseHtml(s: GameState): string {
       <div class="kws">${(def.keywords ?? []).map((k) => `<span class="kw">${KEYWORD_LABEL[k]}</span>`).join('')}</div>
       <div class="ctext">${richText(def.text)}</div></div>`;
   });
-  return `<div class="overlay"><div class="dialog"><h2>手札に加えるカードを1枚選んでください</h2><div class="choose-row">${opts.join('')}</div><div class="muted">残りは元の順番で山札の上に戻ります</div></div></div>`;
+  // 山札の上から見て選ぶとき（データ検索）と、使ったスペルから選んで生成するとき（禁書の閲覧）
+  const act = s.pending!.action as { card?: number };
+  const src = s.players[HUMAN].hand.find((c) => c.uid === act.card);
+  const fromDeck = !src || JSON.stringify(getCard(cat, src.cardId).effects ?? []).includes('lookAtTopPickOne');
+  const note = fromDeck ? '残りは元の順番で山札の上に戻ります' : '選んだカードを手札に生成します';
+  return `<div class="overlay"><div class="dialog"><h2>手札に加えるカードを1枚選んでください</h2><div class="choose-row">${opts.join('')}</div><div class="muted">${note}</div></div></div>`;
 }
 
 function mulliganHtml(s: GameState): string {
@@ -685,6 +698,13 @@ function onClick(e: MouseEvent, root: HTMLElement, game: Game, all: Action[], on
     if (btn === 'confirm' && step.kind === 'confirm') {
       ui.sel.confirmed = true;
       return advanceSelection(game, all, rerender);
+    }
+    if (btn?.startsWith('choice-') && step.kind === 'target') {
+      const n = Number(btn.slice('choice-'.length));
+      if (step.values.some((v) => v.kind === 'choice' && v.n === n)) {
+        ui.sel.picks[step.id] = [...step.picked, { kind: 'choice', n }];
+        return advanceSelection(game, all, rerender);
+      }
     }
     const picked = pickFromClick(t, step, s);
     if (picked) return advanceSelection(game, all, rerender);

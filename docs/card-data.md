@@ -74,6 +74,7 @@ type Card = {
   effects?: Effect[];         // スペルを使ったときの効果
   abilities?: Ability[];      // ユニットの誘発・常時・起動能力、手札にある間の効果
   enhance?: Enhance;          // 強化
+  tags?: string[];            // 属性（"drone" ＝ドローン属性。CY-01・CY-03）
   token?: boolean;            // 効果で出すためだけのカード。デッキには入れられない（TK-01）
   text: string;               // 画面に出す効果文（表示専用）
 };
@@ -98,7 +99,8 @@ type Keyword = "ranged" | "pierce" | "firstStrike" | "shield" | "mobile" | "dela
 type Ability =
   | { kind: "trigger"; when: TriggerType; condition?: Condition; targets?: TargetSpec[]; effects: Effect[] }
   | { kind: "static"; modifiers: StaticModifier[] }
-  | { kind: "activated"; cost: number; targets?: TargetSpec[]; effects: Effect[] }
+  | { kind: "activated"; cost: number; condition?: Condition; targets?: TargetSpec[]; effects: Effect[] }
+      // condition: そのユニットが条件を満たすときだけ使える（KN-19 は後列にいるときだけ）
   | { kind: "inHand"; when: TriggerType; effects: Effect[] }    // 手札にある間だけ働く
   | { kind: "costReduction"; by: Value };                       // 手札にある間、コストを by だけ下げる（CY-21・AC-22）
 
@@ -175,7 +177,9 @@ type GrowthCounter =
 ```ts
 type TargetSpec = {
   id: string;                         // 効果の中で参照する名前
-  kind: "unit" | "cell" | "lane" | "unitOrPlayer" | "cardInHand";
+  kind: "unit" | "cell" | "lane" | "unitOrPlayer" | "cardInHand" | "choice";
+  choices?: string[];                 // kind が "choice" のとき、選択肢の名前（選んだ番号を byChoice で使う。KN-18）
+  other?: boolean;                    // そのユニット自身を選べない（「他の味方」。KN-05・KN-06・KN-20）
   side?: "ally" | "enemy" | "any";    // 省略時 "any"（単に「ユニット」＝敵味方どちらでも）
   count?: number;                     // 選ぶ数（省略時 1）
   where?: Condition;                  // 選べるものの条件（例: 空きマス、前列、スペル）
@@ -187,6 +191,7 @@ type TargetSpec = {
 
 - `kind: "cell"` の `where` に `{ "empty": true }` を書くと空きマスだけを選べる。
 - 必要な対象を選べないスペルは使えない（ルール仕様書 7.2）。`optional: true` なら選ばずに使える。
+- 配置時の能力の対象は、ユニットを置いた後で選ぶ（置いたマスは空きマスではない）。
 
 ### 4.3 セレクタ（Selector）
 
@@ -201,14 +206,17 @@ type Selector =
         side?: "ally" | "enemy" | "any";
         relative?: "leftRight" | "sameLaneOther";     // このユニットから見た位置
         lane?: LaneRef; row?: "front" | "back";
-        cardId?: string;                              // 特定のカードのユニット（偵察ドローンなど）
+        cardId?: string;                              // 特定のカードのユニット
+        tag?: string;                                 // その属性のカードのユニット（ドローン属性。CY-20）
         where?: Condition;
         random?: number;                              // その中からランダムに選ぶ数
         other?: boolean;                              // このユニット自身を除く（「他の味方」。KN-21）
       } }
   | { cell: { owner: "ally" | "enemy"; lane: LaneRef; row: "front" | "back" } }
   | { cellsRelative: "leftRight" }                    // このユニットの左右隣のマス
-  | { randomCell: "ally" | "enemy" }                  // そのプレイヤーの8マス（空きマスを含む）からランダムに1つ。評価するたびに選び直す（AC-08）
+  | { randomCell: "ally" | "enemy" }                  // そのプレイヤーの8マス（空きマスを含む）からランダムに1つ。評価するたびに選び直す
+  | { cross: Selector }                               // そのマス（またはユニットのいるマス）と前後左右のマス（CY-11）
+  | { combatTargetOf: Selector }                      // そのユニットの戦闘対象（ユニットか相手本体。ルール仕様書 11.7。CY-18）
   | "enemyPlayer" | "allyPlayer";
 
 type LaneRef = number | { ref: string } | { laneOf: Selector } | "all";
@@ -220,8 +228,10 @@ type LaneRef = number | { ref: string } | { laneOf: Selector } | "all";
 type Value =
   | number
   | { attackOf: Selector; ifGone?: number }   // そのユニットの攻撃力（いなければ ifGone、省略時 0）
+  | { healthOf: Selector; ifGone?: number }   // そのユニットの残り体力（KN-21）
   | { count: "spellsCastThisGame" }           // この試合で自分が使ったスペルの枚数
   | { count: "unitMovesThisGame" }            // この試合でユニット（敵味方問わず）が移動した回数
+  | { count: "allyEnduresThisGame" }          // この試合で自分の味方が戦闘ダメージを耐えた回数（KN-23）
   | { max: Value; cap: number };              // 上限つき
 ```
 
@@ -251,7 +261,8 @@ type Condition =
 | `onEnemyMove` | 敵ユニットが移動したとき | `eventUnit` が移動したユニット |
 | `onAnyUnitMove` | ユニット（敵味方問わず）が移動したとき | |
 | `onSpellCast` | スペル使用時（自分がスペルを使ったとき） | |
-| `onAllyEndureCombatDamage` | 味方が戦闘ダメージを耐えたとき | 誓いの聖騎士（KN-16） |
+| `onAllyEndureCombatDamage` | 味方が戦闘ダメージを耐えたとき | |
+| `onDealCombatDamage` | このユニットの戦闘の攻撃が、盾に防がれずにユニットにダメージを与えたとき | `eventUnit` がダメージを受けたユニット。機動要塞「バベル」（CY-24） |
 | `roundStart` / `roundEnd` | ラウンド開始時 / ラウンド終了時 | |
 | `combatStart` / `combatEnd` | 戦闘開始時 / 戦闘終了時 | 効果で行う戦闘では起きない |
 
@@ -264,7 +275,7 @@ type Condition =
 | `damage` | `target`, `amount`, `times?` | ダメージを与える（`times` 回に分けて） | KN-25, CY-17 |
 | `destroy` | `target` | 破壊する | AC-14 |
 | `exile` | `target` | 除外する | AC-24 |
-| `heal` | `target`, `amount` | 回復する | KN-05, AC-13 |
+| `heal` | `target`, `amount` | 回復する（プレイヤーを指せばライフを回復する） | AC-05, AC-13 |
 | `buff` | `target`, `attack?`, `health?`, `duration` | 能力値を増減する。`duration` は `"permanent"`（永続）か `"thisRound"` | KN-11, CY-05 |
 | `grantKeyword` | `target`, `keywords`, `duration` | キーワードを与える（盾を与える＝`["shield"]`） | KN-02, KN-12 |
 | `move` | `target`, `to` | ユニットを指定のマスへ移動させる（空きマスでなければ何もしない） | AC-06, CY-15 |
@@ -278,11 +289,14 @@ type Condition =
 | `lookAtTopPickOne` | `look` | 山札の上から見て1枚を手札に、残りは元の順番で戻す | CY-06 |
 | `tutorRandom` | `where`, `count`, `distinctNames?`, `highestCost?`, `as?` | 山札から条件に合うカードをランダムに手札に加え、シャッフル。`distinctNames` なら名前の異なるカードだけ。`highestCost` ならコスト（カードに書かれた値）が最大のものの中から選ぶ。`as` で加えたカードに名前を付ける | KN-18, AC-20, AC-25 |
 | `generate` | `cardId`, `count?` | カードを手札に生成する | AC-05, CY-20 |
-| `generateFromCastSpells` | `count`, `distinctNames` | 使ったスペルからランダムに選んで手札に生成する | AC-18 |
+| `generateFromCastSpells` | `count`, `distinctNames` | 使ったスペルからランダムに選んで手札に生成する | — |
+| `pickCastSpell` | `look` | 使ったスペルから名前の異なるランダムな `look` 枚を見て、1枚を選んで手札に生成する | AC-18 |
+| `generateRandom` | `where`, `count`, `distinctNames?` | 自分の2勢力のカード（トークン専用を除く）から条件に合うものをランダムに手札に生成する | AC-08 |
+| `generateCopyOf` | `of`, `reveal?` | そのユニットと同名のカードを手札に生成する（トークン専用のカードも可）。`reveal` なら公開する | CY-07 |
 | `gainReserve` | `amount` | 予備マナを得る | AC-07 |
 | `gainLife` | `amount` | 自分のライフを回復する（上限なし） | AC-05, AC-23 |
 | `refillMana` | — | 通常マナを最大まで回復する | — |
-| `fight` | `a`, `b` | 2体が互いに攻撃力と同じダメージを与え合う（どちらかがいなければ何もしない） | KN-07 |
+| `fight` | `a`, `b`, `combat?` | 2体が互いに攻撃力と同じダメージを与え合う（どちらかがいなければ何もしない）。`combat` なら戦闘ダメージとして扱い、残った側は「耐えた」に数える | KN-07 |
 | `resolveCombat` | `lanes` | 指定レーンで戦闘を行う（ルール仕様書 11.7） | KN-17, KN-22 |
 | `modifyCost` | `target`, `amount` | 手札のカードのコストを増減する | AC-25 |
 | `modifyLeaderAbilityCost` | `amount` | このリーダーの能力のコストを増減する（試合を通して累積） | — |
@@ -291,7 +305,13 @@ type Condition =
 | `atRoundEnd` | `effects` | 中の効果を、このラウンドの終了時に行う | CY-07, AC-14 |
 | `if` | `condition`, `subject`, `then`, `else?` | 条件を満たすときだけ行う | — |
 | `forEach` | `targets`, `effects` | 範囲の中の1体ずつに効果を行う（中では `eventUnit` がその1体） | — |
-| `repeat` | `times`, `effects` | 中の効果を `times` 回くり返す | AC-08 |
+| `repeat` | `times`, `effects` | 中の効果を `times` 回くり返す | — |
+| `transform` | `target`, `cardId` | ユニットを別のカードのユニットに変化させる（変化前の状態はすべてなくなる。トークンでなくなる） | KN-16 |
+| `grantRandomKeywords` | `target`, `keywords`, `count`, `duration` | `keywords` のうち異なる `count` 個をランダムに与える | KN-23 |
+| `byChoice` | `ref`, `cases` | 対象 `ref`（`kind: "choice"`）で選んだ番号の効果を行う | KN-18 |
+| `shuffleBoard` | — | すべてのユニットを、その持ち主の盤面でランダムに移動させる（全ユニットが移動に数える） | CY-25 |
+| `freeSpellsThisRound` | — | このラウンド中、自分のスペルのコストを0にする（強化のコストは別） | AC-25 |
+| `oracle` | `exclude?` | 自分の2勢力のカード（`exclude` を除く）から1枚を選んで手札に生成し、コストを払って使う（ルール仕様書 11.7） | CY-23 |
 
 - `target` にはセレクタ（4.3）を書く。範囲（`units`）を書けば、その全員に効果を行う。
 - 数値の引数にはすべて Value（4.4）を書ける。
@@ -299,6 +319,8 @@ type Condition =
 ---
 
 ## 6. 記述例
+
+記述例は、その書き方を追加したときのカードの内容で書いている（今のカードの内容は `data/cards/` を参照）。
 
 ### 6.1 シンプルなユニット
 
@@ -487,38 +509,87 @@ type Condition =
 
 ---
 
+### 6.11 効果の選択（兵士招集）
+
+```json
+{
+  "id": "KN-18", "name": "兵士招集", "faction": "knights", "type": "spell", "cost": 7,
+  "targets": [ { "id": "mode", "kind": "choice", "choices": ["前列に巡回騎士", "後列に王都の弓兵"] } ],
+  "effects": [
+    { "op": "byChoice", "ref": "mode", "cases": [
+      [ { "op": "summon", "cardId": "KN-04", "at": { "cell": { "owner": "ally", "lane": "all", "row": "front" } } } ],
+      [ { "op": "summon", "cardId": "KN-03", "at": { "cell": { "owner": "ally", "lane": "all", "row": "back" } } } ]
+    ] }
+  ],
+  "text": "次のうち1つを選ぶ。(A)自分の前列の空きマスすべてに巡回騎士(KN-04)を出す。(B)自分の後列の空きマスすべてに王都の弓兵(KN-03)を出す。"
+}
+```
+
+- 選択肢は対象の一種として、使うときに選ぶ（合法手では選択肢ごとに別の手になる）。
+
+### 6.12 戦闘でダメージを与えたとき（機動要塞「バベル」）
+
+```json
+{
+  "id": "CY-24", "name": "機動要塞「バベル」", "faction": "cyber",
+  "type": "unit", "cost": 6, "attack": 3, "health": 5, "keywords": ["ranged", "mobile"],
+  "abilities": [
+    { "kind": "trigger", "when": "onDealCombatDamage", "effects": [
+      { "op": "if", "subject": "eventUnit", "condition": { "row": "front" },
+        "then": [ { "op": "moveToOtherRow", "target": "eventUnit" } ] }
+    ] }
+  ],
+  "text": "このユニットの攻撃によって、前列の敵ユニットにダメージを与えたなら、そのユニットを同じレーンの後列へ移動させる（後列が空きマスの場合のみ）"
+}
+```
+
+- 誘発はそのステップの破壊の処理の後に処理するので、破壊されたユニットは動かない。
+
 ## 7. 75枚の対応確認
 
 試遊版3勢力の全カード（とトークン専用のカード）とリーダーを `data/cards/knights.json`・`cyber.json`・`academy.json` に書き起こし、8章の検証をすべて通ることを確認した。特殊な表し方をするものは次のとおり。
 
 | カード | 表し方 |
 |---|---|
-| KN-07 騎士の決闘 | 強化で前列の味方を+0/+2（遅延の外）、遅延の中で `fight`（相手の前列のユニットと自分の前列のユニット。どちらかがいなければ何もしない） |
-| KN-16 誓いの聖騎士 | `trigger` の `onAllyEndureCombatDamage` で自分を+2/+0 |
-| KN-21 老将ガラハド | 配置時の `buff` の対象に `{ "units": { "side": "ally", "other": true } }`（自分を除く） |
-| KN-22 聖堂騎士長 | 起動 → `delay` → `resolveCombat`（`lanes: "all"`） |
-| CY-07 オーバークロック | `buff`（このラウンド中+4/+0）と `atRoundEnd` の中の `damage` |
-| CY-14 攻性防壁 / CY-23 オラクル | `trigger` の `onEnemyMove` で `eventUnit` に効果 |
+| KN-05 従軍僧侶 / KN-20 王城の大盾兵 | 配置時の能力の対象に `other: true`（置いた後で選ぶので、自分自身を除く） |
+| KN-06 スパルタ軍曹 | 起動の対象に `other: true`。`damage`（1）→ `buff`（+2/+0 永続） |
+| KN-07 騎士の決闘 | 味方と敵を対象に選び、遅延の中で `fight`（`combat: true`）。強化（add）で味方を+0/+2（遅延の外） |
+| KN-10 近衛弓兵長 | `roundEnd` の `trigger` で自分を+1/+0（永続） |
+| KN-16 昇進 | `transform`（`cardId: "KN-10"`）。強化（add）で同じ対象に盾 |
+| KN-17 王国の軍師 | 配置時の `trigger` と起動の両方に `tutorRandom` |
+| KN-18 兵士招集 | 対象の `kind: "choice"` と `byChoice`（6.11） |
+| KN-19 切り込み隊長 | 起動に `condition: { "row": "back" }`。`swapCells`（自分と、同じレーンの前列のマス） |
+| KN-21 老将ガラハド | 配置時に `forEach`（他の味方）→ `buff`（`attackOf`・`healthOf` の `eventUnit`） |
+| KN-22 開戦 | 遅延の中で `resolveCombat`（`lanes: "all"`） |
+| KN-23 竜殺しの英雄 | 配置時に `buff`（`allyEnduresThisGame`）と `grantRandomKeywords` |
+| KN-24 双子騎士 / KN-25 暗黒騎士 | 配置時の `summon`（空きマスの対象 / 相手の同じレーンのマス） |
+| CY-01・CY-03 / CY-20 | `tags: ["drone"]` / `static` の対象に `{ "units": { "side": "ally", "tag": "drone" } }` |
+| CY-07 量子コピー | `generateCopyOf`（`reveal: true`） |
+| CY-11 EMPグレネード | マスを対象に選び、遅延の中で `{ "cross": { "ref": "cell" } }` に `damage`。強化（replace）で同じ遅延の中に −2/−0 を加える |
+| CY-14 攻性防壁 | `trigger` の `onEnemyMove` で `eventUnit` に効果 |
 | CY-16 ドローン管制官 | `summon` の `at` に `{ "cellsRelative": "leftRight" }`（空きマスでなければ出さない） |
-| CY-25 衛星兵器「ラグナロク」 | 強化（add）で味方すべてに盾（遅延の外）、遅延の中で全ユニットに8ダメージ |
-| AC-02 ホーミング魔弾 | 対象の `kind: "unitOrPlayer"`（敵ユニットまたは相手プレイヤー） |
-| AC-08 数打ちゃ当たる | `repeat`（`times` に `spellsCastThisGame`）の中で、`damage` の対象に `{ "randomCell": "enemy" }`（空きマスなら外れ） |
+| CY-18 サイバー忍者 | 起動で `{ "combatTargetOf": "self" }` に `damage`、自分に先制（このラウンド中） |
+| CY-23 マザーAI「オラクル」 | 配置時に `refillMana` → `oracle`（`exclude: ["CY-23"]`） |
+| CY-24 機動要塞「バベル」 | `onDealCombatDamage`（6.12） |
+| CY-25 衛星兵器「ラグナロク」 | `shuffleBoard` |
+| AC-02 ホーミング魔弾 / AC-05 魔女の聖水 | 対象の `kind: "unitOrPlayer"`（AC-05 は味方側。`heal` はプレイヤーならライフを回復） |
+| AC-08 学院の図書委員 | 配置時に `generateRandom`（`where: { "type": "spell" }`）。強化（replace）で `count: 2`・`distinctNames` |
 | AC-09 召喚ガチャ | `summonRandom`。強化（replace）で対象を2マス（`count: 2`）にし、`distinctNames` |
 | AC-10 魔法の剣 | `buff` の `attack`・`health` に `{ "count": "spellsCastThisGame" }`（永続） |
-| AC-11 氷像の召喚 / TK-01 動く氷像 | `summon`（`cardId: "TK-01"`、`as: "statue"`）と、強化（add）で `{ "ref": "statue" }` を+0/+3。TK-01 は `token: true` |
+| AC-11 氷像の召喚 / TK-01 動く氷像 | `summon`（`cardId: "TK-01"`）。TK-01 は `token: true` で、`roundEnd` に自分を `destroy` |
 | AC-17 雷鳴の詠唱 | 遅延の中で敵ユニットすべてに `damage`。強化（replace）で `times: 2` |
+| AC-18 禁書の閲覧 | `pickCastSpell`（`look: 3`） |
 | AC-20 学院長代理 | 配置時に `tutorRandom`（`highestCost`・`as: "spell"`）→ `reveal`。強化（add、`appliesTo: 0`）で `modifyCost`（−6） |
 | AC-22 魔導ゴーレム / CY-21 重装ガンシップ | `costReduction` の `by` に `spellsCastThisGame` / `unitMovesThisGame` |
 | AC-14 崩落の予言 | `atRoundEnd` の中の `destroy`（遅延ではない） |
 | AC-16 首席の少女 | `static` の `spellCost: -1`（対象は `allyPlayer`） |
 | AC-24 禁呪「終焉の詠唱」 | 遅延の中で `exile`。対象は `units` の `where: { healthAtMost: 3 }`（発動時に判定） |
-| AC-25 天空の大魔導師 | 配置時に `tutorRandom`（`distinctNames`・`as: "spells"`）→ `reveal` → `modifyCost`（−9）（6.8） |
+| AC-25 天空の大魔導師 | 配置時に `tutorRandom`（`distinctNames`）→ `freeSpellsThisRound` |
 | CY-09 転送遅延 | ユニットとその持ち主の空きマスを選び、遅延の中で `move`（発動時に空きマスでなければ動かない） |
 | レイ 成長後 | 能力は成長前と同じ `move`（コスト4）。パッシブは `trigger` の `onEnemyMove` で `eventUnit` を−2/−0 |
 | ノエル | 6.9 |
 | CY-15 スワップ | `swapCells`。1つ目は自分のユニットがいるマス（`where: { "empty": false }`）、2つ目は自分の任意のマス（空きマスも可） |
 | KN-01, KN-14 | 空の配置時の能力を置き、強化の `appliesTo: 0` で指す |
-
 ---
 
 ## 8. データの検証
