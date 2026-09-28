@@ -810,7 +810,7 @@
                 "units": {
                   "side": "enemy",
                   "where": {
-                    "healthAtMost": 3
+                    "attackAtMost": 3
                   }
                 }
               }
@@ -832,7 +832,7 @@
                   "units": {
                     "side": "enemy",
                     "where": {
-                      "healthAtMost": 5
+                      "attackAtMost": 5
                     }
                   }
                 }
@@ -841,7 +841,7 @@
           }
         ]
       },
-      "text": "遅延: 体力3以下の敵ユニットすべてを除外する。強化（5）: 代わりに体力5以下"
+      "text": "遅延: 攻撃力3以下の敵ユニットすべてを除外する。強化（5）: 代わりに攻撃力5以下"
     },
     {
       "id": "AC-25",

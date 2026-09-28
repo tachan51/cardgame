@@ -979,7 +979,7 @@
         }
       ],
       "expect": {
-        "activePlayer": "A",
+        "activePlayer": "B",
         "A": {
           "board": {
             "1前": null,

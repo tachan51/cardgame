@@ -533,26 +533,26 @@
       "expect": {"A": {"life": 17}, "B": {"life": 15}}
     },
     {
-      "name": "AC-24 終焉の詠唱: 発動時点で体力3以下の敵ユニットを除外（盾は無関係、発動前に体力を上げれば残る、味方は対象外）",
+      "name": "AC-24 終焉の詠唱: 発動時点で攻撃力3以下の敵ユニットを除外（体力・盾は無関係、発動前に攻撃力を上げれば残る、味方は対象外）",
       "refs": ["AC-24", "14.1", "11.7"],
-      "setup": {"A": {"mana": 9, "hand": ["AC-24"], "board": {"2前": "KN-03"}}, "B": {"mana": 3, "hand": ["KN-11"], "board": {"1前": "KN-04", "3前": {"card": "KN-01", "health": 2}, "4後": "KN-09"}}},
+      "setup": {"A": {"mana": 9, "hand": ["AC-24"], "board": {"2前": "KN-03"}}, "B": {"mana": 3, "hand": ["KN-11"], "board": {"1前": "KN-04", "2前": {"card": "AC-13", "health": 10}, "3前": "CY-04", "4後": {"card": "KN-20", "keywords": ["shield"]}}}},
       "steps": [
         {"type": "castSpell", "player": "A", "card": "AC-24"},
-        {"expect": {"A": {"delayed": ["AC-24"]}, "B": {"board": {"1前": {"health": 3}}}}},
+        {"expect": {"A": {"delayed": ["AC-24"]}, "B": {"board": {"1前": {"attack": 2}, "3前": {"attack": 3, "health": 1}}}}},
         {"type": "castSpell", "player": "B", "card": "KN-11"}
       ],
-      "expect": {"A": {"delayed": [], "trash": ["AC-24"], "exile": [], "board": {"2前": {"card": "KN-03"}}}, "B": {"exile": ["KN-09"], "trash": ["KN-11"], "board": {"1前": {"card": "KN-04", "health": 4}, "3前": {"card": "KN-01"}, "4後": null}}}
+      "expect": {"A": {"delayed": [], "trash": ["AC-24"], "exile": [], "board": {"2前": {"card": "KN-03"}}}, "B": {"exile": ["KN-04", "AC-13", "KN-20"], "trash": ["KN-11"], "board": {"1前": null, "2前": null, "3前": {"card": "CY-04", "attack": 4, "health": 2}, "4後": null}}}
     },
     {
-      "name": "AC-24 終焉の詠唱（強化）: 体力5以下の敵ユニットを除外（体力6は残る）。除外はトラッシュに置かない",
+      "name": "AC-24 終焉の詠唱（強化）: 攻撃力5以下の敵ユニットを除外（攻撃力6は残る。体力は無関係）。除外はトラッシュに置かない",
       "refs": ["AC-24", "15.1", "11.7"],
-      "setup": {"A": {"mana": 10, "reserve": 5, "hand": ["AC-24"]}, "B": {"board": {"1前": "KN-03", "2後": {"card": "KN-05", "health": 5}, "3前": {"card": "KN-01", "health": 2}, "4後": "KN-09"}}},
+      "setup": {"A": {"mana": 10, "reserve": 5, "hand": ["AC-24"]}, "B": {"board": {"1前": "KN-03", "2前": "CY-18", "2後": {"card": "KN-05", "attack": 5}, "3前": {"card": "KN-01", "health": 10}, "4後": "KN-09"}}},
       "steps": [
         {"type": "castSpell", "player": "A", "card": "AC-24", "enhance": true},
         {"expect": {"A": {"mana": 3, "reserve": 0}}},
         {"type": "pass", "player": "B"}
       ],
-      "expect": {"B": {"exile": ["KN-01", "KN-03", "KN-09"], "trash": [], "board": {"1前": null, "2後": {"card": "KN-05"}, "3前": null, "4後": null}}}
+      "expect": {"B": {"exile": ["CY-18", "KN-01", "KN-03", "KN-09"], "trash": [], "board": {"1前": null, "2前": null, "2後": {"card": "KN-05", "attack": 6, "health": 1}, "3前": null, "4後": null}}}
     },
     {
       "name": "AC-25 天空の大魔導師: 10/10（射撃なし）。配置時に山札から名前の異なるスペル3枚を手札に加える（公開しない）。このラウンド中は自分のスペルのコストが0（強化コストは払う）",

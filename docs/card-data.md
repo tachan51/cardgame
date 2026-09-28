@@ -151,7 +151,8 @@ type LeaderAbility = { name: string; cost: number; targets?: TargetSpec[]; effec
 
 type GrowthCounter =
   | "allyEnduredCombatDamage"  // 味方が戦闘ダメージを耐えた回数（アルト）
-  | "unitMoved"                // 自分がユニット（敵味方問わず）を移動させた回数（レイ）。効果による移動と、自分の遊撃による移動
+  | "unitMoved"                // 自分がユニット（敵味方問わず）を移動させた回数。効果による移動と、自分の遊撃による移動
+  | "unitMoveRounds"           // 自分がユニットを移動させたラウンドの数（1ラウンドに何回移動させても1。レイ）
   | "leaderAbilityUsed"        // このリーダーの能力を使った回数
   | "spellsCast";              // 自分がスペルを使った回数（ノエル）。生成したスペルも数える
 ```
@@ -231,6 +232,8 @@ type Value =
   | { healthOf: Selector; ifGone?: number }   // そのユニットの残り体力（KN-21）
   | { count: "spellsCastThisGame" }           // この試合で自分が使ったスペルの枚数
   | { count: "unitMovesThisGame" }            // この試合でユニット（敵味方問わず）が移動した回数
+  | { count: "myMovesThisGame" }              // この試合で自分がユニット（敵味方問わず）を移動させた回数（CY-21）
+  | { count: "myMoveRoundsThisGame" }         // この試合で自分がユニットを移動させたラウンドの数（CY-25）
   | { count: "allyEnduresThisGame" }          // この試合で自分の味方が戦闘ダメージを耐えた回数（KN-23）
   | { max: Value; cap: number };              // 上限つき
 ```
@@ -309,7 +312,7 @@ type Condition =
 | `transform` | `target`, `cardId` | ユニットを別のカードのユニットに変化させる（変化前の状態はすべてなくなる。トークンでなくなる） | KN-16 |
 | `grantRandomKeywords` | `target`, `keywords`, `count`, `duration` | `keywords` のうち異なる `count` 個をランダムに与える | KN-23 |
 | `byChoice` | `ref`, `cases` | 対象 `ref`（`kind: "choice"`）で選んだ番号の効果を行う | KN-18 |
-| `shuffleBoard` | — | すべてのユニットを、その持ち主の盤面でランダムに移動させる（全ユニットが移動に数える） | CY-25 |
+| `shuffleBoard` | — | すべてのユニットを、その持ち主の盤面でランダムに移動させる（全ユニットが移動に数える） | —（v0.9 の初版のラグナロク） |
 | `freeSpellsThisRound` | — | このラウンド中、自分のスペルのコストを0にする（強化のコストは別） | AC-25 |
 | `oracle` | `exclude?` | 自分の2勢力のカード（`exclude` を除く）から1枚を選んで手札に生成し、コストを払って使う（ルール仕様書 11.7） | CY-23 |
 
@@ -571,7 +574,7 @@ type Condition =
 | CY-18 サイバー忍者 | 起動で `{ "combatTargetOf": "self" }` に `damage`、自分に先制（このラウンド中） |
 | CY-23 マザーAI「オラクル」 | 配置時に `refillMana` → `oracle`（`exclude: ["CY-23"]`） |
 | CY-24 機動要塞「バベル」 | `onDealCombatDamage`（6.12） |
-| CY-25 衛星兵器「ラグナロク」 | `shuffleBoard` |
+| CY-25 衛星兵器「ラグナロク」 | 遅延の中で `enemyPlayer` に `damage`（`amount` に `myMoveRoundsThisGame`。発動時の値） |
 | AC-02 ホーミング魔弾 / AC-05 魔女の聖水 | 対象の `kind: "unitOrPlayer"`（AC-05 は味方側。`heal` はプレイヤーならライフを回復） |
 | AC-08 学院の図書委員 | 配置時に `generateRandom`（`where: { "type": "spell" }`）。強化（replace）で `count: 2`・`distinctNames` |
 | AC-09 召喚ガチャ | `summonRandom`。強化（replace）で対象を2マス（`count: 2`）にし、`distinctNames` |
@@ -580,10 +583,10 @@ type Condition =
 | AC-17 雷鳴の詠唱 | 遅延の中で敵ユニットすべてに `damage`。強化（replace）で `times: 2` |
 | AC-18 禁書の閲覧 | `pickCastSpell`（`look: 3`） |
 | AC-20 学院長代理 | 配置時に `tutorRandom`（`highestCost`・`as: "spell"`）→ `reveal`。強化（add、`appliesTo: 0`）で `modifyCost`（−6） |
-| AC-22 魔導ゴーレム / CY-21 重装ガンシップ | `costReduction` の `by` に `spellsCastThisGame` / `unitMovesThisGame` |
+| AC-22 魔導ゴーレム / CY-21 重装ガンシップ | `costReduction` の `by` に `spellsCastThisGame` / `myMovesThisGame` |
 | AC-14 崩落の予言 | `atRoundEnd` の中の `destroy`（遅延ではない） |
 | AC-16 首席の少女 | `static` の `spellCost: -1`（対象は `allyPlayer`） |
-| AC-24 禁呪「終焉の詠唱」 | 遅延の中で `exile`。対象は `units` の `where: { healthAtMost: 3 }`（発動時に判定） |
+| AC-24 禁呪「終焉の詠唱」 | 遅延の中で `exile`。対象は `units` の `where: { attackAtMost: 3 }`（発動時に判定） |
 | AC-25 天空の大魔導師 | 配置時に `tutorRandom`（`distinctNames`）→ `freeSpellsThisRound` |
 | CY-09 転送遅延 | ユニットとその持ち主の空きマスを選び、遅延の中で `move`（発動時に空きマスでなければ動かない） |
 | レイ 成長後 | 能力は成長前と同じ `move`（コスト4）。パッシブは `trigger` の `onEnemyMove` で `eventUnit` を−2/−0 |

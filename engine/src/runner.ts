@@ -519,6 +519,8 @@ export class Runner {
     }
     if ('count' in v) {
       if (v.count === 'unitMovesThisGame') return this.s.unitMoves ?? 0;
+      if (v.count === 'myMovesThisGame') return this.pl(ctx.controller).moves ?? 0;
+      if (v.count === 'myMoveRoundsThisGame') return this.pl(ctx.controller).moveRounds ?? 0;
       if (v.count === 'allyEnduresThisGame') return this.pl(ctx.controller).endured ?? 0;
       return this.pl(ctx.controller).spellsCast;
     }
@@ -783,6 +785,14 @@ export class Runner {
       this.s.unitMoves = (this.s.unitMoves ?? 0) + 1;
       // レイの成長条件: 自分がユニットを移動させた回数（カード・能力の効果と、自分の遊撃。敵味方問わず）
       this.addProgress(by, 'unitMoved', 1);
+      const st = this.pl(by);
+      st.moves = (st.moves ?? 0) + 1;
+      // レイの成長条件: ユニットを移動させたラウンドの数（1ラウンドに何回移動させても1）
+      if (st.moveRound !== this.s.round) {
+        st.moveRound = this.s.round;
+        st.moveRounds = (st.moveRounds ?? 0) + 1;
+        this.addProgress(by, 'unitMoveRounds', 1);
+      }
       events.push({ type: 'move', uid: m.from.unit.uid, owner: m.from.unit.owner });
     }
     this.touch();

@@ -40,7 +40,7 @@ const TRIGGERS = new Set([
   'onAllyEndureCombatDamage', 'onDealCombatDamage', 'roundStart', 'roundEnd', 'combatStart', 'combatEnd',
 ]);
 const TARGET_KINDS = new Set(['unit', 'cell', 'lane', 'unitOrPlayer', 'cardInHand', 'choice']);
-const GROWTH = new Set(['allyEnduredCombatDamage', 'unitMoved', 'leaderAbilityUsed', 'spellsCast']);
+const GROWTH = new Set(['allyEnduredCombatDamage', 'unitMoved', 'unitMoveRounds', 'leaderAbilityUsed', 'spellsCast']);
 
 /** 勢力ファイルからカタログを作る。問題があれば CatalogError を投げる */
 export function buildCatalog(files: FactionFile[]): Catalog {
@@ -154,7 +154,7 @@ class Checker {
     if ('attackOf' in v) this.selector(v.attackOf, refs);
     else if ('healthOf' in v) this.selector(v.healthOf, refs);
     else if ('count' in v) {
-      if (!['spellsCastThisGame', 'unitMovesThisGame', 'allyEnduresThisGame'].includes(v.count)) this.add(`数値 ${v.count} は使えません`);
+      if (!['spellsCastThisGame', 'unitMovesThisGame', 'myMovesThisGame', 'myMoveRoundsThisGame', 'allyEnduresThisGame'].includes(v.count)) this.add(`数値 ${v.count} は使えません`);
     } else if ('max' in v) this.value(v.max, refs);
   }
 
