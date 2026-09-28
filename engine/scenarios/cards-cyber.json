@@ -227,15 +227,15 @@
       "expect": {"result": null, "A": {"hand": [], "deckCount": 0, "board": {"1後": {"card": "CY-10"}}}}
     },
     {
-      "name": "EMPグレネード: 遅延で指定マスと前後左右の5マスのユニットに2ダメージ（斜め・離れたマス・もう一方の盤面は無傷。発動前に範囲から逃げたユニットも受けない）",
+      "name": "EMPグレネード: 遅延で指定マスと前後左右のユニットに2ダメージ。相手の前列を指定すると、向かい合う自分の前列の味方にも当たる（斜め・離れたマスは無傷。発動前に範囲から逃げたユニットも受けない）",
       "refs": ["CY-11", "14.1", "5.2"],
-      "setup": {"A": {"mana": 4, "hand": ["CY-11"], "board": {"2前": "CY-05"}}, "B": {"board": {"2前": "KN-03", "2後": "KN-09", "1前": "CY-05", "3前": "CY-03", "1後": "KN-03", "4前": "KN-03"}}},
+      "setup": {"A": {"mana": 4, "hand": ["CY-11"], "board": {"2前": "CY-05", "1前": "KN-04"}}, "B": {"board": {"2前": "KN-03", "2後": "KN-09", "1前": "CY-05", "3前": "CY-03", "1後": "KN-03", "4前": "KN-03"}}},
       "steps": [
         {"type": "castSpell", "player": "A", "card": "CY-11", "targets": {"cell": {"cell": "B:2前"}}},
         {"expect": {"activePlayer": "B", "A": {"mana": 0, "delayed": ["CY-11"]}}},
         {"type": "mobileMove", "player": "B", "unit": "3前", "to": "4後"}
       ],
-      "expect": {"A": {"delayed": [], "trash": ["CY-11"], "board": {"2前": {"card": "CY-05", "damage": 0}}}, "B": {"board": {"2前": null, "2後": {"card": "KN-09", "damage": 0, "shield": false}, "1前": {"card": "CY-05", "damage": 2}, "4後": {"card": "CY-03", "damage": 0}, "1後": {"card": "KN-03", "damage": 0}, "4前": {"card": "KN-03", "damage": 0}}, "trash": ["KN-03"]}}
+      "expect": {"A": {"delayed": [], "trash": ["CY-11"], "board": {"2前": {"card": "CY-05", "damage": 2}, "1前": {"card": "KN-04", "damage": 0}}}, "B": {"board": {"2前": null, "2後": {"card": "KN-09", "damage": 0, "shield": false}, "1前": {"card": "CY-05", "damage": 2}, "4後": {"card": "CY-03", "damage": 0}, "1後": {"card": "KN-03", "damage": 0}, "4前": {"card": "KN-03", "damage": 0}}, "trash": ["KN-03"]}}
     },
     {
       "name": "EMPグレネード: 自分の盤面のマスも指定でき、範囲の味方にも2ダメージ（レーン1の左は無い）",
@@ -248,14 +248,14 @@
       "expect": {"A": {"delayed": [], "trash": ["CY-11", "KN-03"], "board": {"1後": {"card": "CY-05", "damage": 2}, "1前": {"card": "KN-06", "damage": 2}, "2後": null, "2前": {"card": "KN-03", "damage": 0}}}, "B": {"board": {"1前": {"card": "KN-03", "damage": 0}}}}
     },
     {
-      "name": "EMPグレネード（強化）: 2ダメージに加え、発動時に範囲のユニットをこのラウンド中−2/−0（盾がダメージを防いでも−2/−0は受ける）",
+      "name": "EMPグレネード（強化）: 2ダメージに加え、発動時に範囲のユニットをこのラウンド中−2/−0（盾がダメージを防いでも−2/−0は受ける。向かい合う味方も受ける）",
       "refs": ["CY-11", "14.1", "15.1", "10.4"],
-      "setup": {"A": {"mana": 4, "reserve": 2, "hand": ["CY-11"]}, "B": {"board": {"1前": "CY-05", "1後": "KN-06", "2前": "KN-13", "4前": "KN-06"}}},
+      "setup": {"A": {"mana": 4, "reserve": 2, "hand": ["CY-11"], "board": {"1前": {"card": "KN-04", "health": 2}}}, "B": {"board": {"1前": "CY-05", "1後": "KN-06", "2前": "KN-13", "4前": "KN-06"}}},
       "steps": [
         {"type": "castSpell", "player": "A", "card": "CY-11", "enhance": true, "targets": {"cell": {"cell": "B:1前"}}},
         {"expect": {"A": {"mana": 0, "reserve": 0, "delayed": ["CY-11"]}, "B": {"board": {"1前": {"attack": 2, "damage": 0}, "1後": {"attack": 6}}}}},
         {"type": "pass", "player": "B"},
-        {"expect": {"B": {"board": {"1前": {"card": "CY-05", "damage": 2, "attack": 0}, "1後": {"card": "KN-06", "damage": 2, "attack": 4}, "2前": {"card": "KN-13", "damage": 0, "shield": false, "attack": 1}, "4前": {"card": "KN-06", "damage": 0, "attack": 6}}}}},
+        {"expect": {"A": {"board": {"1前": {"card": "KN-04", "damage": 2, "attack": 0}}}, "B": {"board": {"1前": {"card": "CY-05", "damage": 2, "attack": 0}, "1後": {"card": "KN-06", "damage": 2, "attack": 4}, "2前": {"card": "KN-13", "damage": 0, "shield": false, "attack": 1}, "4前": {"card": "KN-06", "damage": 0, "attack": 6}}}}},
         {"do": "endRound"}
       ],
       "expect": {"B": {"board": {"1前": {"attack": 2}, "1後": {"attack": 6}, "2前": {"attack": 3}}}}

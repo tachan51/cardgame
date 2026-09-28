@@ -215,7 +215,7 @@ type Selector =
   | { cell: { owner: "ally" | "enemy"; lane: LaneRef; row: "front" | "back" } }
   | { cellsRelative: "leftRight" }                    // このユニットの左右隣のマス
   | { randomCell: "ally" | "enemy" }                  // そのプレイヤーの8マス（空きマスを含む）からランダムに1つ。評価するたびに選び直す
-  | { cross: Selector }                               // そのマス（またはユニットのいるマス）と前後左右のマス（CY-11）
+  | { cross: Selector }                               // そのマス（またはユニットのいるマス）と前後左右のマス。前列の前は向かい合う相手の前列（CY-11）
   | { combatTargetOf: Selector }                      // そのユニットの戦闘対象（ユニットか相手本体。ルール仕様書 11.7。CY-18）
   | "enemyPlayer" | "allyPlayer";
 
