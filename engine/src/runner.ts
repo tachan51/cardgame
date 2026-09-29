@@ -1381,7 +1381,8 @@ export class Runner {
       const r = this.damageUnit(target, amount, src.cardId);
       hitUnits.add(target.uid);
       if (!r.blocked) dealt.push({ type: 'combatDamage', uid: target.uid, owner: q, source: src.uid });
-      if (!pierce || r.blocked) return;
+      if (!pierce) return;
+      // 盾で防がれても、残り体力を超えた分は流れる（盾は考慮しない。14章）
       const excess = amount - Math.max(0, before);
       if (excess <= 0) return;
       // 貫通: 同じレーンの次の対象（相手の後列 → 相手本体）へ
