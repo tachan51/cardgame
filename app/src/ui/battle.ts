@@ -338,7 +338,7 @@ function playerPanel(s: GameState, r: Runner, p: PlayerId, hl: Highlights, pv: P
     <div class="life ${hl.players.has(p) ? 'hl' : ''}" data-player="${p}">❤ ${st.life}${lifeAfter}${mark ? `<span class="dmark" data-card-id="${marks.cards.get(`player:${p}`)}" title="${esc(mark.join('、'))}">⏳</span>` : ''}</div>
     <div class="mana"><span class="normal" title="通常マナ（カードに使う）">◆ ${st.mana}/${st.maxMana}</span> <span class="reserve" title="予備マナ（リーダー能力・強化・起動に使う）">◇ ${st.reserve}</span></div>
     <div class="zones small">手札 ${st.hand.length}　山札 ${st.deck.length}　トラッシュ ${st.trash.length}${st.exile.length ? `　除外 ${st.exile.length}` : ''}　使ったスペル ${st.spellsCast}
-      <span title="この試合で自分がユニットを移動させた回数（重装ガンシップなど）">　移動させた回数 ${st.moves ?? 0}</span><span title="この試合で自分がユニットを移動させたラウンド数（衛星兵器ラグナロクのダメージ・レイの成長条件）">　移動させたラウンド数 ${st.moveRounds ?? 0}</span></div>
+      <span title="この試合で自分がユニットを移動させた回数（重装ガンシップなど）">　移動させた回数 ${st.moves ?? 0}</span><span title="この試合で自分がユニットを移動させたラウンド数（衛星兵器ラグナロクのダメージ・レイの成長条件）">　移動させたラウンド数 ${st.moveRounds ?? 0}</span><span title="この試合で味方が戦闘ダメージを耐えた回数（竜殺しの英雄）">　戦闘ダメージを耐えた回数 ${st.endured ?? 0}</span></div>
     ${deckName ? spectateHand(s, r, p) : ''}
     ${p === AI && !deckName && st.hand.some(isOpen) ? `<div class="small">公開: ${st.hand.filter(isOpen).map((c) => `<span data-card-id="${c.cardId}" class="link">${esc(cardName(c.cardId))}</span>`).join('、')}</div>` : ''}
     <div class="leaders">${leaders}</div>
