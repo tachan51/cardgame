@@ -76,6 +76,7 @@ export function renderBattle(root: HTMLElement, game: Game, onQuit: () => void, 
         <div class="detail" id="detail"><div class="muted">カードにマウスを乗せると詳しく表示します</div></div>
         ${preview ? previewHtml(s, preview) : ''}
         ${delaysHtml(s, r)}
+        ${roundEndHtml(s)}
         ${recentHtml(m.state, m.logMark)}
         <div class="log" id="log">${logHtml(s, m.logMark)}</div>
       </aside>
@@ -207,7 +208,7 @@ function previewHtml(s: GameState, pv: PreviewInfo): string {
     ${s.delayed.length ? '<div class="muted small">予約中の遅延効果が発動した後の予測です</div>' : ''}</div>`;
 }
 
-// ---------------------------------------------------------------- 遅延の予告の印
+// ---------------------------------------------------------------- 遅延・ラウンド終了時の予約の予告の印
 
 interface Marks {
   cells: Map<string, string[]>;
@@ -247,7 +248,46 @@ function delayMarks(s: GameState, r: Runner): Marks {
       m.cards.set(`lane:${d.ctx.selfLane}`, d.cardId);
     }
   }
+  // ラウンド終了時の予約（崩落の予言など）も、対象の上に予告の印を出す（ルール仕様書 11.7）
+  for (const e of s.roundEnd) {
+    const cardId = e.ctx.source.cardId;
+    const label = `${who(e.ctx.controller)}の${cardName(cardId)}（ラウンド終了時）`;
+    for (const v of Object.values(e.ctx.targets).flat()) {
+      if (v.kind === 'unit') {
+        const loc = r.findUnit(v.uid);
+        if (loc) {
+          add(m.cells, `${loc.p}:${loc.i}`, label);
+          m.cards.set(`cell:${loc.p}:${loc.i}`, cardId);
+        }
+      } else if (v.kind === 'cell') {
+        add(m.cells, `${v.p}:${v.i}`, label);
+        m.cards.set(`cell:${v.p}:${v.i}`, cardId);
+      } else if (v.kind === 'lane') {
+        add(m.lanes, v.lane, label);
+        m.cards.set(`lane:${v.lane}`, cardId);
+      } else if (v.kind === 'player') {
+        add(m.players, v.p, label);
+        m.cards.set(`player:${v.p}`, cardId);
+      }
+    }
+  }
   return m;
+}
+
+function roundEndHtml(s: GameState): string {
+  if (!s.roundEnd.length) return '';
+  const units = unitIndex(s);
+  const items = s.roundEnd.map((e) => {
+    const cardId = e.ctx.source.cardId;
+    const ts = Object.values(e.ctx.targets)
+      .flat()
+      .map((v) => targetText(v, units))
+      .join('、');
+    const def = cat.cards.get(cardId);
+    return `<li data-card-id="${cardId}" class="delay-item"><b>${who(e.ctx.controller)}</b>: <span class="link">${esc(cardName(cardId))}</span>${ts ? ` → ${esc(ts)}` : ''}
+      ${def ? `<div class="ctext small">${richText(def.text)}</div>` : ''}</li>`;
+  });
+  return `<div class="box delays"><h3>⏳ ラウンド終了時の予約</h3><ul>${items.join('')}</ul><div class="muted small">このラウンドの終了フェイズ（戦闘の後）に行います</div></div>`;
 }
 
 function delaysHtml(s: GameState, r: Runner): string {

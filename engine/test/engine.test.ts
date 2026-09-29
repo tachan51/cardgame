@@ -178,6 +178,15 @@ describe('公開情報とプレビュー', () => {
     expect(v.players.B.hand.map((c) => c.cardId)).toEqual(['AC-02', '?']);
   });
 
+  it('ラウンド終了時の予約（崩落の予言）の対象は相手にも見え、ログにも残る', () => {
+    let s = buildState(cat, { A: { maxMana: 3, hand: ['AC-14'] }, B: { board: { '2前': 'KN-04' } } });
+    const cell = { kind: 'cell' as const, p: 'B' as const, i: 2 }; // B の 2前
+    s = applyAction(cat, s, { type: 'castSpell', player: 'A', card: s.players.A.hand[0].uid, targets: { cell: [cell] } });
+    const v = publicView(s, 'B');
+    expect(v.roundEnd.map((e) => [e.ctx.source.cardId, e.ctx.targets.cell])).toEqual([['AC-14', [cell]]]);
+    expect(v.log.find((e) => e.type === 'roundEndReserve')).toMatchObject({ player: 'A', card: 'AC-14', targets: { cell: [cell] } });
+  });
+
   it('戦闘のプレビューは元の状態を変えない', () => {
     // 突撃騎兵（5/1 先制）に貫通: 巡回騎士（2/3）を先に倒し、超えた2が本体へ
     const s = buildState(cat, { A: { board: { '1前': { card: 'KN-14', keywords: ['pierce'] } } }, B: { board: { '1前': 'KN-04' } } });
