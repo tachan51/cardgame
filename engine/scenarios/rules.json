@@ -22,9 +22,7 @@
             },
             "3後": {
               "card": "KN-03",
-              "keywords": [
-                "firstStrike"
-              ]
+              "health": -1
             }
           }
         },
@@ -32,10 +30,16 @@
           "board": {
             "3前": {
               "card": "KN-20",
-              "health": 3,
+              "health": -1,
               "shield": true
             },
-            "3後": "KN-03"
+            "3後": {
+              "card": "KN-03",
+              "keywords": [
+                "firstStrike"
+              ],
+              "shield": true
+            }
           }
         }
       },
@@ -59,18 +63,18 @@
           ]
         },
         "B": {
-          "life": 20,
+          "life": 19,
           "board": {
-            "3前": {
-              "card": "KN-20",
-              "health": 1,
-              "damage": 4,
-              "shield": false
-            },
+            "3前": null,
             "3後": {
-              "damage": 0
+              "card": "KN-03",
+              "damage": 0,
+              "shield": false
             }
-          }
+          },
+          "trash": [
+            "KN-20"
+          ]
         }
       }
     },
@@ -126,7 +130,7 @@
       }
     },
     {
-      "name": "盾で防いだら貫通しない。先制で攻撃したユニットは通常ステップで攻撃しない",
+      "name": "盾で防いでも、貫通は残り体力を超えた分が流れる（v1.15）。先制で攻撃したユニットは通常ステップで攻撃しない",
       "refs": [
         "8.1",
         "14"
@@ -164,17 +168,18 @@
           ]
         },
         "B": {
-          "life": 20,
+          "life": 18,
           "board": {
             "1前": {
               "card": "KN-09",
               "shield": false,
               "damage": 0
             },
-            "1後": {
-              "damage": 0
-            }
-          }
+            "1後": null
+          },
+          "trash": [
+            "KN-05"
+          ]
         }
       }
     },
@@ -1425,6 +1430,221 @@
         "A": {
           "life": 20,
           "handCount": 1
+        }
+      }
+    },
+    {
+      "name": "8.4 割り当て順 (A): 貫通の前列5＋射撃の後列2 → 後列の2を先に割り当て、前列の貫通が4流れる（後列のダメージが無駄にならない）",
+      "refs": [
+        "8.3",
+        "8.4",
+        "14"
+      ],
+      "setup": {
+        "A": {
+          "board": {
+            "1前": {
+              "card": "KN-04",
+              "attack": 3,
+              "keywords": [
+                "pierce"
+              ]
+            },
+            "1後": {
+              "card": "KN-04",
+              "keywords": [
+                "ranged"
+              ]
+            }
+          }
+        },
+        "B": {
+          "board": {
+            "1前": {
+              "card": "KN-04",
+              "attack": -2
+            },
+            "1後": {
+              "card": "KN-04",
+              "attack": -2
+            }
+          }
+        }
+      },
+      "steps": [
+        {
+          "do": "combat"
+        }
+      ],
+      "expect": {
+        "B": {
+          "life": 19,
+          "board": {
+            "1前": null,
+            "1後": null
+          }
+        }
+      }
+    },
+    {
+      "name": "8.4 割り当て順 (B): 前列2＋貫通・射撃の後列4 → 前列の2を先に割り当て、後列の貫通が3流れる",
+      "refs": [
+        "8.3",
+        "8.4",
+        "14"
+      ],
+      "setup": {
+        "A": {
+          "board": {
+            "1前": {
+              "card": "KN-04"
+            },
+            "1後": {
+              "card": "KN-04",
+              "attack": 2,
+              "keywords": [
+                "ranged",
+                "pierce"
+              ]
+            }
+          }
+        },
+        "B": {
+          "board": {
+            "1前": {
+              "card": "KN-04",
+              "attack": -2
+            },
+            "1後": {
+              "card": "KN-04",
+              "attack": -2
+            }
+          }
+        }
+      },
+      "steps": [
+        {
+          "do": "combat"
+        }
+      ],
+      "expect": {
+        "B": {
+          "life": 20,
+          "board": {
+            "1前": null,
+            "1後": null
+          }
+        }
+      }
+    },
+    {
+      "name": "8.4 割り当て順 (C): 貫通の前列5＋貫通・射撃の後列4 → 前列 → 後列の順。後列の4はすべて流れる",
+      "refs": [
+        "8.3",
+        "8.4",
+        "14"
+      ],
+      "setup": {
+        "A": {
+          "board": {
+            "1前": {
+              "card": "KN-04",
+              "attack": 3,
+              "keywords": [
+                "pierce"
+              ]
+            },
+            "1後": {
+              "card": "KN-04",
+              "attack": 2,
+              "keywords": [
+                "ranged",
+                "pierce"
+              ]
+            }
+          }
+        },
+        "B": {
+          "board": {
+            "1前": {
+              "card": "KN-04",
+              "attack": -2
+            },
+            "1後": {
+              "card": "KN-04",
+              "attack": -2
+            }
+          }
+        }
+      },
+      "steps": [
+        {
+          "do": "combat"
+        }
+      ],
+      "expect": {
+        "B": {
+          "life": 17,
+          "board": {
+            "1前": null,
+            "1後": null
+          }
+        }
+      }
+    },
+    {
+      "name": "8.4 割り当て順: 盾を持つ対象には、貫通を持たない後列の攻撃が先に当たって盾を消し、前列の貫通が流れる",
+      "refs": [
+        "8.3",
+        "8.4",
+        "14"
+      ],
+      "setup": {
+        "A": {
+          "board": {
+            "1前": {
+              "card": "KN-04",
+              "attack": 3,
+              "keywords": [
+                "pierce"
+              ]
+            },
+            "1後": {
+              "card": "KN-04",
+              "keywords": [
+                "ranged"
+              ]
+            }
+          }
+        },
+        "B": {
+          "board": {
+            "1前": {
+              "card": "KN-04",
+              "attack": -2,
+              "shield": true
+            },
+            "1後": {
+              "card": "KN-04",
+              "attack": -2
+            }
+          }
+        }
+      },
+      "steps": [
+        {
+          "do": "combat"
+        }
+      ],
+      "expect": {
+        "B": {
+          "life": 20,
+          "board": {
+            "1前": null,
+            "1後": {
+              "damage": 2
+            }
+          }
         }
       }
     }

@@ -1381,15 +1381,18 @@ export class Runner {
       const r = this.damageUnit(target, amount, src.cardId);
       hitUnits.add(target.uid);
       if (!r.blocked) dealt.push({ type: 'combatDamage', uid: target.uid, owner: q, source: src.uid });
-      if (!pierce || r.blocked) return;
+      if (!pierce) return;
+      // 盾で防がれても、残り体力を超えた分は流れる（盾は考慮しない。14章）
       const excess = amount - Math.max(0, before);
       if (excess <= 0) return;
       // 貫通: 同じレーンの次の対象（相手の後列 → 相手本体）へ
       const back = isFront ? this.unitAt(q, cellIndex(lane, 'back')) : null;
       hit(back, q, lane, excess, pierce, false, src);
     };
-    // 同じ対象への攻撃は、前列のユニット → 後列のユニットの順に割り当てる（8.4）
-    for (const a of plan) {
+    // 同じ対象への攻撃は、貫通を持たないユニット → 貫通を持つユニットの順に割り当てる。
+    // 貫通の有無が同じなら前列 → 後列（8.4）。貫通しない攻撃が倒れた対象に当たって無駄になるのを防ぐ
+    const order = [...plan].sort((x, y) => Number(x.pierce) - Number(y.pierce));
+    for (const a of order) {
       const isFront = a.target !== null && a.target === this.unitAt(a.q, cellIndex(a.lane, 'front'));
       hit(a.target, a.q, a.lane, a.amount, a.pierce, isFront, a.unit);
     }
