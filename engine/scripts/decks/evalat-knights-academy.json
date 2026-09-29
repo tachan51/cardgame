@@ -1,0 +1,72 @@
+{
+  "formatVersion": 1,
+  "id": "evalat-knights-academy",
+  "name": "検証: ラウンド終了の効果（騎士団＋学院）",
+  "leaders": [
+    "leader-alto",
+    "leader-noel"
+  ],
+  "description": "評価の時点（evalAt）の検証用。近衛弓兵長・学院の修道女・崩落の予言・氷像の召喚・召喚の魔法陣（学院の石像）を3枚ずつ入れ、残りは見本の「壁の奥から大魔法」から",
+  "cards": [
+    {
+      "id": "KN-10",
+      "count": 3
+    },
+    {
+      "id": "AC-21",
+      "count": 3
+    },
+    {
+      "id": "AC-14",
+      "count": 3
+    },
+    {
+      "id": "AC-11",
+      "count": 3
+    },
+    {
+      "id": "AC-15",
+      "count": 3
+    },
+    {
+      "id": "KN-01",
+      "count": 3
+    },
+    {
+      "id": "KN-04",
+      "count": 3
+    },
+    {
+      "id": "KN-03",
+      "count": 2
+    },
+    {
+      "id": "KN-08",
+      "count": 3
+    },
+    {
+      "id": "KN-09",
+      "count": 3
+    },
+    {
+      "id": "KN-11",
+      "count": 2
+    },
+    {
+      "id": "AC-02",
+      "count": 3
+    },
+    {
+      "id": "AC-05",
+      "count": 2
+    },
+    {
+      "id": "AC-08",
+      "count": 2
+    },
+    {
+      "id": "AC-10",
+      "count": 2
+    }
+  ]
+}

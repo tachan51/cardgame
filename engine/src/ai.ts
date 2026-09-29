@@ -14,7 +14,7 @@ import { handAdjust } from './hand-table';
 import { legalActions } from './legal';
 import { chooseMulligan, type MulliganPolicy } from './mulligan';
 import { nextRandom, shuffleInPlace, type RngHolder } from './rng';
-import { canonical, defaultOracle, Runner, setOracleChooser } from './runner';
+import { canonical, defaultOracle, NeedChoice, Runner, setOracleChooser } from './runner';
 import type { Action, CardInstance, FactionId, GameState, PlayerId, Unit } from './types';
 import { previewCombat, publicView } from './view';
 
@@ -85,6 +85,13 @@ export interface AiWeights {
   remember?: boolean;
   /** 次のラウンドのマナ（最大マナ＋1と予備マナ）で使えない手札の価値の倍率（案 B の評価版。調整用、省略時 1） */
   unplayableHand?: number;
+  /**
+   * ラウンドの途中の手を、どの時点の盤面で評価するか（調整用、省略時 combat）。
+   *   combat    … 戦闘が終わった直後（終了フェイズの前）
+   *   roundEnd  … 終了フェイズの後（ラウンド終了時の効果と「このラウンド中」の強化の終わりを反映）
+   *   nextRound … 次のラウンドの開始フェイズの後（マナの回復・予備マナの加算・ドローも反映）
+   */
+  evalAt?: 'combat' | 'roundEnd' | 'nextRound';
 }
 
 /** 段階1の評価 */
@@ -124,6 +131,8 @@ export const STAGE2_WEIGHTS: AiWeights = {
   // 盾は 1.5 → 0.5、遊撃は 0.5 → 2.0（ai.md 16章。つよい同士で比べて勝率 53.5%、ふつうは互角）
   shield: 0.5,
   kwMobile: 2,
+  // ラウンドの途中の手も、次のラウンドの開始後の盤面で評価する（ai.md 18章。検証用デッキを含めた総当たりで勝率 54.0%）
+  evalAt: 'nextRound',
 };
 
 export const DEFAULT_WEIGHTS = STAGE2_WEIGHTS;
@@ -321,8 +330,25 @@ function settleScore(cat: Catalog, before: GameState, next: GameState, me: Playe
   if (next.result) return evaluate(cat, next, me, w, true);
   if (next.pending) return evaluate(cat, before, me, w, false) + 0.5;
   if (next.round > before.round) return evaluate(cat, next, me, w, true);
-  const pv = previewCombat(cat, next);
-  return evaluate(cat, pv.state, me, w, false);
+  return evaluateSettled(cat, next, me, w);
+}
+
+/** ラウンドの途中の状態を、このまま双方がパスしたとして w.evalAt の時点まで進めて評価する */
+function evaluateSettled(cat: Catalog, s: GameState, me: PlayerId, w: AiWeights): number {
+  const pv = previewCombat(cat, s).state;
+  if (pv.result || !w.evalAt || w.evalAt === 'combat') return evaluate(cat, pv, me, w, false);
+  const after = structuredClone(pv);
+  try {
+    const r = new Runner(cat, after);
+    r.endPhase();
+    if (after.result || w.evalAt === 'roundEnd') return evaluate(cat, after, me, w, false);
+    r.startRound(false);
+    return evaluate(cat, after, me, w, true);
+  } catch (e) {
+    // 終了フェイズ・開始フェイズの効果で選択が必要になったら、戦闘の直後で評価する
+    if (e instanceof NeedChoice) return evaluate(cat, pv, me, w, false);
+    throw e;
+  }
 }
 
 // ---------------------------------------------------------------- 評価
@@ -546,7 +572,7 @@ function replyValue(cat: Catalog, world: GameState, a: Action, me: PlayerId, _op
     s = applyAction(cat, s, action);
   }
   if (s.result || s.round >= end) return evaluate(cat, s, me, w, true);
-  return evaluate(cat, previewCombat(cat, s).state, me, w, false);
+  return evaluateSettled(cat, s, me, w);
 }
 
 // ---------------------------------------------------------------- オラクル（CY-23）

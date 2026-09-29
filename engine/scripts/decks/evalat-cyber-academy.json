@@ -1,0 +1,72 @@
+{
+  "formatVersion": 1,
+  "id": "evalat-cyber-academy",
+  "name": "検証: 一時的な効果とラウンド終了（電脳＋学院）",
+  "leaders": [
+    "leader-noel",
+    "leader-rei"
+  ],
+  "description": "評価の時点（evalAt）の検証用。狙撃手ヴァイパー・サイバー忍者・ベヒモス・ジャミング技師・EMPグレネード・ドローンエンジニア・崩落の予言・氷像の召喚・召喚の魔法陣を入れ、残りは見本の「ドローンと魔法陣の物量戦」から",
+  "cards": [
+    {
+      "id": "CY-12",
+      "count": 3
+    },
+    {
+      "id": "CY-18",
+      "count": 3
+    },
+    {
+      "id": "CY-19",
+      "count": 2
+    },
+    {
+      "id": "CY-05",
+      "count": 3
+    },
+    {
+      "id": "CY-11",
+      "count": 2
+    },
+    {
+      "id": "CY-20",
+      "count": 3
+    },
+    {
+      "id": "AC-14",
+      "count": 2
+    },
+    {
+      "id": "AC-11",
+      "count": 2
+    },
+    {
+      "id": "AC-15",
+      "count": 3
+    },
+    {
+      "id": "CY-04",
+      "count": 3
+    },
+    {
+      "id": "CY-03",
+      "count": 3
+    },
+    {
+      "id": "AC-09",
+      "count": 3
+    },
+    {
+      "id": "CY-08",
+      "count": 3
+    },
+    {
+      "id": "AC-17",
+      "count": 3
+    },
+    {
+      "id": "AC-03",
+      "count": 2
+    }
+  ]
+}
