@@ -825,13 +825,16 @@ export class Runner {
     return true;
   }
 
-  generate(p: PlayerId, cardId: string): CardInstance | null {
+  /**
+   * カードを手札に生成する。open が true（カードの文面で何を生成するか決まっている）なら、何を生成したかが相手にも分かる。
+   * ランダムに選ぶ・自分で選ぶ生成は相手には分からない（ルール仕様書 11.7）
+   */
+  generate(p: PlayerId, cardId: string, open = true): CardInstance | null {
     const st = this.pl(p);
     if (st.hand.length >= HAND_LIMIT) return null;
-    // 生成したカードは、何を生成したかが相手にも分かる
-    const inst: CardInstance = { uid: this.newUid(), cardId, costMod: 0, revealed: false, generated: true, known: true };
+    const inst: CardInstance = { uid: this.newUid(), cardId, costMod: 0, revealed: false, generated: true, known: open };
     st.hand.push(inst);
-    this.log('generate', { player: p, card: cardId });
+    this.log('generate', { player: p, card: cardId, ...(open ? {} : { hidden: true }) });
     return inst;
   }
 
@@ -1138,7 +1141,7 @@ export class Runner {
         const picked = e.distinctNames
           ? pickRandom(this.s, names, e.count)
           : Array.from({ length: names.length ? e.count : 0 }, () => pickRandom(this.s, this.pl(me).castSpellIds, 1)[0]);
-        for (const id of picked) this.generate(me, id);
+        for (const id of picked) this.generate(me, id, false);
         return;
       }
       case 'gainReserve': {
@@ -1258,7 +1261,7 @@ export class Runner {
         const pool = [...this.cat.cards.values()].filter((c) => facs.has(c.faction) && !c.token && this.cardMatches(c.id, e.where)).map((c) => c.id);
         if (!pool.length) return;
         const picked = e.distinctNames ? pickRandom(this.s, pool, e.count) : Array.from({ length: e.count }, () => pickRandom(this.s, pool, 1)[0]);
-        for (const id of picked) this.generate(me, id);
+        for (const id of picked) this.generate(me, id, false);
         return;
       }
       case 'pickCastSpell': {
@@ -1270,7 +1273,7 @@ export class Runner {
           names.map((cardId, k) => ({ uid: k + 1, cardId })),
         );
         this.log('pickCast', { player: me, looked: names.length });
-        this.generate(me, names[n - 1]);
+        this.generate(me, names[n - 1], false);
         return;
       }
       case 'byChoice': {

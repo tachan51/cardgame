@@ -6,6 +6,7 @@ import {
   previewCombat,
   Runner,
   type Action,
+  type CardInstance,
   type GameState,
   type PlayerId,
   type TargetValue,
@@ -338,9 +339,14 @@ function playerPanel(s: GameState, r: Runner, p: PlayerId, hl: Highlights, pv: P
     <div class="mana"><span class="normal" title="通常マナ（カードに使う）">◆ ${st.mana}/${st.maxMana}</span> <span class="reserve" title="予備マナ（リーダー能力・強化・起動に使う）">◇ ${st.reserve}</span></div>
     <div class="zones small">手札 ${st.hand.length}　山札 ${st.deck.length}　トラッシュ ${st.trash.length}${st.exile.length ? `　除外 ${st.exile.length}` : ''}　使ったスペル ${st.spellsCast}</div>
     ${deckName ? spectateHand(s, r, p) : ''}
-    ${p === AI && !deckName && st.hand.some((c) => c.revealed) ? `<div class="small">公開: ${st.hand.filter((c) => c.revealed).map((c) => `<span data-card-id="${c.cardId}" class="link">${esc(cardName(c.cardId))}</span>`).join('、')}</div>` : ''}
+    ${p === AI && !deckName && st.hand.some(isOpen) ? `<div class="small">公開: ${st.hand.filter(isOpen).map((c) => `<span data-card-id="${c.cardId}" class="link">${esc(cardName(c.cardId))}</span>`).join('、')}</div>` : ''}
     <div class="leaders">${leaders}</div>
   </section>`;
+}
+
+/** 手札のカードの中身が相手にも分かっているか（公開した・文面で決まったカードを生成した・盤面から手札に戻した） */
+function isOpen(c: CardInstance): boolean {
+  return c.revealed || !!c.known;
 }
 
 /** 観戦のときの手札（両者とも中身を見せる） */
@@ -350,7 +356,7 @@ function spectateHand(s: GameState, r: Runner, p: PlayerId): string {
   return `<div class="spec-hand">${hand
     .map((c) => {
       const cost = r.cardCost(p, c);
-      return `<span class="spec-card fac-${getCard(cat, c.cardId).faction}" data-card-id="${c.cardId}"><b>${cost}</b> ${esc(cardName(c.cardId))}${c.revealed ? '（公開）' : ''}</span>`;
+      return `<span class="spec-card fac-${getCard(cat, c.cardId).faction}" data-card-id="${c.cardId}"><b>${cost}</b> ${esc(cardName(c.cardId))}${isOpen(c) ? '（公開）' : ''}</span>`;
     })
     .join('')}</div>`;
 }
@@ -429,7 +435,7 @@ function handHtml(s: GameState, r: Runner, hl: Highlights, all: Action[]): strin
         <div class="cost ${cost < def.cost ? 'down' : cost > def.cost ? 'up' : ''}">${cost}</div>
         <div class="cname">${esc(def.name)}</div>
         <div class="ctype small">${cardTypeLabel(c.cardId)}${def.type === 'unit' ? `　⚔${def.attack} ♥${def.health}` : ''}</div>
-        <div class="kws">${[...r.cardKeywords(HUMAN, c.cardId)].map((k) => `<span class="kw">${KEYWORD_LABEL[k]}</span>`).join('')}${c.revealed ? '<span class="tag">公開中</span>' : ''}</div>
+        <div class="kws">${[...r.cardKeywords(HUMAN, c.cardId)].map((k) => `<span class="kw">${KEYWORD_LABEL[k]}</span>`).join('')}${isOpen(c) ? '<span class="tag">公開中</span>' : ''}</div>
         <div class="ctext">${richText(def.text)}</div>
       </div>`;
     })
