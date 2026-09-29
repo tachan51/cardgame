@@ -22,9 +22,7 @@
             },
             "3後": {
               "card": "KN-03",
-              "keywords": [
-                "firstStrike"
-              ]
+              "health": -1
             }
           }
         },
@@ -32,10 +30,16 @@
           "board": {
             "3前": {
               "card": "KN-20",
-              "health": 3,
+              "health": -1,
               "shield": true
             },
-            "3後": "KN-03"
+            "3後": {
+              "card": "KN-03",
+              "keywords": [
+                "firstStrike"
+              ],
+              "shield": true
+            }
           }
         }
       },
@@ -59,18 +63,18 @@
           ]
         },
         "B": {
-          "life": 20,
+          "life": 19,
           "board": {
-            "3前": {
-              "card": "KN-20",
-              "health": 1,
-              "damage": 4,
-              "shield": false
-            },
+            "3前": null,
             "3後": {
-              "damage": 0
+              "card": "KN-03",
+              "damage": 0,
+              "shield": false
             }
-          }
+          },
+          "trash": [
+            "KN-20"
+          ]
         }
       }
     },
