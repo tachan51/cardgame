@@ -305,7 +305,7 @@ type Condition =
 | `modifyLeaderAbilityCost` | `amount` | このリーダーの能力のコストを増減する（試合を通して累積） | — |
 | `reveal` | `target` | 手札のカードを公開する | AC-25 |
 | `delay` | `effects` | 中の効果を予約し、自分の次の手番の始めに発動する（ルール仕様書 14.1） | KN-15, AC-01 |
-| `atRoundEnd` | `effects` | 中の効果を、このラウンドの終了時に行う | CY-07, AC-14 |
+| `atRoundEnd` | `effects` | 中の効果を、このラウンドの終了時に行う。予約の内容と対象は双方に公開する（ルール仕様書 11.7） | AC-14 |
 | `if` | `condition`, `subject`, `then`, `else?` | 条件を満たすときだけ行う | — |
 | `forEach` | `targets`, `effects` | 範囲の中の1体ずつに効果を行う（中では `eventUnit` がその1体） | — |
 | `repeat` | `times`, `effects` | 中の効果を `times` 回くり返す | — |

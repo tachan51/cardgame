@@ -1209,6 +1209,8 @@ export class Runner {
       }
       case 'atRoundEnd':
         this.s.roundEnd.push({ effects: structuredClone(e.effects), ctx: structuredClone(ctx) });
+        // 予約の内容と対象は双方に公開する（ルール仕様書 11.7）
+        this.log('roundEndReserve', { player: ctx.controller, card: ctx.source.cardId, targets: ctx.targets });
         return;
       case 'if': {
         const subject = this.units(e.subject, ctx)[0];

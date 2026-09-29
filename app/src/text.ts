@@ -94,6 +94,13 @@ export function logText(e: LogEntry): string | null {
       return `即効: ${p}が続けて行動する`;
     case 'delayReserve':
       return `${p}が${c()}の遅延効果を予約`;
+    case 'roundEndReserve': {
+      const ts = Object.values(e.targets as Record<string, TargetValue[]>)
+        .flat()
+        .map((v) => targetText(v, new Map()))
+        .join('、');
+      return `${p}が${c()}の効果をラウンド終了時に予約${ts ? `（→ ${ts}）` : ''}`;
+    }
     case 'delayResolve':
       return `${p}の${c()}の遅延効果が発動`;
     case 'combatStart':
