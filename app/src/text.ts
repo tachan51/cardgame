@@ -128,6 +128,8 @@ export function logText(e: LogEntry): string | null {
     case 'summon':
       return `${who(e.player)}の${e.cell}に${c()}が出た`;
     case 'generate':
+      // ランダムに・選んで生成したカードは、AI の分は何かを見せない（ルール仕様書 11.7）
+      if (e.hidden) return e.player === HUMAN ? `${p}の手札に${c()}を生成（相手には非公開）` : `${p}の手札にカードを1枚生成（非公開）`;
       return `${p}の手札に${c()}を生成`;
     case 'returnToHand':
       return `${who(e.player)}の${c()}が手札に戻った`;

@@ -187,6 +187,28 @@ describe('公開情報とプレビュー', () => {
     expect(v.log.find((e) => e.type === 'roundEndReserve')).toMatchObject({ player: 'A', card: 'AC-14', targets: { cell: [cell] } });
   });
 
+  it('文面で決まったカードの生成（見習い魔法使い）は、何を生成したか相手にも分かる', () => {
+    let s = buildState(cat, { A: { maxMana: 2, hand: ['AC-03'] } });
+    s = applyAction(cat, s, { type: 'playUnit', player: 'A', card: s.players.A.hand[0].uid, cell: 0 });
+    expect(s.players.A.hand.map((c) => [c.cardId, c.known])).toEqual([['AC-01', true]]);
+    expect(publicView(s, 'B').log.find((e) => e.type === 'generate')).toMatchObject({ card: 'AC-01' });
+    expect(publicView(s, 'B', { remember: true }).players.A.hand.map((c) => c.cardId)).toEqual(['AC-01']);
+  });
+
+  it('ランダムな生成（学院の図書委員）は、何を生成したか相手には分からない', () => {
+    let s = buildState(cat, { A: { maxMana: 4, hand: ['AC-08'], leaders: ['leader-alto', 'leader-noel'] } });
+    s = applyAction(cat, s, { type: 'playUnit', player: 'A', card: s.players.A.hand[0].uid, cell: 0 });
+    const gen = s.players.A.hand[0];
+    expect(gen.generated).toBe(true);
+    expect(gen.known).toBe(false);
+    // 自分からは見える
+    expect(publicView(s, 'A').log.find((e) => e.type === 'generate')).toMatchObject({ card: gen.cardId, hidden: true });
+    // 相手からは、覚えておく設定でも見えない
+    const v = publicView(s, 'B', { remember: true });
+    expect(v.players.A.hand.map((c) => c.cardId)).toEqual(['?']);
+    expect(v.log.find((e) => e.type === 'generate')).toMatchObject({ card: '?', hidden: true });
+  });
+
   it('戦闘のプレビューは元の状態を変えない', () => {
     // 突撃騎兵（5/1 先制）に貫通: 巡回騎士（2/3）を先に倒し、超えた2が本体へ
     const s = buildState(cat, { A: { board: { '1前': { card: 'KN-14', keywords: ['pierce'] } } }, B: { board: { '1前': 'KN-04' } } });

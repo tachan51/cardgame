@@ -29,6 +29,8 @@ export function publicView(state: GameState, viewer: PlayerId, opts: { remember?
   }
   v.rngState = 0;
   v.log = v.log.filter((e) => !(e.type === 'pick' && e.player === opponent(viewer)));
+  // 相手がランダムに・選んで生成したカードは、何を生成したか分からない
+  v.log = v.log.map((e) => (e.type === 'generate' && e.hidden && e.player === opponent(viewer) ? { ...e, card: HIDDEN } : e));
   return v;
 }
 
