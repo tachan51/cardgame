@@ -1372,12 +1372,14 @@ export class Runner {
       const back = this.unitAt(q, cellIndex(lane, 'back'));
       return { ...a, q, lane, target: front ?? back ?? null, back };
     });
+    // 貫通で流れる量は、ステップの開始時点の残り体力で決める（同じステップの味方の攻撃は考慮しない。8.4）
+    const startHealth = new Map(this.allUnits().map((x) => [x.unit.uid, this.health(x.unit)]));
     const hitUnits = new Set<number>();
     const dealt: GameEvent[] = [];
     const hit = (target: Unit | null, q: PlayerId, lane: number, amount: number, pierce: boolean, isFront: boolean, src: Unit) => {
       if (amount <= 0) return;
       if (!target) return this.damagePlayer(q, amount, src.cardId);
-      const before = this.health(target);
+      const before = startHealth.get(target.uid) ?? this.health(target);
       const r = this.damageUnit(target, amount, src.cardId);
       hitUnits.add(target.uid);
       if (!r.blocked) dealt.push({ type: 'combatDamage', uid: target.uid, owner: q, source: src.uid });
@@ -1389,10 +1391,8 @@ export class Runner {
       const back = isFront ? this.unitAt(q, cellIndex(lane, 'back')) : null;
       hit(back, q, lane, excess, pierce, false, src);
     };
-    // 同じ対象への攻撃は、貫通を持たないユニット → 貫通を持つユニットの順に割り当てる。
-    // 貫通の有無が同じなら前列 → 後列（8.4）。貫通しない攻撃が倒れた対象に当たって無駄になるのを防ぐ
-    const order = [...plan].sort((x, y) => Number(x.pierce) - Number(y.pierce));
-    for (const a of order) {
+    // ダメージは前列のユニット → 後列のユニットの順に与える（割り振る量には影響しない。盾がどの攻撃を防ぐかだけが決まる）
+    for (const a of plan) {
       const isFront = a.target !== null && a.target === this.unitAt(a.q, cellIndex(a.lane, 'front'));
       hit(a.target, a.q, a.lane, a.amount, a.pierce, isFront, a.unit);
     }
