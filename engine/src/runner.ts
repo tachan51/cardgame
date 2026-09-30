@@ -1389,10 +1389,8 @@ export class Runner {
       const back = isFront ? this.unitAt(q, cellIndex(lane, 'back')) : null;
       hit(back, q, lane, excess, pierce, false, src);
     };
-    // 同じ対象への攻撃は、貫通を持たないユニット → 貫通を持つユニットの順に割り当てる。
-    // 貫通の有無が同じなら前列 → 後列（8.4）。貫通しない攻撃が倒れた対象に当たって無駄になるのを防ぐ
-    const order = [...plan].sort((x, y) => Number(x.pierce) - Number(y.pierce));
-    for (const a of order) {
+    // 同じ対象への攻撃は、貫通の有無によらず前列のユニット → 後列のユニットの順に割り当てる（8.4）
+    for (const a of plan) {
       const isFront = a.target !== null && a.target === this.unitAt(a.q, cellIndex(a.lane, 'front'));
       hit(a.target, a.q, a.lane, a.amount, a.pierce, isFront, a.unit);
     }
