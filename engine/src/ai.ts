@@ -527,8 +527,9 @@ function searchInner(
   const pass = scored.find((x) => x.action.type === 'pass')!;
   if (!cands.includes(pass)) cands.push(pass);
   if (cands.length === 1) return { action: pass.action, score: pass.score, baseline };
-  // とどめを刺せる手があれば読むまでもない
-  const lethal = cands.find((x) => x.score >= 1000);
+  // その場で勝ちが決まる手があれば読むまでもない。
+  // 「このまま双方がパスしたら勝ち」の手は、相手に応手の機会があるので読む（ai.md 19章）
+  const lethal = cands.find((x) => x.score >= 1000 && isWin(cat, state, x.action, me));
   if (lethal) return { action: lethal.action, score: lethal.score, baseline };
 
   const worlds = Array.from({ length: D }, () => determinize(cat, state, me, rng, !!w.remember));
@@ -541,7 +542,8 @@ function searchInner(
       r.n += 1;
     }
   }
-  let best = results[results.length - 1];
+  // 同点なら候補の最初の手（段階2の評価が高い手。同じならパス）を選ぶ
+  let best = results[0];
   for (const r of results) {
     if (!r.n) continue;
     const avg = r.total / r.n;
@@ -550,6 +552,15 @@ function searchInner(
     if (avg > bestAvg + 0.05 || (Math.abs(avg - bestAvg) <= 0.05 && r.c.score > best.c.score)) best = r;
   }
   return { action: best.c.action, score: best.n ? best.total / best.n : best.c.score, baseline };
+}
+
+/** その手を打つと、その場で自分の勝ちで試合が終わるか */
+function isWin(cat: Catalog, state: GameState, a: Action, me: PlayerId): boolean {
+  try {
+    return applyAction(cat, state, a).result?.winner === me;
+  } catch {
+    return false;
+  }
 }
 
 /**
